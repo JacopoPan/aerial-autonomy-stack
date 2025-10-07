@@ -252,7 +252,6 @@ docker exec -it aircraft-container tmux attach
 
 ## Future Work / Ideas for Contributions
 
-- [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) RL interface
 - Support for [SPARK-FAST-LIO](https://github.com/MIT-SPARK/spark-fast-lio)/[SuperOdom](https://github.com/superxslam/SuperOdom)
 - Support for [JSBSim](https://github.com/JSBSim-Team/jsbsim) flight dynamics
 - Support for [ArduPilot's DDS interface](https://ardupilot.org/dev/docs/ros2-interfaces.html)
