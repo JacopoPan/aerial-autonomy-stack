@@ -388,8 +388,6 @@ Once done, detach Tmux (and remove the containers) with `Ctrl + b`, then `d`
 
 ## TODOs
 
-[Gymnasium](https://github.com/Farama-Foundation/Gymnasium) RL interface
-
 HITL/SITL architectures
 - https://docs.px4.io/main/en/simulation/
 - https://docs.px4.io/main/en/simulation/#sitl-simulation-environment
