@@ -14,8 +14,7 @@
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
-%>
-<% 
+
   drones = []
   num_quads.times { |i| drones << { type: 'quad', index: i } }
   num_vtols.times { |i| drones << { type: 'vtol', index: i } }

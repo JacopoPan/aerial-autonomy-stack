@@ -326,7 +326,7 @@ Set up a LAN with netmask `255.255.0.0` and an arbitrary `SIM_SUBNET` (e.g. `172
 - `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
 
 
-**Optionally**, set up a second LAN or [MANET](https://doodlelabs.com/product/nano/) with netmask `255.255.0.0` and `AIR_SUBNET` (e.g. `172.31`) between:
+**Optionally**, set up a second LAN or [MANET](https://doodlelabs.com/product/nano/) with netmask `255.255.0.0` and `AIR_SUBNET` (e.g. `10.223`) between:
 
 - One **ground** computer, with IP `[AIR_SUBNET].90.101`
 - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
@@ -335,24 +335,24 @@ Set up a LAN with netmask `255.255.0.0` and an arbitrary `SIM_SUBNET` (e.g. `172
 First, start all aircraft containers, one on each Jetson (e.g. *via* SSH):
 ```sh
 # On the Jetson with IP ending in 90.1
-HITL=true DRONE_ID=1 DRONE_TYPE=quad AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=172.31 ./deploy_run.sh        # Add HEADLESS=false if a screen is connected to the Jetson
+HITL=true DRONE_ID=1 DRONE_TYPE=quad AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh        # Add HEADLESS=false if a screen is connected to the Jetson
 ```
 
 ```sh
 # On the Jetson with IP ending in 90.2
-HITL=true DRONE_ID=2 DRONE_TYPE=quad AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=172.31 ./deploy_run.sh
+HITL=true DRONE_ID=2 DRONE_TYPE=quad AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh
 ```
 
 Enable the Zenoh bridge between aircraft using the `AIR_SUBNET`, on the ground computer:
 ```sh
 # Computer with IP ending in 90.101
-HITL=true GROUND=true HEADLESS=false NUM_QUADS=2 NUM_VTOLS=0 SIM_SUBNET=172.30 AIR_SUBNET=172.31 ./deploy_run.sh
+HITL=true GROUND=true HEADLESS=false NUM_QUADS=2 NUM_VTOLS=0 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh
 ```
 
 Finally, on the simulation computer:
 ```sh
 # Computer with IP ending in 90.100
-HITL=true NUM_QUADS=2 NUM_VTOLS=0 AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=172.31 ./sim_run.sh
+HITL=true NUM_QUADS=2 NUM_VTOLS=0 AUTOPILOT=px4 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./sim_run.sh
 ```
 
 > [!NOTE]
