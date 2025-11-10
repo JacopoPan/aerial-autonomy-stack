@@ -197,9 +197,9 @@
       <plugin name="Entity tree" filename="EntityTree">
         <gz-gui>
           <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-          <property key="width" type="double">0</property>
-          <property key="height" type="double">0</property>
+          <property key="showTitleBar" type="bool">true</property>
+          <property key="width" type="double">150</property>
+          <property key="height" type="double">600</property>
         </gz-gui>
       </plugin>
     </gui>

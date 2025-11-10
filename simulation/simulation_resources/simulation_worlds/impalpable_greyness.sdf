@@ -197,9 +197,9 @@
       <plugin name="Entity tree" filename="EntityTree">
         <gz-gui>
           <property key="state" type="string">floating</property>
-          <property key="showTitleBar" type="bool">false</property>
-          <property key="width" type="double">0</property>
-          <property key="height" type="double">0</property>
+          <property key="showTitleBar" type="bool">true</property>
+          <property key="width" type="double">150</property>
+          <property key="height" type="double">600</property>
         </gz-gui>
       </plugin>
     </gui>
@@ -369,7 +369,7 @@
     </model>
 
     <model name="cylinder">
-      <pose>12 8 10 0 0 0</pose>
+      <pose>12 8 20 0 0 0</pose>
       <link name="link">
         <inertial>
           <pose>0 0 0 0 0 0</pose>
@@ -385,7 +385,7 @@
           <geometry>
             <cylinder>
               <radius>1</radius>
-              <length>5</length>
+              <length>10</length>
             </cylinder>
           </geometry>
         </collision>
@@ -393,7 +393,7 @@
           <geometry>
             <cylinder>
               <radius>1</radius>
-              <length>5</length>
+              <length>10</length>
             </cylinder>
           </geometry>
           <material>
@@ -442,8 +442,44 @@
       </link>
     </model>
 
+    <model name="sphere2">
+      <pose>-10 0 10 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>10</mass>
+          <inertia>
+            <ixx>1</ixx>
+            <iyy>1</iyy>
+            <izz>1</izz>
+          </inertia>
+        </inertial>
+        <collision name='collision'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <sphere>
+              <radius>6</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>6</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0 1 0 1.0</ambient>
+            <diffuse>0 1 0 1.0</diffuse>
+            <!-- <specular>0 1 0 1.0</specular> -->
+            <!-- <emissive>0 1 0 1.0</emissive> -->
+          </material>
+        </visual>
+      </link>
+    </model>
+
     <model name="cube">
-      <pose>10 -10 10 0 0 0</pose>
+      <pose>10 -10 20 0 0 0</pose>
       <link name="link">
         <inertial>
           <pose>0 0 0 0 0 0</pose>
@@ -458,14 +494,14 @@
           <pose>0 0 0 0 0 0</pose>
           <geometry>
             <box>
-              <size>4.0 4.0 4.0</size>
+              <size>4.0 4.0 6.0</size>
             </box>
           </geometry>
         </collision>
         <visual name="visual">
           <geometry>
             <box>
-              <size>4.0 4.0 4.0</size>
+              <size>4.0 4.0 6.0</size>
             </box>
           </geometry>
           <material>
