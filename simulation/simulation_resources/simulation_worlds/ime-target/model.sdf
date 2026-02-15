@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="ime-target">
+    <static>false</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://ime-target/meshes/ime-target.glb</uri>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://ime-target/meshes/ime-target.glb</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>
