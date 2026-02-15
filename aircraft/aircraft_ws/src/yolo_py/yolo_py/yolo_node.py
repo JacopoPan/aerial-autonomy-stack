@@ -30,7 +30,7 @@ class YoloInferenceNode(Node):
         self.architecture = platform.machine()
         
         # Load classes
-        names_file = "/aas/yolo/coco.json"
+        names_file = "/aas/yolo/classes.json"
         with open(names_file, "r") as f:
             self.classes = {int(k): v for k, v in json.load(f).items()}
         colors_rgba = plt.cm.hsv(np.linspace(0, 1, len(self.classes)))
@@ -39,12 +39,12 @@ class YoloInferenceNode(Node):
         # Load model and runtime
         # Options, from fastest to most accurate, <10MB to >100MB: yolov8n, yolov8s, yolov8m, yolov8l, yolov8x, export in Dockerfile.aircraft
         if self.architecture == 'x86_64':
-            model_path = "/aas/yolo/yolov8n_320.onnx" # Simulated camera in sensor_camera/model.sdf is 320x240
+            model_path = "/aas/yolo/yolov11_320.onnx" # Simulated camera in sensor_camera/model.sdf is 320x240
             self.input_size = 320 # YOLOv8 input size
             print("Loading CUDAExecutionProvider on AMD64 (x86) architecture.")
             self.session = ort.InferenceSession(model_path, providers=["CUDAExecutionProvider"]) # For simulation
         elif self.architecture == 'aarch64':
-            model_path = "/aas/yolo/yolov8n_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLOv8 (this is slightly wasteful when self.hitl = True)
+            model_path = "/aas/yolo/yolov11_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLOv8 (this is slightly wasteful when self.hitl = True)
             self.input_size = 640 # YOLOv8 input size
             print("Loading (with cache) TensorrtExecutionProvider on ARM64 architecture (Jetson).") # The first cache built takes ~10'
             cache_path = "/tensorrt_cache" # Mounted as volume by main_deploy.sh
