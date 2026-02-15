@@ -1,0 +1,41 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="fog_generator">
+    <pose>0 0 0 0 -1.5707 0</pose>
+    <static>false</static>
+    <link name="fog_link">
+      <!-- Added inertial properties to prevent drone from flipping -->
+      <inertial>
+        <mass>0.001</mass>
+        <inertia>
+          <ixx>0.000001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000001</iyy>
+          <iyz>0</iyz>
+          <izz>0.000001</izz>
+        </inertia>
+      </inertial>
+      <particle_emitter name="emitter" type="box">
+        <emitting>false</emitting>
+        <size>5 5 0</size>
+        <particle_size>1 1 1</particle_size>
+        <lifetime>7</lifetime>
+        <min_velocity>0.1</min_velocity>
+        <max_velocity>0.5</max_velocity>
+        <scale_rate>0.5</scale_rate>
+        <rate>5</rate>
+        <material>
+          <diffuse>0.7 0.7 0.7</diffuse>
+          <specular>1.0 1.0 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_map>materials/textures/fog.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+        <color_range_image>materials/textures/fogcolors.png</color_range_image>
+      </particle_emitter>
+    </link>
+  </model>
+</sdf>

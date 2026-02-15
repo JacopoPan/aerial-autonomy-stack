@@ -4,6 +4,34 @@
     
     <model name='iris'>
       <pose>0 0 0 0 0 0</pose>
+
+      <include>
+        <uri>model://grenade</uri>
+        <name>B1</name>
+        <pose>-0.140 0.0 -0.15 1.5707 0 0</pose>
+      </include>
+
+      <include>
+        <uri>model://fog_generator</uri>
+        <name>fog_emitter</name>
+        <pose>-0.140 0.0 -0.15 0 0 0</pose>
+      </include>
+
+      <joint name="fog_joint" type="fixed">
+          <parent>B1::link</parent>
+          <child>fog_emitter::fog_link</child>
+      </joint>
+
+      <!-- gz topic -t /iris_with_ardupilot_{N}/drop -m gz.msgs.Empty -p "" -->
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>base_link</parent_link>
+        <child_model>B1</child_model>
+        <child_link>link</child_link>
+        <topic>/iris_with_ardupilot/drop</topic>
+      </plugin>
+
       <link name='base_link'>
         <enable_wind>true</enable_wind>
         <velocity_decay>
@@ -499,6 +527,10 @@
     </model>
 
     <!-- plugins -->
+    <plugin
+      filename="gz-sim-particle-emitter-system"
+      name="gz::sim::systems::ParticleEmitter">
+    </plugin>
     <plugin filename="gz-sim-joint-state-publisher-system"
       name="gz::sim::systems::JointStatePublisher">
     </plugin>
@@ -756,7 +788,38 @@
         <controlVelocitySlowdownSim>1</controlVelocitySlowdownSim>
       </control>
 
+      <!-- Servo channel for payload drop -->
+      <control channel="8">
+        <type>COMMAND</type>
+        <jointName>iris::CameraJoint</jointName>
+        <cmd_topic>/iris_with_ardupilot/gripper/cmd</cmd_topic>
+        <multiplier>2000</multiplier>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <offset>0</offset>
+      </control>
+
     </plugin>
 
+    <!-- Triggered publisher: converts servo command to drop signal -->
+    <plugin filename="gz-sim-triggered-publisher-system"
+      name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Double" topic="/iris_with_ardupilot/gripper/cmd">
+        <match field="data">2000</match>
+      </input>
+      <output type="gz.msgs.Empty" topic="/iris_with_ardupilot/drop"/>
+    </plugin>
+
+    <!-- Triggered publisher: Smoke ON (using correct ParticleEmitter message types) -->
+    <plugin filename="gz-sim-triggered-publisher-system"
+      name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Double" topic="/iris_with_ardupilot/gripper/cmd">
+        <match field="data">2000</match>
+      </input>
+      <output type="gz.msgs.ParticleEmitter" topic="/model/iris_with_ardupilot/model/iris/model/fog_emitter/link/fog_link/particle_emitter/emitter/cmd">
+        emitting: {data: true}
+      </output>
+    </plugin>
+    
   </model>
 </sdf>

@@ -1,0 +1,17 @@
+model {
+  file: "model.sdf"
+  file_format {
+    version {
+      major: 1
+      minor: 6
+    }
+    name: "sdf"
+  }
+}
+name: "fog_generator"
+description: "A fog generator."
+authors {
+  name: "Nate Koenig"
+  email: "nate@openrobotics.org"
+}
+
