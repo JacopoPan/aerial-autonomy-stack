@@ -36,6 +36,7 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   #"git@github.com:droneswarmufpe/MAVKit.git;main;MAVKit"
   #"https://github.com/droneswarmufpe/RoboChart2Python-PDS;main;RoboChart2Python-PDS"
   #"git@github.com:droneswarmufpe/Sistemas.git;main;Sistemas"
+  #"git@github.com:droneswarmufpe/Projeto-Enxame-Drones.git;main;Projeto-Enxame-Drones"
   # TODO: add SARP cloning here
   # "https://github.com/microsoft/onnxruntime.git;v1.22.1;onnxruntime" # Only for the deployment build
   "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
