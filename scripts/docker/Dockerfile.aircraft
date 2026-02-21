@@ -184,7 +184,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     
 # Add pymavlink for debugging and testing
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial utm
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial utm pymap3d cartopy
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install mavlink-router 
