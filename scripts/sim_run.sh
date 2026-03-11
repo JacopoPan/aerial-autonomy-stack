@@ -120,7 +120,7 @@ PARENT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 # Launch the simulation container
 # não pecisa rebuildar quando mexe no script agr
 DOCKER_CMD="docker run -it --rm \
-  --volume ${PARENT_DIR}/aircraft/aircraft_resources/Projeto-Enxame-Drones:/aas/aircraft_resources/Projeto-Enxame-Drones \
+  --volume ${PARENT_DIR}/simulation/simulation_resources/:/aas/simulation_resources/ \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
   --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
   --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR --env CAMERA_PITCH=$CAMERA_PITCH \
@@ -152,6 +152,7 @@ if [[ "$HITL" == "false" ]]; then
     sleep 1.0 # Limit resource usage
     # Launch the ground container
     DOCKER_CMD="docker run -it --rm \
+      --volume ${PARENT_DIR}/ground/ground_resources/:/aas/ground_resources/ \
       --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
       --env HEADLESS=$HEADLESS \
@@ -183,7 +184,7 @@ if [[ "$HITL" == "false" ]]; then
       sleep 1.0 # Limit resource usage
       local NAME_AIRCRAFT_CNT="aircraft-container-inst${INSTANCE}_${DRONE_ID}"
       DOCKER_CMD="docker run -it --rm \
-        --volume ${PARENT_DIR}/aircraft/aircraft_resources/Projeto-Enxame-Drones:/aas/aircraft_resources/Projeto-Enxame-Drones \
+        --volume ${PARENT_DIR}/aircraft/aircraft_resources/:/aas/aircraft_resources/ \
         --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
         --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
         --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR \
