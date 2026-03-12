@@ -32,15 +32,22 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   # Aircraft image
   # Add repos for PDS-Swarm
   # FIX: (mateus) clonei manualmente pq por aqui reclamava de incorrect access rights
-  #"git@github.com:droneswarmufpe/Chorus.git;main;Chorus"
-  #"git@github.com:droneswarmufpe/MAVKit.git;main;MAVKit"
-  #"https://github.com/droneswarmufpe/RoboChart2Python-PDS;main;RoboChart2Python-PDS"
-  #"git@github.com:droneswarmufpe/Sistemas.git;main;Sistemas"
-  #"git@github.com:droneswarmufpe/Projeto-Enxame-Drones.git;main;Projeto-Enxame-Drones"
+  "git@github.com:droneswarmufpe/Chorus.git;main;Chorus"
+  "git@github.com:droneswarmufpe/MAVKit.git;main;MAVKit"
+  "git@github.com:droneswarmufpe/RoboChart2Python-PDS;main;RoboChart2Python-PDS"
+  "git@github.com:droneswarmufpe/Sistemas.git;main;Sistemas"
+  "git@github.com:droneswarmufpe/Projeto-Enxame-Drones.git;main;Projeto-Enxame-Drones"
   # TODO: add SARP cloning here
   # "https://github.com/microsoft/onnxruntime.git;v1.22.1;onnxruntime" # Only for the deployment build
   "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
 )
+
+pgrep ssh-agent > /dev/null || eval "$(ssh-agent -s)"
+
+if ! ssh-add -l 2>/dev/null | grep -q "SHA256:"; then
+  echo "Error: No SSH keys loaded in ssh-agent." >&2
+  exit 1
+fi
 
 for repo_info in "${REPOS[@]}"; do
   IFS=';' read -r url branch dir <<< "$repo_info" # Split the string into URL, BRANCH, and DIR
