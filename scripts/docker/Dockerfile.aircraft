@@ -232,6 +232,16 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
+    ################################################################################
+# Stage 8 - ?+GB ###############################################################
+################################################################################
+# Install YOLO with --no-deps to avoid installing opencv from pip, upgrade sympy and install ultralytics dependencies manually
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
+    && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
+    && pip3 install --no-cache-dir --resume-retries 5 numpy torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil
+
+
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
