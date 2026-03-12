@@ -4,15 +4,16 @@
   camera = ENV.fetch('CAMERA', 'true') == 'true'
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
   camera_pitch = ENV.fetch('CAMERA_PITCH', '1.5707').to_f 
-
+  
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   ground_id = ENV.fetch('GROUND_ID', '101')
-
+  
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
   world = ENV.fetch('WORLD', 'impalpable_greyness')
-
+  
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
+  centralized = ENV.fetch('CENTRALIZED', 'false') == 'true'
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   rtf = ENV.fetch('RTF', '1.0').to_f
@@ -112,6 +113,12 @@ windows:
           <% end %>
   <% end %>
         <% if camera %>
+        <% if centralized %>
+        - >
+          /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
+          /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image
+          <%= "#{sim_subnet}.90.#{ground_id}" %> <%=5600 + sitl_instance%> 8
+        <% else %>
         - >
           /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
           /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image
