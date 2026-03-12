@@ -114,6 +114,16 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
+
+################################################################################
+# Stage 5 - ?+GB ###############################################################
+################################################################################
+# Install YOLO with --no-deps to avoid installing opencv from pip, upgrade sympy and install ultralytics dependencies manually
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
+    && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
+    && pip3 install --no-cache-dir --resume-retries 5 numpy torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil
+
 # Add MAVLink 2 C library
 COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
 
