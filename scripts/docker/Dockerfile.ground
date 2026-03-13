@@ -180,6 +180,8 @@ COPY /github_clones/Sistemas /infra_sw/Sistemas
 # Copy folder SARP
 COPY /github_clones/SARP /infra_sw/SARP
 
+RUN pip3 install pymap3d utm numpy==1.26.4
+
 # Final config
 WORKDIR /aas
 COPY ground/ground.yml.erb /aas/ground.yml.erb
