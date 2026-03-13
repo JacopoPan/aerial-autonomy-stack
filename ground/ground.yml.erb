@@ -4,6 +4,11 @@
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
 
+  sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
+  air_subnet = ENV.fetch('AIR_SUBNET', '10.22')
+  sim_id = ENV.fetch('SIM_ID', '100')
+  ground_id = ENV.fetch('GROUND_ID', '101')
+
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
 %>
 
