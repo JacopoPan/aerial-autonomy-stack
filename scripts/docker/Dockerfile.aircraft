@@ -239,8 +239,11 @@ RUN apt-get update && \
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
     && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
-    && pip3 install --no-cache-dir --resume-retries 5 numpy torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil
+    && pip3 install --no-cache-dir --resume-retries 5 torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil pymap3d utm
 
+COPY /MAVKit /libs/MAVKit
+WORKDIR /libs/MAVKit
+RUN pip install -e .
 
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
@@ -262,39 +265,7 @@ RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc
 RUN echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
 
-## Infra de Software Install
-# Install Chorus
-COPY /github_clones/Chorus /infra_sw/Chorus
-WORKDIR /infra_sw/Chorus
-RUN pip install -e .
-
-# Install MAVKit
-COPY /github_clones/MAVKit /infra_sw/MAVKit
-WORKDIR /infra_sw/MAVKit
-RUN pip install -e .
-
-# Install r2p_pds/lib
-COPY /github_clones/RoboChart2Python-PDS /infra_sw/RoboChart2Python-PDS
-WORKDIR /infra_sw/RoboChart2Python-PDS/lib
-RUN pip install -e .
-
-# Install pytransitions
-RUN pip install transitions
-
-# Install libtmux
-RUN pip install libtmux
-
-# Install dearpygui
-RUN pip install dearpygui
-
-# Install tmux
-RUN apt install tmux
-
-# Install Java
-RUN apt install openjdk-11-jdk
-
-# Copy folder Sistemas
-COPY /github_clones/Sistemas /infra_sw/Sistemas
+RUN pip install numpy==1.26.4
 
 # Final config
 WORKDIR /aas
