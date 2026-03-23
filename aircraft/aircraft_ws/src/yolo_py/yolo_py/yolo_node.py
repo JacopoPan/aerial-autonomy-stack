@@ -11,6 +11,7 @@ import threading
 import queue
 import time
 import platform
+from rclpy.clock import Clock, ClockType
 
 from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D, ObjectHypothesis, ObjectHypothesisWithPose
 from sensor_msgs.msg import Image
@@ -19,6 +20,7 @@ from cv_bridge import CvBridge
 
 CONF_THRESH = 0.5
 NMS_THRESH = 0.45 # Non-Maximal Suppression
+system_clock = Clock(clock_type=ClockType.SYSTEM_TIME)
 
 class YoloInferenceNode(Node):
     def __init__(self, headless, hitl, hfov, vfov):
@@ -166,13 +168,14 @@ class YoloInferenceNode(Node):
                 self.get_logger().info("Frame queue is empty, is the stream running?")
                 continue
             
+            time_start = system_clock.now()
             # Inference
             with Profiler("do_yolo (includes ONNX Runtime)"):
                 boxes, confidences, class_ids = self.do_yolo(frame)
 
             # Publish detections
             if len(boxes) > 0:
-                self.publish_detections(frame.shape, boxes, confidences, class_ids)
+                self.publish_detections(frame.shape, boxes, confidences, class_ids, time_start)
 
             # Visualize
             if not self.headless:
@@ -266,7 +269,7 @@ class YoloInferenceNode(Node):
         
         return boxes, confidences, class_ids
 
-    def publish_detections(self, frame_shape, boxes, confidences, class_ids):
+    def publish_detections(self, frame_shape, boxes, confidences, class_ids, time_start):
         h, w = frame_shape[:2]
         w_half = w * 0.5
         h_half = h * 0.5
@@ -303,6 +306,7 @@ class YoloInferenceNode(Node):
 
             detection = Detection2D()
             detection.bbox = bbox
+            detection.header.stamp = time_start.to_msg() # Use the timestamp from the start of processing for all detections in this batch
             detection.id = hypothesis.class_id
             detection.results.append(result)
             
