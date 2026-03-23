@@ -11,6 +11,8 @@
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
   world = ENV.fetch('WORLD', 'impalpable_greyness')
+  x_offset = ENV.fetch('X_OFFSET', 0).to_i
+  y_offset = ENV.fetch('Y_OFFSET', 0).to_i
   
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
   centralized = ENV.fetch('CENTRALIZED', 'false') == 'true'
@@ -60,7 +62,7 @@ windows:
           sed -i 's|<real_time_factor>1.0</real_time_factor>|<%= rtf_string %>|' /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           <% if autopilot == 'ardupilot' %>
           /aas/simulation_resources/aircraft_models/_create_ardupilot_models.sh <%= num_quads %> <%= num_vtols %> <%= camera_pitch %> &&
-          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf &&
+          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf <%= x_offset %> <%= y_offset %> &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
           GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/aas/simulation_resources/aircraft_models:/aas/simulation_resources/simulation_worlds 
@@ -106,12 +108,12 @@ windows:
           --add-param-file=/aas/simulation_resources/aircraft_models/<%= model_name %>/ardupilot-4.6.params
           -l $(python3 /aas/simulation_resources/patches/extract_spherical_coords.py /aas/simulation_resources/simulation_worlds/<%= world %>.sdf)
           <% if centralized %>
-          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14550 + sitl_instance %>
+          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14570 + drone_id %>
           <% else %>
           --out=udp:<%= "#{sim_subnet}.90.#{drone_id}" %>:14570 
           <% end %>
           <% if gnd_container %>
-          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14550 + sitl_instance %>
+          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14550 + drone_id%>
           <% else %>
           --out=udp:127.0.0.1:<%= 14550 + sitl_instance %>
           <% end %>
