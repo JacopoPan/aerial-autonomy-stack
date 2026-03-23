@@ -19,6 +19,8 @@ NUM_QUADS="${NUM_QUADS:-2}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 WORLD="${WORLD:-apple_orchard}" # Options: impalpable_greyness (default), apple_orchard, shibuya_crossing, swiss_town
 CENTRALIZED="${CENTRALIZED:-false}" # Options: true, false (default) - If true, all cameras will stream to the ground container. If false, each camera will stream to its own IP (useful for testing network conditions and scalability)
+X_OFFSET="${X_OFFSET:-0}" # X offset for drone placement in the world (default = 0)
+Y_OFFSET="${Y_OFFSET:-0}" # Y offset for drone placement in the world (default = 0)
 #
 DEV="${DEV:false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
@@ -127,7 +129,8 @@ DOCKER_CMD="docker run -it --rm \
   --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env WORLD=$WORLD \
   --env SIMULATED_TIME=true --env RTF=$RTF --env START_AS_PAUSED=$START_AS_PAUSED \
   --env SIM_SUBNET=$SIM_SUBNET --env GROUND_ID=$GROUND_ID \
-  --env GND_CONTAINER=$GND_CONTAINER --env CENTRALIZED=$CENTRALIZED\
+  --env GND_CONTAINER=$GND_CONTAINER --env CENTRALIZED=$CENTRALIZED \
+  --env X_OFFSET=$X_OFFSET --env Y_OFFSET=$Y_OFFSET \
   --env ROS_DOMAIN_ID=$SIM_ID \
   --privileged \
   --name $SIM_CONT_NAME"
