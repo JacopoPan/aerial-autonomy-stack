@@ -199,7 +199,7 @@ cd aerial-autonomy-stack/scripts/
   </a>
 </div>
 
-## Simulation
+## Simulation (TODO: update this section showing how to run in centralized mode and execute missions from python scripts)
 
 ![workspace](https://github.com/user-attachments/assets/ad909fcc-69de-44ac-84b3-c5bc7a1c896f)
 
@@ -231,32 +231,9 @@ python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
 ```
 
 > [!TIP]
-> <details>
-> <summary>Tip 1: use <b>ROS2 drone motion primitives</b> from CLI <i>(click to expand)</i></summary>
->
-> ```sh
-> # Takeoff action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0, vtol_transition_heading: 330.0, vtol_loiter_nord: 200.0, vtol_loiter_east: 100.0, vtol_loiter_alt: 120.0}'"
->
-> # Land (at home) action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
->
-> # Orbit action (quads and VTOLs)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
->
-> # Reposition service (quads only)
-> ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
->
-> # Offboard action (PX4 quads and VTOLs offboard_setpoint_type: attitude = 0, rates = 1, trajectory = 2; ArduPilot quads offboard_setpoint_type: velocity = 3, acceleration = 4) 
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{offboard_setpoint_type: 1, max_duration_sec: 5.0}'"
->
-> # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
-> ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
-> ```
-To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_resources/missions/test_mission.yaml)
 > </details>
 > <details>
-> <summary>Tip 2: use <b>Tmux shortcuts</b> to navigate windows and panes in Xterm <i>(click to expand)</i></summary>
+> <summary>Tip 1: use <b>Tmux shortcuts</b> to navigate windows and panes in Xterm <i>(click to expand)</i></summary>
 >
 > ```sh
 > Ctrl + b, then n, p                   # Move between Tmux windows 
@@ -275,7 +252,7 @@ To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_r
 > ```
 > </details>
 > <details>
-> <summary>Tip 3: <b>develop within running containers</b> <i>(click to expand)</i></summary>
+> <summary>Tip 2: <b>develop within running containers</b> <i>(click to expand)</i></summary>
 > 
 > Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders `[aircraft|ground|simulation]_resources`, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
 > 
@@ -310,7 +287,7 @@ To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_r
 > To end the simulation, in each terminal detach Tmux with `Ctrl + b`, then `d`; kill all lingering processes with `tmux kill-server && pkill -f gz`
 > </details>
 > <details>
-> <summary>Tip 4: periodically run <b>Docker cleanups</b> <i>(click to expand)</i></summary>
+> <summary>Tip 3: periodically run <b>Docker cleanups</b> <i>(click to expand)</i></summary>
 >
 > ```sh
 > docker ps -a                          # List containers
@@ -338,132 +315,6 @@ To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_r
 > / *(ii)* `impalpable_greyness`, an empty world with simple shapes
 > / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
-
-## Gymnasium Environment
-
-Using a Python `venv` or a [`conda`](https://docs.conda.io/projects/conda/en/stable/user-guide/install/linux.html) environment is optional but recommended:
-```sh
-wget https://repo.anaconda.com/archive/Anaconda3-2025.06-0-Linux-x86_64.sh # Or a newer version in https://repo.anaconda.com/archive/
-bash Anaconda3-2025.06-0-Linux-x86_64.sh
-conda create -n aas python=3.13
-conda activate aas
-```
-
-Install the `aas-gym` package (after completing the steps in ["Installation"](#installation)):
-```sh
-conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/aas-gym/
-pip3 install -e .
-```
-
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aas-gym-pip-install.yml/badge.svg" alt="aircraft-image arm64">
-  </a>
-</div>
-
-Use with:
-```sh
-conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/scripts
-python3 gym_run.py --mode step                        # Manually step AAS @1Hz
-python3 gym_run.py --mode speedup                     # Speed-up test @50Hz (10x RTF)
-python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz (>20x RTF)
-```
-
-<!--
-
-TODO:
-python3 gym_run.py --mode learn                       # Train and test a PPO agent
-
-Debug with:
-docker exec -it simulation-container-inst0 tmux attach
-docker exec -it aircraft-container-inst0_1 tmux attach
-
-Clean up with:
-docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
-
--->
-
-## Jetson Deployment
-
-> AAS is tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB
-> 
-> Read [`SETUP_AVIONICS.md`](/supplementary/SETUP_AVIONICS.md) to setup the requirements on the Jetson and configure the Pixhawk
-
-```sh
-sudo apt update && sudo apt install -y git git-lfs
-
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/scripts/
-
-./deploy_build.sh                                                                             # Build for arm64, on Jetson Orin NX the first build takes ~1h, mostly to build onnxruntime-gpu with TensorRT support from source
-```
-
-<div align="right">
-  <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml">
-    <img src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64">
-  </a>
-</div>
-
-Finally, start the `aircraft-image` on Jetson Orin NX
-
-```sh
-cd aerial-autonomy-stack/scripts/
-DRONE_TYPE=quad AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false ./deploy_run.sh
-# Note: the 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
-```
-
-<details>
-<summary><b>Advanced Topic: HITL Simulation</b> <i>(click to expand)</i></summary>
-
-> **Note:** currently, HITL covers the Jetson compute and the inter-vehicle network, support for Pixhawk HITL is WIP. 
-> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
-
-Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
-
-- One simulation computer, with IP `[SIM_SUBNET].90.100`
-- One ground computer, with IP `[SIM_SUBNET].90.101`
-- `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
-
-> **Optionally**, set up a second LAN :`AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
-> 
-> - One ground computer, with IP `[AIR_SUBNET].90.101`
-> - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
-
-First, start all aircraft containers, one on each Jetson (e.g. *via* SSH):
-```sh
-# On the Jetson with IPs ending in 90.1
-HITL=true DRONE_ID=1 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
-```
-
-```sh
-# On the Jetson with IPs ending in 90.2
-HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh
-```
-
-Then, start the simulation:
-```sh
-# On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./sim_run.sh
-```
-
-Finally, start QGC and the Zenoh bridge:
-```sh
-# On the computer with IPs ending in 90.101
-HITL=true GROUND=true HEADLESS=false NUM_QUADS=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh
-```
-
-> **Note:** running only the first 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge to the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
-
-Once done, detach Tmux (and remove the containers) with `Ctrl + b`, then `d`
-
-</details>
-
----
-> You've done a man's job, sir. I guess you're through, huh?
-
-<!-- 
 
 ## License 
 
