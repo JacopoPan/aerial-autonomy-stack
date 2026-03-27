@@ -180,7 +180,7 @@ aerial-autonomy-stack
 ```sh
 sudo apt update && sudo apt install -y git git-lfs xterm xfonts-base && git lfs install
 
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
+git clone https://github.com/droneswarmufpe/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/scripts/
 
 ./sim_build.sh
