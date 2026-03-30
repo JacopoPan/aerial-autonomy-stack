@@ -123,10 +123,6 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
     && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
     && pip3 install --no-cache-dir --resume-retries 5 torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil pymap3d utm
-    
-COPY /MAVKit /libs/MAVKit
-WORKDIR /libs/MAVKit
-RUN pip install -e .
 
 # Add MAVLink 2 C library
 COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
@@ -146,6 +142,34 @@ COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QG
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash
+
+SHELL ["/bin/bash", "-c"]
+    
+
+## Infra de Software Install
+COPY github_clones/MAVKit /libs/MAVKit
+WORKDIR /libs/MAVKit
+RUN pip install -e .
+
+COPY github_clones/Chorus /libs/Chorus
+WORKDIR /libs/Chorus
+#RUN pip install -e .
+RUN source /opt/ros/humble/setup.bash && pip install -e .
+
+# Install pytransitions
+RUN pip install transitions
+
+# Install libtmux
+RUN pip install libtmux
+
+# Install dearpygui
+RUN pip install dearpygui
+
+# Install ZeroMQ
+RUN pip install zmq
+
+# Install tmux
+RUN apt install tmux
 
 RUN pip install numpy==1.26.4
 

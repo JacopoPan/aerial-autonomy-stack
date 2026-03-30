@@ -15,17 +15,17 @@ AIR_SUBNET="${AIR_SUBNET:-10.22}" # Inter-vehicle subnet (default = 10.22) Note:
 SIM_ID="${SIM_ID:-100}" # Last byte of the simulation container IP (default = 100)
 GROUND_ID="${GROUND_ID:-101}" # Last byte of the simulation container IP (default = 101)
 #
-NUM_QUADS="${NUM_QUADS:-2}" # Number of quadcopters (default = 1)
+NUM_QUADS="${NUM_QUADS:-3}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
-WORLD="${WORLD:-apple_orchard}" # Options: impalpable_greyness (default), apple_orchard, shibuya_crossing, swiss_town
-CENTRALIZED="${CENTRALIZED:-false}" # Options: true, false (default) - If true, all cameras will stream to the ground container. If false, each camera will stream to its own IP (useful for testing network conditions and scalability)
-X_OFFSET="${X_OFFSET:-0}" # X offset for drone placement in the world (default = 0)
-Y_OFFSET="${Y_OFFSET:-0}" # Y offset for drone placement in the world (default = 0)
+WORLD="${WORLD:-esefex_fbx}" # Options: impalpable_greyness (default), apple_orchard, shibuya_crossing, swiss_town
+CENTRALIZED="${CENTRALIZED:-true}" # Options: true, false (default) - If true, all cameras will stream to the ground container. If false, each camera will stream to its own IP (useful for testing network conditions and scalability)
+X_OFFSET="${X_OFFSET:-5}" # X offset for drone placement in the world (default = 0)
+Y_OFFSET="${Y_OFFSET:--110}" # Y offset for drone placement in the world (default = 0)
 #
 DEV="${DEV:false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
-RTF="${RTF:-1.0}" # Real-time factor (default = 1.0), set to <=0.0 for as fast as possible execution
+RTF="${RTF:-5.0}" # Real-time factor (default = 1.0), set to <=0.0 for as fast as possible execution
 START_AS_PAUSED="${START_AS_PAUSED:-false}" # Options: true, false (default)
 INSTANCE="${INSTANCE:-0}" # Integer ID to make docker network/container names unique as well as offsetting the second byte of the subnets (default = 0)
 # Set unique subnets and container/network names based on INSTANCE
@@ -107,7 +107,7 @@ calculate_terminal_position() {
 }
 
 # Setup terminal dimensions and enable Shift+Ctrl+c, Shift+Ctrl+v copy-paste in Xterm
-TERM_COLS=100
+TERM_COLS=160
 TERM_ROWS=32
 FONT_SIZE=10
 XTERM_CONFIG_ARGS=(
@@ -154,7 +154,7 @@ if [[ "$HITL" == "false" ]]; then
     sleep 1.0 # Limit resource usage
     # Launch the ground container
     DOCKER_CMD="docker run -it --rm \
-      --volume ${PARENT_DIR}/github_clones/Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
+      --volume ${PARENT_DIR}/../Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
       --volume ${PARENT_DIR}/ground/ground_resources/:/aas/ground_resources/ \
       --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
@@ -187,7 +187,7 @@ if [[ "$HITL" == "false" ]]; then
       sleep 1.0 # Limit resource usage
       local NAME_AIRCRAFT_CNT="aircraft-container-inst${INSTANCE}_${DRONE_ID}"
       DOCKER_CMD="docker run -it --rm \
-        --volume ${PARENT_DIR}/github_clones/Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
+        --volume ${PARENT_DIR}/../Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
         --volume ${PARENT_DIR}/aircraft/aircraft_resources/:/aas/aircraft_resources/ \
         --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
         --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \

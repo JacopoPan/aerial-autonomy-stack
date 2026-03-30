@@ -241,7 +241,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
     && pip3 install --no-cache-dir --resume-retries 5 torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil pymap3d utm
 
-COPY /MAVKit /libs/MAVKit
+COPY github_clones/MAVKit /libs/MAVKit
 WORKDIR /libs/MAVKit
 RUN pip install -e .
 
