@@ -154,6 +154,7 @@ if [[ "$HITL" == "false" ]]; then
     sleep 1.0 # Limit resource usage
     # Launch the ground container
     DOCKER_CMD="docker run -it --rm \
+      --ipc=host \
       --volume ${PARENT_DIR}/github_clones/Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
       --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
@@ -186,6 +187,7 @@ if [[ "$HITL" == "false" ]]; then
       sleep 1.0 # Limit resource usage
       local NAME_AIRCRAFT_CNT="aircraft-container-inst${INSTANCE}_${DRONE_ID}"
       DOCKER_CMD="docker run -it --rm \
+        --ipc=host \
         --volume ${PARENT_DIR}/github_clones/Projeto-Enxame-Drones:/aas/Projeto-Enxame-Drones \
         --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
         --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
@@ -212,7 +214,7 @@ if [[ "$HITL" == "false" ]]; then
   # Launch the Quad containers
   launch_aircraft_containers "quad" $NUM_QUADS
   # Launch the VTOL containers
-  launch_aircraft_containers "vtol" $NUM_VTOLS
+  launch_aircraft_containers "vtol" $NUM_VTOLS  
 
   if [[ "$GND_CONTAINER" == "true" ]]; then
     sleep 2.0 # Once all containers are up, connect ground and aircraft containers to the air network
