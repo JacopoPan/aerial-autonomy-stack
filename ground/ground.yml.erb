@@ -19,12 +19,7 @@ windows:
   - ground_system:
       layout: even-horizontal
       panes:
-        - clear && cd /aas/Projeto-Enxame-Drones
-        - clear && cd /aas/Projeto-Enxame-Drones && python3 pubsub_broker.py
-        - clear && cd /aas/Projeto-Enxame-Drones && python3 04_localiza_alvo.py
-        - clear && cd /aas/Projeto-Enxame-Drones && sleep 5 && DRONE_ID=1 python3 02_ataque_do_alvo.py
-        - clear && cd /aas/Projeto-Enxame-Drones && sleep 5 && DRONE_ID=2 python3 02_ataque_do_alvo.py
-        - clear && cd /aas/Projeto-Enxame-Drones && sleep 5 && DRONE_ID=3 python3 02_ataque_do_alvo.py
+        - clear && echo "So nice to have you with us, this is the ground container."
 
   - zenoh_and_qgc:
       layout: even-horizontal
