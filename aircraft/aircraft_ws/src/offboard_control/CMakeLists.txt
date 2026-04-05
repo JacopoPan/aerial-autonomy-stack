@@ -22,7 +22,7 @@ set(CMAKE_MODULE_PATH "/usr/share/cmake/geographiclib" ${CMAKE_MODULE_PATH})
 find_package(GeographicLib REQUIRED)
 
 add_executable(px4_offboard src/px4_offboard.cpp)
-target_link_libraries(px4_offboard Geographic)
+target_link_libraries(px4_offboard ${GeographicLib_LIBRARIES})
 ament_target_dependencies(px4_offboard 
                           rclcpp
                           rclcpp_action
@@ -36,7 +36,7 @@ ament_target_dependencies(px4_offboard
                           )
 
 add_executable(ardupilot_guided src/ardupilot_guided.cpp)
-target_link_libraries(ardupilot_guided Geographic)
+target_link_libraries(ardupilot_guided ${GeographicLib_LIBRARIES})
 ament_target_dependencies(ardupilot_guided
                           rclcpp
                           rclcpp_action

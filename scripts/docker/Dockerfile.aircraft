@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu22.04 AS base_amd64
+FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu24.04 AS base_amd64
 FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
 ################################################################################
 # Stage 1 - 8GB ################################################################
@@ -18,8 +18,8 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ROS2 Humble
-# Based on https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+# Install ROS2 Jazzy
+# Based on https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 RUN apt update \
     && apt install -y --no-install-recommends \
         locales \
@@ -38,12 +38,12 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
     $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 RUN apt update \
     && apt install -y --no-install-recommends \
-        ros-humble-desktop ros-dev-tools \
-        ros-humble-bondcpp ros-humble-ament-cmake-clang-format \
-        ros-humble-vision-msgs \
+        ros-jazzy-desktop ros-dev-tools \
+        ros-jazzy-bondcpp ros-jazzy-ament-cmake-clang-format \
+        ros-jazzy-vision-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc
 RUN rosdep init
 
 ################################################################################
@@ -55,9 +55,9 @@ FROM ros2-image AS ros2-px4msgs-image
 COPY /github_clones/px4_msgs /aas/github_ws/src/px4_msgs
 WORKDIR /aas/github_ws
 RUN rosdep update
-RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y
+RUN rosdep install --from-paths src --ignore-src --rosdistro jazzy -y
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install"
 
 ################################################################################
 # Stage 3 - 8.5GB ##############################################################
@@ -82,10 +82,10 @@ FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
 # MAVROS
 RUN apt-get update && \
-    apt-get install -y ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
+    apt-get install -y ros-jazzy-mavros ros-jazzy-mavros-extras ros-jazzy-mavros-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
+RUN /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################
@@ -96,8 +96,7 @@ FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 # Install YOLO and ONNX in virtual environment /yolo-env/
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
 RUN python3 -m venv /yolo-env
-RUN /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
+RUN /yolo-env/bin/pip3 install --no-cache-dir --retries 5 ultralytics onnx
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 
 # Test ONNX export (WARNING: removing this step from this stage can break px4_msgs build in later stages)
@@ -116,8 +115,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # NOTE: we want system Python's OpenCV to have GStreamer support
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2"
+RUN pip3 install --no-cache-dir --retries 5 "numpy<2" --break-system-packages
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
 # Versus $ /yolo-env/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
 
@@ -126,8 +124,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
+RUN pip3 install --no-cache-dir --retries 5 onnxruntime-gpu --break-system-packages
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
@@ -176,7 +173,7 @@ WORKDIR /aas/github_ws/
 RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.xml \
     && cp -rf src/livox_ros_driver2/launch_ROS2 src/livox_ros_driver2/launch
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DJAZZY_ROS=jazzy -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
 # Stage 6 - 16GB ###############################################################
@@ -184,15 +181,14 @@ RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install
 FROM image-with-onnxruntime-gpu_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
 # Install KISS-ICP
-RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
+RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24" --break-system-packages
 COPY /github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Add pymavlink for debugging and testing
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial --break-system-packages
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install Zenoh
@@ -220,8 +216,8 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
 
 # Install PlotJuggler
 RUN apt-get update && \
-    apt-get install -y ros-humble-plotjuggler \
-    ros-humble-plotjuggler-ros \
+    apt-get install -y ros-jazzy-plotjuggler \
+    ros-jazzy-plotjuggler-ros \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -230,14 +226,14 @@ COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
 WORKDIR /aas/aircraft_ws
 RUN rosdep update
-RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y --skip-keys "px4_msgs"
+RUN rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "px4_msgs"
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY aircraft/aircraft_resources/ /aas/aircraft_resources
 COPY aircraft/aircraft_resources/patches/kiss_icp.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz
-COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/humble/share/mavros/launch/apm_pluginlists.yaml
+COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
 RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/cancellable_action
 RUN chmod +x /aas/aircraft_resources/patches/cancellable_action.py
 
@@ -247,7 +243,7 @@ COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/air
 # Source the workspaces
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc
 RUN echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

@@ -1,7 +1,7 @@
 ################################################################################
 # Stage 1 - 8GB ################################################################
 ################################################################################
-FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu22.04 AS ros2-image
+FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu24.04 AS ros2-image
 
 # Tell apt (and other Debian tools) not to prompt for user input during package installs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,8 +16,8 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ROS2 Humble
-# Based on https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+# Install ROS2 Jazzy
+# Based on https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 RUN apt update \
     && apt install -y --no-install-recommends \
         locales \
@@ -36,12 +36,12 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
     $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 RUN apt update \
     && apt install -y --no-install-recommends \
-        ros-humble-desktop ros-dev-tools \
-        ros-humble-bondcpp ros-humble-ament-cmake-clang-format \
-        ros-humble-vision-msgs \
+        ros-jazzy-desktop ros-dev-tools \
+        ros-jazzy-bondcpp ros-jazzy-ament-cmake-clang-format \
+        ros-jazzy-vision-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc
 RUN rosdep init
 
 ################################################################################
@@ -89,8 +89,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial mavproxy future --break-system-packages
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 ################################################################################
@@ -125,9 +124,9 @@ COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
 COPY ground/ground_ws/src /aas/ground_ws/src
 WORKDIR /aas/ground_ws
 RUN rosdep update
-RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y
+RUN rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY ground/ground_resources/ /aas/ground_resources
@@ -135,7 +134,7 @@ COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QG
 
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/ground_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

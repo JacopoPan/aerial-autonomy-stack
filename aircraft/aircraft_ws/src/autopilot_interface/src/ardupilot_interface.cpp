@@ -92,10 +92,10 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     // Services
     set_speed_service_ = this->create_service<autopilot_interface_msgs::srv::SetSpeed>(
         "set_speed", std::bind(&ArdupilotInterface::set_speed_callback, this, std::placeholders::_1, std::placeholders::_2),
-        rmw_qos_profile_services_default, callback_group_service_);
+        rclcpp::ServicesQoS(), callback_group_service_);
     set_reposition_service_ = this->create_service<autopilot_interface_msgs::srv::SetReposition>(
         "set_reposition", std::bind(&ArdupilotInterface::set_reposition_callback, this, std::placeholders::_1, std::placeholders::_2),
-        rmw_qos_profile_services_default, callback_group_service_);
+        rclcpp::ServicesQoS(), callback_group_service_);
 
     // Actions
     land_action_server_ = rclcpp_action::create_server<autopilot_interface_msgs::action::Land>(this, "land_action",

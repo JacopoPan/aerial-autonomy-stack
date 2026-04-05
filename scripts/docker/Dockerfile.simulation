@@ -1,7 +1,7 @@
 ################################################################################
 # Stage 1 - 8GB ################################################################
 ################################################################################
-FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu22.04 AS ros2-image
+FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu24.04 AS ros2-image
 
 # Tell apt (and other Debian tools) not to prompt for user input during package installs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -16,8 +16,8 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ROS2 Humble
-# Based on https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+# Install ROS2 Jazzy
+# Based on https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 RUN apt update \
     && apt install -y --no-install-recommends \
         locales \
@@ -36,12 +36,12 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
     $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 RUN apt update \
     && apt install -y --no-install-recommends \
-        ros-humble-desktop ros-dev-tools \
-        ros-humble-bondcpp ros-humble-ament-cmake-clang-format \
-        ros-humble-vision-msgs \
+        ros-jazzy-desktop ros-dev-tools \
+        ros-jazzy-bondcpp ros-jazzy-ament-cmake-clang-format \
+        ros-jazzy-vision-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
+RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc
 RUN rosdep init
 
 ################################################################################
@@ -91,7 +91,8 @@ RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyri
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
 RUN apt update \
     && apt install -y --no-install-recommends \
-        gz-harmonic ros-humble-ros-gzharmonic \
+        gz-harmonic ros-jazzy-ros-gz \
+        ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-sim \
         libgz-transport13-* libgz-msgs10-dev \
         python3-gz-transport13 python3-gz-msgs10 \
     && apt clean \
@@ -137,8 +138,7 @@ RUN apt update \
         libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" mavproxy
+RUN pip3 install --no-cache-dir --retries 5 "numpy<2" mavproxy --break-system-packages
 ENV GZ_VERSION=harmonic
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -197,8 +197,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # Add pymavlink to emulate the ground system using telemetry data
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial --break-system-packages
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 ################################################################################
@@ -221,24 +220,22 @@ RUN apt-get update && \
 COPY /github_clones/flight_review /aas/github_apps/flight_review
 WORKDIR /aas/github_apps/flight_review/app
 RUN python3 -m venv /px4fr-env
-RUN /px4fr-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /px4fr-env/bin/pip3 install --no-cache-dir --resume-retries 5 -r requirements.txt
+RUN /px4fr-env/bin/pip3 install --no-cache-dir --retries 5 -r requirements.txt
 
 # Install ZeroMQ
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libzmq3-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pyzmq
+RUN pip3 install --no-cache-dir --retries 5 pyzmq --break-system-packages
 
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
 RUN rosdep update
-RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y
+RUN rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
@@ -260,7 +257,7 @@ RUN ruby _create_sdfs_using_sensor_config.rb
 
 # Source the workspaces
 RUN echo "source /aas/simulation_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/simulation_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/simulation_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas
