@@ -59,7 +59,7 @@ void on_frame(const gz::msgs::Image &msg) {
 }
 
 bool check_nvidia_encoder() {
-    GstElementFactory *factory = gst_element_factory_find("nvh264enc");
+    GstElementFactory *factory = gst_element_factory_find("nvh264enc"); // TODO: update check
     if (factory) {
         gst_object_unref(factory);
         return true;
