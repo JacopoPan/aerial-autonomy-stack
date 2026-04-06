@@ -1,7 +1,7 @@
 ################################################################################
 # Stage 1 - 8GB ################################################################
 ################################################################################
-FROM nvcr.io/nvidia/cuda:13.2.0-cudnn-runtime-ubuntu24.04 AS ros2-image
+FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu24.04 AS ros2-image
 
 # Tell apt (and other Debian tools) not to prompt for user input during package installs
 ENV DEBIAN_FRONTEND=noninteractive
