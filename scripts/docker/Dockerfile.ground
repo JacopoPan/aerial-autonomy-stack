@@ -114,6 +114,18 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install mavlink-router 
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        git meson ninja-build pkg-config gcc g++ systemd \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+COPY /github_clones/mavlink-router /aas/github_apps/mavlink-router
+WORKDIR /aas/github_apps/mavlink-router
+RUN meson setup build . --buildtype=release \
+    && ninja -C build \
+    && ninja -C build install
+
 
 ################################################################################
 # Stage 5 - ?+GB ###############################################################
