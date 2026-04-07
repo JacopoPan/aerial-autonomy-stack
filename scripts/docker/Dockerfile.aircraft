@@ -215,14 +215,15 @@ FROM ros2-mavros-yolo-kissicp-zenoh-image AS aircraft-dev-image
 
 # Save the YOLO model weights (ONNX, Opset 12) and class names
 WORKDIR /aas/yolo
+COPY aircraft/aircraft_resources/models/yolov11-ime-target.pt /aas/yolo/yolov11-ime-target.pt
 # Model options (from fastest to most accurate, <10MB to >100MB): yolov8n, yolov8s, yolov8m, yolov8l, yolov8x
-# Export standard 640 static (for Jetson deployment) as yolov8n_640.onnx and smaller 320 static (for SITL/HITL) as yolov8n_320.onnx
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt').export(format='onnx', opset=12, imgsz=640)" && \
-    mv yolov8n.onnx yolov8n_640.onnx && \
-    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt').export(format='onnx', opset=12, imgsz=320)" && \
-    mv yolov8n.onnx yolov8n_320.onnx && \
-    /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolov8n.pt').names))" | grep '{' > coco.json && \
-    rm yolov8n.pt
+# Export standard 640 static (for Jetson deployment) as yolov11_640.onnx and smaller 320 static (for SITL/HITL) as yolov11_320.onnx
+RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolov11-ime-target.pt').export(format='onnx', opset=12, imgsz=640)" && \
+    mv yolov11-ime-target.onnx yolov11_640.onnx && \
+    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolov11-ime-target.pt').export(format='onnx', opset=12, imgsz=320)" && \
+    mv yolov11-ime-target.onnx yolov11_320.onnx && \
+    /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolov11-ime-target.pt').names))" | grep '{' > classes.json && \
+    rm yolov11-ime-target.pt
 
 # Install PlotJuggler
 RUN apt-get update && \
@@ -230,6 +231,28 @@ RUN apt-get update && \
     ros-humble-plotjuggler-ros \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
+
+    ################################################################################
+# Stage 8 - ?+GB ###############################################################
+################################################################################
+# Install YOLO with --no-deps to avoid installing opencv from pip, upgrade sympy and install ultralytics dependencies manually
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
+    && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
+    && pip3 install --no-cache-dir --resume-retries 5 torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil
+
+## Infra de Software Install
+COPY github_clones/MAVKit /libs/MAVKit
+WORKDIR /libs/MAVKit
+RUN pip install -e .
+
+COPY github_clones/Chorus /libs/Chorus
+WORKDIR /libs/Chorus
+#RUN pip install -e .
+RUN bash -c 'source /opt/ros/humble/setup.bash && pip install -e .'
+
+# Install dependencies
+RUN pip install numpy==1.26.4 transitions libtmux dearpygui zmq pymap3d utm cartopy
 
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
@@ -245,45 +268,10 @@ COPY aircraft/aircraft_resources/ /aas/aircraft_resources
 COPY aircraft/aircraft_resources/patches/kiss_icp.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz
 COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/humble/share/mavros/launch/apm_pluginlists.yaml
 
-
 # Source the workspaces
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc
 RUN echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
-
-## Infra de Software Install
-# Install Chorus
-COPY /github_clones/Chorus /infra_sw/Chorus
-WORKDIR /infra_sw/Chorus
-RUN pip install -e .
-
-# Install MAVKit
-COPY /github_clones/MAVKit /infra_sw/MAVKit
-WORKDIR /infra_sw/MAVKit
-RUN pip install -e .
-
-# Install r2p_pds/lib
-COPY /github_clones/RoboChart2Python-PDS /infra_sw/RoboChart2Python-PDS
-WORKDIR /infra_sw/RoboChart2Python-PDS/lib
-RUN pip install -e .
-
-# Install pytransitions
-RUN pip install transitions
-
-# Install libtmux
-RUN pip install libtmux
-
-# Install dearpygui
-RUN pip install dearpygui
-
-# Install tmux
-RUN apt install tmux
-
-# Install Java
-RUN apt install openjdk-11-jdk
-
-# Copy folder Sistemas
-COPY /github_clones/Sistemas /infra_sw/Sistemas
 
 # Final config
 WORKDIR /aas

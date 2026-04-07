@@ -11,6 +11,7 @@ import threading
 import queue
 import time
 import platform
+from rclpy.clock import Clock, ClockType
 
 from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D, ObjectHypothesis, ObjectHypothesisWithPose
 from sensor_msgs.msg import Image
@@ -19,6 +20,7 @@ from cv_bridge import CvBridge
 
 CONF_THRESH = 0.5
 NMS_THRESH = 0.45 # Non-Maximal Suppression
+system_clock = Clock(clock_type=ClockType.SYSTEM_TIME)
 
 class YoloInferenceNode(Node):
     def __init__(self, headless, hitl, hfov, vfov):
@@ -30,7 +32,7 @@ class YoloInferenceNode(Node):
         self.architecture = platform.machine()
         
         # Load classes
-        names_file = "/aas/yolo/coco.json"
+        names_file = "/aas/yolo/classes.json"
         with open(names_file, "r") as f:
             self.classes = {int(k): v for k, v in json.load(f).items()}
         colors_rgba = plt.cm.hsv(np.linspace(0, 1, len(self.classes)))
@@ -39,12 +41,12 @@ class YoloInferenceNode(Node):
         # Load model and runtime
         # Options, from fastest to most accurate, <10MB to >100MB: yolov8n, yolov8s, yolov8m, yolov8l, yolov8x, export in Dockerfile.aircraft
         if self.architecture == 'x86_64':
-            model_path = "/aas/yolo/yolov8n_320.onnx" # Simulated camera in sensor_camera/model.sdf is 320x240
+            model_path = "/aas/yolo/yolov11_320.onnx" # Simulated camera in sensor_camera/model.sdf is 320x240
             self.input_size = 320 # YOLOv8 input size
             print("Loading CUDAExecutionProvider on AMD64 (x86) architecture.")
             self.session = ort.InferenceSession(model_path, providers=["CUDAExecutionProvider"]) # For simulation
         elif self.architecture == 'aarch64':
-            model_path = "/aas/yolo/yolov8n_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLOv8 (this is slightly wasteful when self.hitl = True)
+            model_path = "/aas/yolo/yolov11_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLOv8 (this is slightly wasteful when self.hitl = True)
             self.input_size = 640 # YOLOv8 input size
             print("Loading (with cache) TensorrtExecutionProvider on ARM64 architecture (Jetson).") # The first cache built takes ~10'
             cache_path = "/tensorrt_cache" # Mounted as volume by main_deploy.sh
@@ -166,13 +168,14 @@ class YoloInferenceNode(Node):
                 self.get_logger().info("Frame queue is empty, is the stream running?")
                 continue
             
+            time_start = system_clock.now()
             # Inference
             with Profiler("do_yolo (includes ONNX Runtime)"):
                 boxes, confidences, class_ids = self.do_yolo(frame)
 
             # Publish detections
             if len(boxes) > 0:
-                self.publish_detections(frame.shape, boxes, confidences, class_ids)
+                self.publish_detections(frame.shape, boxes, confidences, class_ids, time_start)
 
             # Visualize
             if not self.headless:
@@ -266,7 +269,7 @@ class YoloInferenceNode(Node):
         
         return boxes, confidences, class_ids
 
-    def publish_detections(self, frame_shape, boxes, confidences, class_ids):
+    def publish_detections(self, frame_shape, boxes, confidences, class_ids, time_start):
         h, w = frame_shape[:2]
         w_half = w * 0.5
         h_half = h * 0.5
@@ -303,6 +306,7 @@ class YoloInferenceNode(Node):
 
             detection = Detection2D()
             detection.bbox = bbox
+            detection.header.stamp = time_start.to_msg() # Use the timestamp from the start of processing for all detections in this batch
             detection.id = hypothesis.class_id
             detection.results.append(result)
             

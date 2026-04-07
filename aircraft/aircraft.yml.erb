@@ -14,6 +14,7 @@
 
   hitl = ENV.fetch('HITL', 'false') == 'true'
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
+  centralized = ENV.fetch('CENTRALIZED', 'false') == 'true'
 
   record_rosbag = ENV.fetch('RECORD_ROSBAG', 'false') == 'true'
 
@@ -25,7 +26,12 @@
 name: drone
 
 windows:
-
+  <% if centralized %>
+  - ap_interface:
+      layout: even-horizontal
+      panes:
+        - clear && echo "Running in centralized mode, no processes are running in the aircraft container."
+  <% else %>
   - ap_interface:
       layout: even-horizontal
       panes:
@@ -77,11 +83,11 @@ windows:
       panes:
         - >
           <% if simulated_time %>
-          mavlink-routerd -t 0 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14572 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14571 <%= "#{sim_subnet}.90.#{drone_id}" %>:14570
+          mavlink-routerd -t 0 -e 127.0.0.1:14573 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14572 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14571 <%= "#{sim_subnet}.90.#{drone_id}" %>:14570
           <% else %>
-          mavlink-routerd -t 0 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14572 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14571 /dev/ttyACM0:57600
+          mavlink-routerd -t 0 -e 127.0.0.1:14573 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14572 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14571 /dev/ttyACM0:57600
           <% end %>
-        
+  <% end %>
   <% end %>
 
   <% if record_rosbag %>

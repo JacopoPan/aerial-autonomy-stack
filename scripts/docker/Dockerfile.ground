@@ -95,7 +95,7 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" future mavproxy 
+    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" future mavproxy
 
 # Add pymavlink to emulate the ground system using telemetry data
 RUN pip3 install --no-cache-dir --upgrade pip \
@@ -113,6 +113,41 @@ RUN apt update \
         wmctrl x11-xserver-utils \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install mavlink-router 
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        git meson ninja-build pkg-config gcc g++ systemd \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+COPY /github_clones/mavlink-router /aas/github_apps/mavlink-router
+WORKDIR /aas/github_apps/mavlink-router
+RUN meson setup build . --buildtype=release \
+    && ninja -C build \
+    && ninja -C build install
+
+
+################################################################################
+# Stage 5 - ?+GB ###############################################################
+################################################################################
+# Install YOLO with --no-deps to avoid installing opencv from pip, upgrade sympy and install ultralytics dependencies manually
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
+    && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
+    && pip3 install --no-cache-dir --resume-retries 5 torch torchvision matplotlib pillow pyyaml requests scipy tqdm psutil
+
+## Infra de Software Install
+COPY github_clones/MAVKit /libs/MAVKit
+WORKDIR /libs/MAVKit
+RUN pip install -e .
+
+COPY github_clones/Chorus /libs/Chorus
+WORKDIR /libs/Chorus
+#RUN pip install -e .
+RUN bash -c 'source /opt/ros/humble/setup.bash && pip install -e .'
+
+# Install dependencies
+RUN pip install numpy==1.26.4 transitions libtmux dearpygui zmq pymap3d utm cartopy
 
 # Add MAVLink 2 C library
 COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
@@ -133,42 +168,7 @@ COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QG
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash
 
-## Infra de Software Install
-# Install Chorus
-COPY /github_clones/Chorus /infra_sw/Chorus
-WORKDIR /infra_sw/Chorus
-RUN pip install -e .
-
-# Install MAVKit
-COPY /github_clones/MAVKit /infra_sw/MAVKit
-WORKDIR /infra_sw/MAVKit
-RUN pip install -e .
-
-# Install r2p_pds/lib
-COPY /github_clones/RoboChart2Python-PDS /infra_sw/RoboChart2Python-PDS
-WORKDIR /infra_sw/RoboChart2Python-PDS/lib
-RUN pip install -e .
-
-# Install pytransitions
-RUN pip install transitions
-
-# Install libtmux
-RUN pip install libtmux
-
-# Install dearpygui
-RUN pip install dearpygui
-
-# Install tmux
-RUN apt install tmux
-
-# Install Java
-RUN apt install openjdk-11-jdk
-
-# Copy folder Sistemas
-COPY /github_clones/Sistemas /infra_sw/Sistemas
-
-# Copy folder SARP
-COPY /github_clones/SARP /infra_sw/SARP
+SHELL ["/bin/bash", "-c"]
 
 # Final config
 WORKDIR /aas

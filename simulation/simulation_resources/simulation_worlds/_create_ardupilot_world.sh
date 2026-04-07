@@ -3,15 +3,25 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 <num_quads> <num_vtols> <full_path_to_empty_world>"
-  echo "Example: ./_create_ardupilot_world.sh 2 1 /aas/simulation_resources/simulation_worlds/impalpable_greyness.sdf"
+if [ "$#" -lt 3 ] || [ "$#" -gt 5 ]; then
+  echo "Usage: $0 <num_quads> <num_vtols> <full_path_to_empty_world> [X_OFFSET] [Y_OFFSET]"
+  echo "Example: ./_create_ardupilot_world.sh 2 1 /aas/simulation_resources/simulation_worlds/impalpable_greyness.sdf 10 5"
   exit 1
 fi
 
 NUM_QUADS=$1
 NUM_VTOLS=$2
 BASE_WORLD_WITH_PATH=$3
+
+# Optional arguments with default values
+X_OFFSET=${4:-0}
+Y_OFFSET=${5:-0}
+
+echo "NUM_QUADS: $NUM_QUADS"
+echo "NUM_VTOLS: $NUM_VTOLS"
+echo "BASE_WORLD_WITH_PATH: $BASE_WORLD_WITH_PATH"
+echo "X_OFFSET: $X_OFFSET"
+echo "Y_OFFSET: $Y_OFFSET"
 
 # Resolve the path relative to the script's directory if it's not absolute
 if [[ "$BASE_WORLD_WITH_PATH" != /* ]]; then
@@ -49,13 +59,13 @@ DRONE_ID=0
 # Loop for quads
 for i in $(seq 1 $NUM_QUADS); do
   DRONE_ID=$((DRONE_ID + 1))
-  MODEL_XML="    <include>\n      <uri>model://iris_with_ardupilot_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( -1 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"  ALL_MODELS_XML+=$MODEL_XML
+  MODEL_XML="    <include>\n      <uri>model://iris_with_ardupilot_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( X_OFFSET + (i-1) * 2 )) $(( Y_OFFSET - (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"  ALL_MODELS_XML+=$MODEL_XML
 done
 
 # Loop for VTOLs
 for i in $(seq 1 $NUM_VTOLS); do
   DRONE_ID=$((DRONE_ID + 1))
-  MODEL_XML="    <include>\n      <uri>model://alti_transition_quad_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 2 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
+  MODEL_XML="    <include>\n      <uri>model://alti_transition_quad_${DRONE_ID}</uri>\n     <pose degrees=\"true\">$(( X_OFFSET + (i-1) * 2 )) $(( Y_OFFSET + 2 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
   ALL_MODELS_XML+=$MODEL_XML
 done
 

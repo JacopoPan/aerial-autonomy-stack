@@ -4,15 +4,18 @@
   camera = ENV.fetch('CAMERA', 'true') == 'true'
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
   camera_pitch = ENV.fetch('CAMERA_PITCH', '1.5707').to_f 
-
+  
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   ground_id = ENV.fetch('GROUND_ID', '101')
-
+  
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
   world = ENV.fetch('WORLD', 'impalpable_greyness')
-
+  x_offset = ENV.fetch('X_OFFSET', 0).to_i
+  y_offset = ENV.fetch('Y_OFFSET', 0).to_i
+  
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
+  centralized = ENV.fetch('CENTRALIZED', 'false') == 'true'
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   rtf = ENV.fetch('RTF', '1.0').to_f
@@ -59,7 +62,7 @@ windows:
           sed -i 's|<real_time_factor>1.0</real_time_factor>|<%= rtf_string %>|' /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           <% if autopilot == 'ardupilot' %>
           /aas/simulation_resources/aircraft_models/_create_ardupilot_models.sh <%= num_quads %> <%= num_vtols %> <%= camera_pitch %> &&
-          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf &&
+          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf <%= x_offset %> <%= y_offset %> &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
           GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/aas/simulation_resources/aircraft_models:/aas/simulation_resources/simulation_worlds 
@@ -104,9 +107,13 @@ windows:
           --speedup <%= speedup %>
           --add-param-file=/aas/simulation_resources/aircraft_models/<%= model_name %>/ardupilot-4.6.params
           -l $(python3 /aas/simulation_resources/patches/extract_spherical_coords.py /aas/simulation_resources/simulation_worlds/<%= world %>.sdf)
+          <% if centralized %>
+          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14570 + drone_id %>
+          <% else %>
           --out=udp:<%= "#{sim_subnet}.90.#{drone_id}" %>:14570 
+          <% end %>
           <% if gnd_container %>
-          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14550 + sitl_instance %>
+          --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14550 + drone_id%>
           <% else %>
           --out=udp:127.0.0.1:<%= 14550 + sitl_instance %>
           <% end %>
@@ -115,7 +122,11 @@ windows:
         - >
           /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
           /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image
+          <% if centralized %>
+          <%= "#{sim_subnet}.90.#{ground_id}" %> <%=5600 + sitl_instance%> 8
+          <% else %>
           <%= "#{sim_subnet}.90.#{drone_id}" %> 5600 8
+          <% end %>
         <% end %>
         <% if lidar %>
         - >
