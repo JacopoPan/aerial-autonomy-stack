@@ -10,6 +10,7 @@
   ground_id = ENV.fetch('GROUND_ID', '101')
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
+  centralized = ENV.fetch('CENTRALIZED', 'false') == 'true'
 %>
 
 name: ground
@@ -20,6 +21,22 @@ windows:
       layout: even-horizontal
       panes:
         - clear && echo "So nice to have you with us, this is the ground container."
+
+  <% if centralized %>
+  <% num_quads.times do |i| %>
+  <% drone_id = i + 1 %>
+  - mavlink_router_quad_<%= drone_id %>:
+      layout: even-horizontal
+      panes:
+        - <%
+          ground_ip = "#{sim_subnet}.90.#{ground_id}"
+          master_port = 14570 + drone_id
+          slave_port_1 = 14000 + 100 * drone_id
+          slave_port_2 = 14001 + 100 * drone_id
+          %>
+          mavlink-routerd <%= ground_ip %>:<%= master_port %> -e <%= ground_ip %>:<%= slave_port_1 %> -e <%= ground_ip %>:<%= slave_port_2 %>
+  <% end %>
+  <% end %>
 
   - zenoh_and_qgc:
       layout: even-horizontal
