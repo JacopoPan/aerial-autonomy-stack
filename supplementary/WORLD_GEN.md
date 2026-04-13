@@ -22,45 +22,114 @@ Após obter o arquivo, deve-se realizar os seguintes passos:
 - Abrir o blender e navegar até edit > preferences > add-ons > “⌄” na parte superior direita > Install from disk > selecionar o arquivo blosm .zip > Install from disk
 
 
-![](images/blosm-pref.png)
+<div align="center">
+  <img src="images/blosm-pref.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 
-![](images/blosm-addons.png)
+<div align="center">
+  <img src="images/blosm-addons.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 
-![](images/blosm-select.png)
+<div align="center">
+  <img src="images/blosm-select.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 # Obter API Google Tile
 
-![](images/key-press-project.png)
+### Requisito
+- Conta Google Cloud: https://docs.cloud.google.com/docs/get-started
 
-![](images/key-create.png)
+### Passos para obter a chave API do Google Tile
 
-![](images/key-set-name-and-confirm.png)
+Com uma conta google cloud é possível obter a chave API do Google Tile, que é necessária para o Blosm obter os dados do google e gerar mapas mais próximos do real. Para isso, basta seguir os seguintes passos:
 
-![](images/key-project-confirmation.png)
 
-![](images/key-open-menu.png)
+- Acessar o console do [google cloud](https://console.cloud.google.com/) e pressionar no projeto atual para abrir a lista de projetos.
 
-![](images/key-select-keys.png)
+<div align="center">
+  <img src="images/key-press-project.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/key-key-created.png)
+- Pressionar no botão “Novo Projeto” para criar um novo projeto.
 
-![](images/key-skip.png)
+<div align="center">
+  <img src="images/key-create.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/key-sec-menu.png)
+- Nomeie o projeto e selecione a organização e conta de faturamento. 
+  - Obs.: Apesar de ser utilizada uma conta de faturamento, os primeiros 1000 tiles do mês são gratuitos, logo, para gerar algumas dezenas de mapas pequenos não haverá custo.
 
-![](images/key-edit.png)
+<div align="center">
+  <img src="images/key-set-name-and-confirm.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/key-select-map-tile.png)
+- Após confirmar a criação do projeto, a pagina é redirecionada para o dashboard do projeto e uma notificação de criação do projeto é exibida, basta pressionar no botão "Selecionar Projeto" para acessar o projeto criado.
 
-![](images/key-confirm-edit.png)
+<div align="center">
+  <img src="images/key-project-confirmation.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/key-copy.png)
+- No dashboard do projeto, basta abrir o menu lateral pressionando no ícone de três linhas no canto superior esquerdo da tela e navegar até Plataforma Google Maps > Chaves e credenciais.
 
-![](images/key-blender-config.png)
+<div align="center">
+  <img src="images/key-open-menu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/key-blender-set.png)
+<div align="center">
+  <img src="images/key-select-keys.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Uma nova aba é aberta com a chave api do projeto, desative a opção "Ativar todas as APIs do Google Maps neste projeto" e pressione "Acessar a Plataforma...".
+
+<div align="center">
+  <img src="images/key-key-created.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Na nova aba, pressione "Talver mais tarde".
+
+<div align="center">
+  <img src="images/key-skip.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- No dashboard da plataforma google maps, pressione no menu lateral "Chaves e credenciais".
+
+<div align="center">
+  <img src="images/key-sec-menu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Em seguida, na Chave API existente, pressione nos três pontos e selecione "Editar chave de API".
+
+<div align="center">
+  <img src="images/key-edit.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Na nova aba, selecione apenas a opção "Map Tiles API" nas restrições de API e salve as alterações.
+
+<div align="center">
+  <img src="images/key-select-map-tile.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+<div align="center">
+  <img src="images/key-confirm-edit.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Novamente no dashboard da plataforma google maps, pressione "Exibir chaves de API" para obter a chave API do Google Tile.
+
+<div align="center">
+  <img src="images/key-copy.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+- Abra o blender, navegue até edit > preferences > add-ons > Blosm e adicione a chave API do Google Tile no campo "Google 3D Tiles Key", pressione enter para salvar a chave e feche a janela de preferências.
+
+<div align="center">
+  <img src="images/key-blender-config.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
+
+<div align="center">
+  <img src="images/key-blender-set.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 # Gerar mapa
 
@@ -68,35 +137,51 @@ Com a chave API do Google Tile adicionada é possível gerar mapas mais próximo
 
 - Expandir o menu lateral apertando no botão “<”
     
-![](images/map-lateral-menu.png)
+<div align="center">
+  <img src="images/map-lateral-menu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Selecionar a opção do Blosm
     
-![](images/map-blosm-menu.png)
+<div align="center">
+  <img src="images/map-blosm-menu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Configurar o blosm para obter os dados do google
     
-![](images/map-blosm-config.png)
+<div align="center">
+  <img src="images/map-blosm-config.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Apertar o botão “select” que irá abrir no navegador uma aba para selecionar a parte do mapa que se deseja.
     
-![](images/map-select.png)
+<div align="center">
+  <img src="images/map-select.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Pressionar o botão “Copy” no navegador e em seguida “Paste” na aba do Blosm do blender.
     
-![](images/map-blosm-coord.png)
+<div align="center">
+  <img src="images/map-blosm-coord.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Por fim, pressionar o botão “import” e aguardar (a importação pode durar até mais de 5 minutos dependendo do tamanho do mapa). Após finalizar o mapa terá a seguinte aparência.
     
-![](images/map-first-visu.png)
+<div align="center">
+  <img src="images/map-first-visu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Para visualizar as texturas basta ativar o viewport com material preview
     
-![](images/map-viewport.png)
+<div align="center">
+  <img src="images/map-viewport.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Tendo então a visualização final
 
-![](images/map-best-visu.png)
+<div align="center">
+  <img src="images/map-best-visu.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 
 # Exportar mapa para o Gazebo
@@ -107,33 +192,47 @@ Antes de exportar o mapa para o gazebo, é necessário ajustar a posição do mo
 
 - Ajuste a visão para ter facilidade em selecionar o ponto no mapa, basta utilizar a top-view, pressionando o 7 no numpad do teclado ou pressionando no eixo Z na referência.
 
-![](images/map-select-axis.png)    
+<div align="center">
+  <img src="images/map-select-axis.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Ative a ferramenta do cursor
 
-![](images/map-config-cursor.png)
+<div align="center">
+  <img src="images/map-config-cursor.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Em seguida, encontre um ponto que sirva de referência, uma interseção de rua, um objeto ou estrutura pontual; e pressione no ponto, isto irá posicionar o cursor.
     
-![](images/map-select-cursor.png)
+<div align="center">
+  <img src="images/map-select-cursor.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
     
 - Selecione o objeto no painel do mundo
     
-![](images/map-select-tile.png)
+<div align="center">
+  <img src="images/map-select-tile.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
     
 - Mova a origem do objeto para o cursor
     
-![](images/map-origin-cursor.png)
+<div align="center">
+  <img src="images/map-origin-cursor.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Pressione “Shift+S” e escolha a opção “Cursor to World Origin”
 
-![](images/map-cursor-origin.png)
+<div align="center">
+  <img src="images/map-cursor-origin.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Pressione “Shift+S” e escolha a opção “Selection to Cursor”.
     
-![](images/map-move-cursor.png)
+<div align="center">
+  <img src="images/map-move-cursor.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Após seguir todos os passos, o ponto desejado estara na posição (0,0,0) do mundo. Isto será importante para utilizar o mapa no gazebo corretamente.
 
@@ -143,25 +242,37 @@ O formato recomendável para exportar mundos compatíveis com o gazebo é o glTF
 
 - Selecionar o mundo na aba de objetos
     
-![](images/map-select-tile.png)
+<div align="center">
+  <img src="images/map-select-tile.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Navegar até File > Export > glTF 2.0
 
-![](images/map-select-gltf.png)
+<div align="center">
+  <img src="images/map-select-gltf.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Utilizar as seguintes configurações
 
-![](images/map-config-1.png)
+<div align="center">
+  <img src="images/map-config-1.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-![](images/map-config-2.png)
+<div align="center">
+  <img src="images/map-config-2.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Escolher o nome do arquivo e onde será salvo, e por fim exportar.
     
-![](images/map-gltf-confirm.png)
+<div align="center">
+  <img src="images/map-gltf-confirm.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - O mundo é exportado como um arquivo único no formato .glb
 
-![](images/map-final-file.png)
+<div align="center">
+  <img src="images/map-final-file.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 ## Adicionando o mundo ao Gazebo
 
@@ -171,22 +282,29 @@ Para obter as coordenadas GPS do ponto de origem do mundo será utilizado o http
 
 - Ao abrir o site, basta pressionar o botão “Explore Earth” no canto superior direito
     
-![](images/map-earth.png)
+<div align="center">
+  <img src="images/map-earth.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Em seguida deve-se localizar o mesmo ponto de referência utilizado durante a criação do mundo no gazebo.
 
-![](images/map-earth-ref.png)
+<div align="center">
+  <img src="images/map-earth-ref.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
 - Ao encontrá-lo, basta posicionar o mouse sobre o ponto, pressionar o botão direito do mouse e escolher a opção “Get info”
     
-![](images/map-earth-info.png)
+<div align="center">
+  <img src="images/map-earth-info.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
     
 - Um painel surgirá na lateral direita da tela com as informações desejadas, deve-se anotar as coordenadas e a elevação.
     
-![](images/map-earth-values.png)
+<div align="center">
+  <img src="images/map-earth-values.png" alt="" style="max-width: 80%; height: auto;" />
+</div>
 
-    - Após isso é necessário converter as coordenadas para a representação decimal https://latlongdata.com/lat-long-converter// (Se atentar a referencia da coordenada N/S e E/W)
-        - -22.9450055556, -43.1570666667
+    - Após isso é necessário converter as coordenadas para a representação decimal: https://latlongdata.com/lat-long-converter (Se atentar a referência da coordenada N/S e E/W)
 
 Por fim, para utilizar o mundo no gazebo é necessário configurar um mundo para usa-lo. Ele terá a seguinte arquitetura
 
