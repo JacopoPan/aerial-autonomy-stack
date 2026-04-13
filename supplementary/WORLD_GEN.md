@@ -304,7 +304,7 @@ Para obter as coordenadas GPS do ponto de origem do mundo será utilizado o http
   <img src="images/map-earth-values.png" alt="" style="max-width: 80%; height: auto;" />
 </div>
 
-    - Após isso é necessário converter as coordenadas para a representação decimal: https://latlongdata.com/lat-long-converter (Se atentar a referência da coordenada N/S e E/W)
+- Após isso é necessário converter as coordenadas para a representação decimal: https://latlongdata.com/lat-long-converter (Se atentar a referência da coordenada N/S e E/W)
 
 Por fim, para utilizar o mundo no gazebo é necessário configurar um mundo para usa-lo. Ele terá a seguinte arquitetura
 
