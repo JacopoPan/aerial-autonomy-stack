@@ -32,6 +32,36 @@ Após obter o arquivo, deve-se realizar os seguintes passos:
 
 # Obter API Google Tile
 
+![](images/key-press-project.png)
+
+![](images/key-create.png)
+
+![](images/key-set-name-and-confirm.png)
+
+![](images/key-project-confirmation.png)
+
+![](images/key-open-menu.png)
+
+![](images/key-select-keys.png)
+
+![](images/key-key-created.png)
+
+![](images/key-skip.png)
+
+![](images/key-sec-menu.png)
+
+![](images/key-edit.png)
+
+![](images/key-select-map-tile.png)
+
+![](images/key-confirm-edit.png)
+
+![](images/key-copy.png)
+
+![](images/key-blender-config.png)
+
+![](images/key-blender-set.png)
+
 # Gerar mapa
 
 Com a chave API do Google Tile adicionada é possível gerar mapas mais próximos do real com textura através do blosm, seguem os passos:
