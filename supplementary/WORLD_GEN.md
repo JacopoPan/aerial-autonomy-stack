@@ -401,13 +401,13 @@ world.sdf
     
 - world.sdf (substituir world pelo nome do mundo)
     
-    > Substituir WORLD pelo nome do mundo
+    > Substituir "WORLD" pelo nome do mundo
     
-    > Substituir WORLD_LATITUDE pelo valor decimal da latitude
+    > Substituir "WORLD_LATITUDE" pelo valor decimal da latitude
     
-    > Substituir WORLD_LONGITUDE pelo valor decimal da longitude
+    > Substituir "WORLD_LONGITUDE" pelo valor decimal da longitude
     
-    > substituir WORLD_ELEVATION pelo valor decimal da elevação
+    > substituir "WORLD_ELEVATION" pelo valor decimal da elevação
 
     <details>
     <summary>world.sdf</summary>
@@ -758,5 +758,5 @@ world.sdf
 - Para executar, basta utilizar o nome do mundo na inicialização da simulação com a flag WORLD, ex.:
 
 ```sh
-AUTOPILOT=ardupilot NUM_QUADS=1 WORLD=big_esefex RTF=1.0 CENTRALIZED=true ./sim_run.s
+AUTOPILOT=ardupilot NUM_QUADS=1 WORLD=big_esefex RTF=1.0 CENTRALIZED=true ./sim_run.sh
 ```
