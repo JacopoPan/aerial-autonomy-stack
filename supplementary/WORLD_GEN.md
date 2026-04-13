@@ -19,7 +19,7 @@
 
 Após obter o arquivo, deve-se realizar os seguintes passos:
 
-- Abrir o blender e navegar até edit > preferences > add-ons > “⌄” na parte superior direita > Install from disk > selecionar o arquivo blosm .zip > Install from disk
+- Abrir o blender e navegar até edit > preferences > add-ons > “v” na parte superior direita > Install from disk > selecionar o arquivo blosm .zip > Install from disk
 
 
 <div align="center">
