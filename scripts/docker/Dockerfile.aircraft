@@ -1,5 +1,5 @@
 FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 AS base_amd64
-FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
+FROM nvcr.io/nvidia/deepstream:7.1-triton-multiarch AS base_arm64
 ################################################################################
 # Stage 1 - 8GB ################################################################
 ################################################################################
