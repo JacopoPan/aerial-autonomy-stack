@@ -2,3 +2,40 @@ ARMING_CHECK 60
 WP_YAW_BEHAVIOR 3
 WPNAV_SPEED 500
 SCHED_LOOP_RATE 250
+
+# Match servo out for motors
+MOT_PWM_MIN      1100
+MOT_PWM_MAX      1900
+
+# Servo gimbal on mount 1 has 3 DOF
+MNT1_TYPE        1
+MNT1_PITCH_MAX   45
+MNT1_PITCH_MIN   -135
+MNT1_ROLL_MAX    30
+MNT1_ROLL_MIN    -30
+MNT1_YAW_MAX     160
+MNT1_YAW_MIN     -160
+
+# Gimbal RC in
+RC6_MAX          1900
+RC6_MIN          1100
+
+# Mount1 Roll
+RC6_OPTION       212
+
+# Mount1 Pitch
+RC7_MAX          1900
+RC7_MIN          1100
+RC7_OPTION       213
+
+# Mount1 Yaw
+RC8_MAX          1900
+RC8_MIN          1100
+RC8_OPTION       214
+
+# Mount1Roll
+SERVO9_FUNCTION  8
+# Mount1Pitch
+SERVO10_FUNCTION 7
+# Mount1Yaw
+SERVO11_FUNCTION 6
