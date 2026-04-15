@@ -175,12 +175,7 @@ RUN mkdir build && cd build && \
     ldconfig
 COPY /github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
 WORKDIR /aas/github_ws/
-# Fix broken HPC-X MPI include path that crashes PCL/VTK compilation in Jetson containers
-RUN echo "==========================================================" && \
-    echo "         MISSING HPC-X MPI DIRECTORIES LIST               " && \
-    echo "==========================================================" && \
-    mpicc --showme:compile | tr ' ' '\n' | grep '^-I' | cut -c 3- && \
-    echo "=========================================================="
+# Fix broken HPC-X MPI include paths that crash compilation in Jetson containers
 RUN mkdir -p /opt/hpcx/ompi/lib/aarch64-linux-gnu/openmpi/include/openmpi/opal/mca/hwloc/hwloc201/hwloc/include
 RUN mkdir -p /opt/hpcx/ompi/lib/aarch64-linux-gnu/openmpi/include/openmpi/opal/mca/event/libevent2022/libevent/include
 # Based on https://github.com/Livox-SDK/livox_ros_driver2/blob/master/README.md
@@ -209,10 +204,15 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 
 # Install Zenoh
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
+# Download, unpack, delete postinst script (crashing on DeepStream base image), and force configuration
 RUN apt-get update && \
-    apt-get install -y zenoh-bridge-ros2dds \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get download zenoh-bridge-ros2dds && \
+    dpkg --unpack zenoh-bridge-ros2dds*.deb && \
+    rm -f /var/lib/dpkg/info/zenoh-bridge-ros2dds.postinst && \
+    dpkg --configure zenoh-bridge-ros2dds && \
+    apt-get install -yf && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* zenoh-bridge-ros2dds*.deb
 
 ################################################################################
 # Stage 7 - 17+GB ##############################################################
