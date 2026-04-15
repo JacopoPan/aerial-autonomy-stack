@@ -161,6 +161,11 @@ RUN apt update && \
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
+# Install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+WORKDIR /
+RUN curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb'
+RUN apt update && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
+
 # Also install the Livox ROS2 driver only on Orin for deployment
 COPY /github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
