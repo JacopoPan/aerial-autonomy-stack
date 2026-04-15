@@ -1,6 +1,8 @@
 <% 
   headless = ENV.fetch('HEADLESS', 'false') == 'true'
 
+  air_subnet = ENV.fetch('AIR_SUBNET', '10.22')
+
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
 
@@ -96,6 +98,6 @@ windows:
         <% (1..(num_quads + num_vtols)).each do |drone_id| %>
         - |
           echo -e "\n\n Attach the AAS container with:\n\n\tdocker exec -it aircraft-container_<%= drone_id %> tmux attach\n\n"
-          ssh orin@10.223.90.<%= drone_id %>
+          ssh orin@<%= "#{air_subnet}.90.#{drone_id}" %>
         <% end %>
   <% end %>

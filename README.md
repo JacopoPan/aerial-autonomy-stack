@@ -433,6 +433,14 @@ AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true
 # HEADLESS/CAMERA/LIDAR=true, false
 ```
 
+Start the `ground-image` on a laptop to connect QGC, Zenoh, SSH, and GStreamer:
+
+```sh
+cd aerial-autonomy-stack/scripts/
+./sim_build.sh                                        # Build all images for amd64, including ground-image
+GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+```
+
 <details>
 <summary><b>Advanced Topic: HITL Simulation</b> <i>(click to expand)</i></summary>
 
@@ -470,7 +478,7 @@ HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./sim_run.sh
 Finally, start QGC and the Zenoh bridge:
 ```sh
 # On the computer with IPs ending in 90.101
-HITL=true GROUND=true HEADLESS=false NUM_QUADS=2 ./deploy_run.sh
+HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
 
 > **Note:** running only the first 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
