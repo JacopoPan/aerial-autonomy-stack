@@ -175,6 +175,8 @@ RUN mkdir build && cd build && \
     ldconfig
 COPY /github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
 WORKDIR /aas/github_ws/
+# Fix broken HPC-X MPI include path that crashes PCL/VTK compilation in Jetson containers
+RUN mkdir -p /opt/hpcx/ompi/lib/aarch64-linux-gnu/openmpi/include
 # Based on https://github.com/Livox-SDK/livox_ros_driver2/blob/master/README.md
 # https://github.com/Livox-SDK/livox_ros_driver2/blob/master/build.sh
 RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.xml \
