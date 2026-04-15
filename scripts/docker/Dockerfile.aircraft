@@ -51,6 +51,10 @@ RUN rosdep init
 ################################################################################
 FROM ros2-image AS ros2-px4msgs-image
 
+# WIP: pin setuptools in deepstreamer image not to conflict with humble
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 setuptools==58.2.0
+
 # Build PX4 messages
 COPY /github_clones/px4_msgs /aas/github_ws/src/px4_msgs
 WORKDIR /aas/github_ws
