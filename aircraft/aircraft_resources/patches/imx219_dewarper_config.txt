@@ -1,0 +1,16 @@
+[property]
+# The output dimensions after undistortion
+output-width=1280
+output-height=720
+num-batch-buffers=1
+
+[surface0]
+# See https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_plugin_gst-nvdewarper.html#configuration-file-parameters
+projection-type=4
+width=1280
+height=720
+
+# Approximate Vertical FOV for a 1280x720 frame with 200deg Diagonal FOV
+src-fov=98.05
+# Distortion coefficients, format: k1;k2;p1;p2;k3
+# distortion=-0.05;0.0;0.0;0.0;0.0
