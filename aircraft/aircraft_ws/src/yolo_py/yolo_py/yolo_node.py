@@ -117,6 +117,22 @@ class YoloInferenceNode(Node):
                     "videoconvert ! video/x-raw, format=BGR ! "
                     "appsink drop=true max-buffers=1 sync=false"
                 ) # Test with: gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! 'video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1' ! nvvidconv ! nv3dsink -e
+                # GPU pipeline with nvinfer example:
+                # gst_pipeline_string = (
+                #     "nvarguscamerasrc sensor-id=0 ! "
+                #     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
+                #     "nvvidconv ! "
+                #     "video/x-raw(memory:NVMM), format=RGBA ! "
+                #     "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
+                #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=NV12 ! "
+                #     "m.sink_0 nvstreammux name=m batch-size=1 width=640 height=360 ! "
+                #     "nvinfer config-file-path=/aas/aircraft_resources/patches/nvinfer_config.txt ! "
+                #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=RGBA ! "
+                #     "nvdsosd ! "
+                #     "nvvideoconvert ! video/x-raw, format=BGRx ! "
+                #     "videoconvert ! video/x-raw, format=BGR ! "
+                #     "appsink drop=true max-buffers=1 sync=false"
+                # )
                 cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
         # cap = cv2.VideoCapture("/sample.mp4") # Load sample video for testing
         assert cap.isOpened(), "Failed to open video stream"
