@@ -162,7 +162,24 @@ ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 # Install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+# Based on https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
 WORKDIR /
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        libssl3 libssl-dev \
+        libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
+        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir --resume-retries 5 meson ninja
+RUN wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
+    && tar -xf glib-2.76.6.tar.xz \
+    && cd glib-2.76.6 \
+    && meson build --prefix=/usr \
+    && ninja -C build \
+    && ninja -C build install
 RUN curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb'
 RUN apt update && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
 
