@@ -97,7 +97,7 @@ FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
 RUN python3 -m venv /yolo-env
 RUN /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
+    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 "ultralytics==8.4.37" onnx
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 
 # Test ONNX export (WARNING: removing this step from this stage can break px4_msgs build in later stages)
@@ -127,7 +127,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu --ignore-installed numpy
+    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
@@ -152,7 +152,7 @@ RUN apt update && \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
-    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl --ignore-installed numpy && \
+    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
     sudo make install && \
     sudo ldconfig && \
