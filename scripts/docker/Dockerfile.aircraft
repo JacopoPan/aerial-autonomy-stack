@@ -118,6 +118,8 @@ RUN apt update \
 # NOTE: we want system Python's OpenCV to have GStreamer support
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 "numpy<2"
+RUN echo "numpy<2" > /etc/pip-constraints.txt
+ENV PIP_CONSTRAINT=/etc/pip-constraints.txt
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
 # Versus $ /yolo-env/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
 
@@ -127,7 +129,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu "numpy<2"
+    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
@@ -152,7 +154,7 @@ RUN apt update && \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
-    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl "numpy<2" && \
+    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
     sudo make install && \
     sudo ldconfig && \
