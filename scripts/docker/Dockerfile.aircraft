@@ -124,13 +124,13 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 ################################################################################
 # Alternate stage for ONNX Runtime GPU: use CUDA in sim, TensorRT on Orin ######
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
+FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
-FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
+FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
 # CMAKE_CUDA_ARCHITECTURES=87 based on: https://developer.nvidia.com/cuda-gpus
@@ -203,7 +203,7 @@ RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install
 ################################################################################
 # Stage 6 - 16GB ###############################################################
 ################################################################################
-FROM image-with-onnxruntime-gpu_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
+FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
 # Install KISS-ICP
 RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
