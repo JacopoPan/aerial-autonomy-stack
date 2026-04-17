@@ -127,7 +127,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
+    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu "numpy<2"
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
@@ -152,7 +152,7 @@ RUN apt update && \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
-    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl && \
+    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl "numpy<2" && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
     sudo make install && \
     sudo ldconfig && \
