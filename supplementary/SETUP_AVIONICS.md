@@ -124,7 +124,7 @@ sudo systemctl restart docker
 
 docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
-docker run --rm --runtime=nvidia nvcr.io/nvidia/l4t-base:r36.2.0 nvidia-smi    # Test nvidia-smi works in a container with Linux4Tegra
+docker run --rm --runtime=nvidia nvcr.io/nvidia/l4t-jetpack:r36.4.0 nvidia-smi # Test nvidia-smi works in a container with Linux4Tegra
 ```
 
 ## Build and Flash PX4 or ArduPilot Firmware

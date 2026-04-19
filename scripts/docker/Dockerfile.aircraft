@@ -93,19 +93,13 @@ RUN /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 
-# Install YOLO and ONNX in virtual environment /yolo-env/
-# See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
-RUN python3 -m venv /yolo-env
-RUN /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
-# Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
-
-# Test ONNX export (WARNING: removing this step from this stage can break px4_msgs build in later stages)
-WORKDIR /aas/yolo
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolov8n.pt').export(format='onnx', opset=12)" && \
-    mv yolov8n.onnx unused.onnx
-# Download a sample video for testing
-RUN wget https://github.com/intel-iot-devkit/sample-videos/raw/master/person-bicycle-car-detection.mp4 -O /sample.mp4
+# In Ubuntu 22, package python3-numpy is on version 1.21.5, check with $ dpkg -l | grep python3-numpy
+# ONNX will pip install >=1.21.6 but we constraint it to <2.0.0 for system Python's OpenCV ABI compatibility
+# Check with $ python3 -c "import numpy; print(numpy.__version__)"
+RUN echo "numpy<2.0.0" > /etc/pip_constraints.txt
+ENV PIP_CONSTRAINT=/etc/pip_constraints.txt
+# Point the GCC compiler to the new pip NumPy headers (instead of the apt ones) to prevent ROS2 colcon from crashing
+ENV CPATH=/usr/local/lib/python3.10/dist-packages/numpy/core/include
 
 # Add GStreamer, Python OpenCV packages
 RUN apt update \
@@ -115,22 +109,26 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# NOTE: we want system Python's OpenCV to have GStreamer support
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2"
+# Install YOLO and ONNX in virtual environment /yolo-env/
+# See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
+RUN python3 -m venv /yolo-env
+RUN /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
+    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
+# Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
+# NOTE: the venv avoids shadowing the system Python's OpenCV (with GStreamer support) with a newer one without GStreamer support
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
 # Versus $ /yolo-env/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
 
 ################################################################################
 # Alternate stage for ONNX Runtime GPU: use CUDA in sim, TensorRT on Orin ######
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_amd64
+FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
-FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-onnxruntime-gpu_arm64
+FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
 # CMAKE_CUDA_ARCHITECTURES=87 based on: https://developer.nvidia.com/cuda-gpus
@@ -161,6 +159,28 @@ RUN apt update && \
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
+# Install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+# Based on https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
+WORKDIR /
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        libssl3 libssl-dev \
+        libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
+        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir --resume-retries 5 meson ninja
+RUN wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
+    && tar -xf glib-2.76.6.tar.xz \
+    && cd glib-2.76.6 \
+    && meson build --prefix=/usr \
+    && ninja -C build \
+    && ninja -C build install
+RUN curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb'
+RUN apt update && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
+
 # Also install the Livox ROS2 driver only on Orin for deployment
 COPY /github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
@@ -176,12 +196,12 @@ WORKDIR /aas/github_ws/
 RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.xml \
     && cp -rf src/livox_ros_driver2/launch_ROS2 src/livox_ros_driver2/launch
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
 # Stage 6 - 16GB ###############################################################
 ################################################################################
-FROM image-with-onnxruntime-gpu_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
+FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
 # Install KISS-ICP
 RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
@@ -189,11 +209,6 @@ COPY /github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
-
-# Add pymavlink for debugging and testing
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
-# Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install Zenoh
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
@@ -205,7 +220,17 @@ RUN apt-get update && \
 ################################################################################
 # Stage 7 - 17+GB ##############################################################
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image AS aircraft-dev-image
+FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image
+
+# Add pymavlink and PlotJuggler for debugging, testing, and analysis
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+# Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
+RUN apt-get update && \
+    apt-get install -y ros-humble-plotjuggler \
+    ros-humble-plotjuggler-ros \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Save the YOLO model weights (ONNX, Opset 12) and class names
 WORKDIR /aas/yolo
@@ -218,12 +243,10 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
     /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolo26n.pt').names))" | grep '{' > coco.json && \
     rm yolo26n.pt
 
-# Install PlotJuggler
-RUN apt-get update && \
-    apt-get install -y ros-humble-plotjuggler \
-    ros-humble-plotjuggler-ros \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
+################################################################################
+# Stage 8 - 17+GB ##############################################################
+################################################################################
+FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image AS aircraft-dev-image
 
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs

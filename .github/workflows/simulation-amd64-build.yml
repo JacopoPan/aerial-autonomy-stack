@@ -2,6 +2,7 @@ name: simulation-image amd64
 
 on:
   workflow_call: {}
+  workflow_dispatch: {}
 
 jobs:
   build:

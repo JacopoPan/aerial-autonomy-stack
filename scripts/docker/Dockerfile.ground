@@ -68,6 +68,13 @@ RUN wget https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppI
     rm /QGroundControl-x86_64.AppImage
 # Run with $ gosu qgcuser /squashfs-root/AppRun
 
+# Install wmctrl and xrandr to resize QGC window
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        wmctrl x11-xserver-utils \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Zenoh
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
 RUN apt-get update && \
@@ -78,7 +85,7 @@ RUN apt-get update && \
 ################################################################################
 # Stage 3 - 8+GB ###############################################################
 ################################################################################
-FROM ros2-qgc-zenoh-image AS ros2-qgc-zenoh-gst-pymavlink-image
+FROM ros2-qgc-zenoh-image AS ros2-qgc-zenoh-gst-mavlink-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -93,11 +100,6 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
-################################################################################
-# Stage 4 - 8+GB ###############################################################
-################################################################################
-FROM ros2-qgc-zenoh-gst-pymavlink-image AS ground-dev-image
-
 # Install mavlink-router
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -111,15 +113,13 @@ RUN meson setup build . --buildtype=release \
     && ninja -C build install
 # Check with $ mavlink-routerd --version
 
-# Install wmctrl and xrandr to resize QGC window
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        wmctrl x11-xserver-utils \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # Add MAVLink 2 C library
 COPY /github_clones/c_library_v2 /usr/local/include/mavlink/
+
+################################################################################
+# Stage 4 - 8+GB ###############################################################
+################################################################################
+FROM ros2-qgc-zenoh-gst-mavlink-image AS ground-dev-image
 
 # Build the ROS 2 workspace
 COPY ground/ground_ws/src /aas/ground_ws/src

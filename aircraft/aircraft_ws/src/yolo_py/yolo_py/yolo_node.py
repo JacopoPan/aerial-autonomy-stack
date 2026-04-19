@@ -110,10 +110,29 @@ class YoloInferenceNode(Node):
                     "nvarguscamerasrc sensor-id=0 ! "
                     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
                     "nvvidconv ! "
-                    "video/x-raw, width=640, height=640, format=BGRx ! " # Keep 1280x720 frame instead: "video/x-raw, format=BGRx, width=1280, height=720, framerate=60/1 ! "
-                    "videoconvert ! video/x-raw, format=BGR ! " # Keep 1280x720 frame instead: "videoconvert ! "
+                    "video/x-raw(memory:NVMM), format=RGBA ! "
+                    "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
+                    "nvvidconv ! "
+                    "video/x-raw, width=640, height=360, format=BGRx ! "
+                    "videoconvert ! video/x-raw, format=BGR ! "
                     "appsink drop=true max-buffers=1 sync=false"
                 ) # Test with: gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! 'video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1' ! nvvidconv ! nv3dsink -e
+                # GPU pipeline with nvinfer example:
+                # gst_pipeline_string = (
+                #     "nvarguscamerasrc sensor-id=0 ! "
+                #     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
+                #     "nvvidconv ! "
+                #     "video/x-raw(memory:NVMM), format=RGBA ! "
+                #     "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
+                #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=NV12 ! "
+                #     "m.sink_0 nvstreammux name=m batch-size=1 width=640 height=360 ! "
+                #     "nvinfer config-file-path=/aas/aircraft_resources/patches/nvinfer_config.txt ! "
+                #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=RGBA ! "
+                #     "nvdsosd ! "
+                #     "nvvideoconvert ! video/x-raw, format=BGRx ! "
+                #     "videoconvert ! video/x-raw, format=BGR ! "
+                #     "appsink drop=true max-buffers=1 sync=false"
+                # )
                 cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
         # cap = cv2.VideoCapture("/sample.mp4") # Load sample video for testing
         assert cap.isOpened(), "Failed to open video stream"
@@ -124,20 +143,15 @@ class YoloInferenceNode(Node):
 
         # Calculate hfov, vfov, and focal lengths in pixels
         diag_pixels = math.sqrt(stream_width**2 + stream_height**2)
-        if self.dfov < 180.0:
-            # Pinhole approximation for < 180deg FOV
+        if self.dfov <= 175.0: # Pinhole approximation for < 175.0deg FOV (simulated camera)
             self.fx = diag_pixels / (2 * math.tan(math.radians(self.dfov) / 2))
             self.fy = self.fx
-            hfov = math.degrees(2 * math.atan(stream_width / (2 * self.fx)))
-            vfov = math.degrees(2 * math.atan(stream_height / (2 * self.fy)))
-        else:
-            # Fisheye (equidistant) approximation for >= 180deg FOV
-            self.fx = diag_pixels / math.radians(self.dfov)
-            self.fy = self.fx
-            hfov = math.degrees(stream_width / self.fx)
-            vfov = math.degrees(stream_height / self.fy)
-            # For the IMX219-200 camera, the 200-degree DFOV introduces severe distortion and the pinhole assumption breaks down at the edges
-            # If needed, perform full camera calibration and use OpenCV's cv2.fisheye.undistortPoints()
+        else: # IMX219-200 CSI camera acquired with nvdewarper
+            vfov_rad = math.radians(98.05) # See imx219_dewarper_config.txt
+            self.fy = (stream_height * 0.5) / math.tan(vfov_rad / 2.0)
+            self.fx = self.fy
+        hfov = math.degrees(2 * math.atan(stream_width / (2 * self.fx)))
+        vfov = math.degrees(2 * math.atan(stream_height / (2 * self.fy)))
         print(f"DFOV {self.dfov}deg, HFOV {hfov:.2f}deg, VFOV {vfov:.2f}deg")
 
         # Load YOLO model and runtime
@@ -332,12 +346,9 @@ class YoloInferenceNode(Node):
 
         dx = center_x - w_half
         dy = h_half - center_y
-        if self.dfov < 180.0: # Pinhole approximation
-            azimuths = np.degrees(np.arctan(dx / self.fx))
-            elevations = np.degrees(np.arctan(dy / self.fy))
-        else: # Linear fisheye mapping
-            azimuths = np.degrees(dx / self.fx)
-            elevations = np.degrees(dy / self.fy)
+        # Pinhole approximation
+        azimuths = np.degrees(np.arctan(dx / self.fx))
+        elevations = np.degrees(np.arctan(dy / self.fy))
 
         # Construct Message
         detection_array = Detection2DArray()

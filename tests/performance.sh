@@ -126,3 +126,56 @@ print(f'{mean:.2f} {std:.2f}')
         done
     done
 } | grep --line-buffered -E "Running:|Avg Speedup:|Elapsed Time:|CRITICAL"
+
+# Performance results from 2026-04-16 on commit e6caaf621ca1cbb271be6c72a6e0da5f6fb50c31
+# System: Alienware Alienware x17 R1 on Ubuntu 22.04.05 with 16GB RAM, Intel Core i7-11800H @ 2.30GHz x 16, GeForce RTX 3060 Mobile
+# NVIDIA Driver Version: 580.126.09; CUDA Version: 13.0
+#
+# Running: speedup | px4 | 1 quads | both sensors
+# Avg Speedup:        7.62x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 69s
+# Running: speedup | px4 | 1 quads | no camera
+# Avg Speedup:        8.19x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 140s
+# Running: speedup | px4 | 1 quads | no lidar
+# Avg Speedup:        7.91x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 213s
+# Running: speedup | px4 | 1 quads | neither sensor
+# Avg Speedup:        8.68x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 281s
+# Running: speedup | ardupilot | 1 quads | both sensors
+# Avg Speedup:        6.10x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 367s
+# Running: speedup | ardupilot | 1 quads | no camera
+# Avg Speedup:        6.59x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 448s
+# Running: speedup | ardupilot | 1 quads | no lidar
+# Avg Speedup:        6.30x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 532s
+# Running: speedup | ardupilot | 1 quads | neither sensor
+# Avg Speedup:        7.19x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 608s
+# Running: vectorenv-speedup | px4 | 1 quads | both sensors
+# Avg Speedup:        11.30x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 693s
+# Running: vectorenv-speedup | px4 | 1 quads | no camera
+# Avg Speedup:        14.76x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 768s
+# Running: vectorenv-speedup | px4 | 1 quads | no lidar
+# Avg Speedup:        13.24x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 846s
+# Running: vectorenv-speedup | px4 | 1 quads | neither sensor
+# Avg Speedup:        19.52x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 912s
+# Running: vectorenv-speedup | ardupilot | 1 quads | both sensors
+# Avg Speedup:        8.36x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 1033s
+# Running: vectorenv-speedup | ardupilot | 1 quads | no camera
+# Avg Speedup:        9.86x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 1139s
+# Running: vectorenv-speedup | ardupilot | 1 quads | no lidar
+# Avg Speedup:        9.34x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 1250s
+# Running: vectorenv-speedup | ardupilot | 1 quads | neither sensor
+# Avg Speedup:        14.60x ± 0.00x wall-clock (Avg of 1 runs)
+# Elapsed Time: 1335s
