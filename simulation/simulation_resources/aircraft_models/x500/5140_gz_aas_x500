@@ -117,3 +117,16 @@ param set-default MPC_Z_V_AUTO_UP 8.0
 # Increase timeouts/rates for faster-than-real-life simulation
 param set-default COM_RC_LOSS_T 35
 param set-default COM_DL_LOSS_T 300
+
+# Gimbal settings
+param set-default MNT_MODE_IN 4
+param set-default MNT_MODE_OUT 2
+param set-default MNT_RC_IN_MODE 1
+
+param set-default MNT_MAN_ROLL 1
+param set-default MNT_MAN_PITCH 2
+param set-default MNT_MAN_YAW 3
+
+param set-default MNT_RANGE_ROLL 180
+param set-default MNT_RANGE_PITCH 180
+param set-default MNT_RANGE_YAW 720
