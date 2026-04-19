@@ -68,6 +68,13 @@ RUN wget https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppI
     rm /QGroundControl-x86_64.AppImage
 # Run with $ gosu qgcuser /squashfs-root/AppRun
 
+# Install wmctrl and xrandr to resize Gazebo/QGC window
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        wmctrl x11-xserver-utils \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Zenoh
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
 RUN apt-get update && \
@@ -185,7 +192,7 @@ RUN make px4_sitl
 ################################################################################
 # Stage 7 - 20GB ###############################################################
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-pymavlink-image
+FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-zmq-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -196,24 +203,12 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Add pymavlink to emulate the ground system using telemetry data
+# Add pymavlink and mavproxy to quickly inspect MAVLink streams
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
-################################################################################
-# Stage 8 - 21+GB ##############################################################
-################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-pymavlink-image AS simulation-dev-image
-
-# Install wmctrl and xrandr to resize Gazebo window
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        wmctrl x11-xserver-utils \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install https://github.com/PX4/flight_review
+# Install https://github.com/PX4/flight_review to inspect PX4 SITL logs
 RUN apt-get update && \
     apt-get install -y sqlite3 libfftw3-bin libfftw3-dev \
     && apt clean \
@@ -231,6 +226,11 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 pyzmq
+
+################################################################################
+# Stage 8 - 21+GB ##############################################################
+################################################################################
+FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-zmq-image AS simulation-dev-image
 
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
