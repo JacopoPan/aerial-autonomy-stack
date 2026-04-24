@@ -204,7 +204,7 @@ aerial-autonomy-stack
     - **NOTE: latest DeepStream supported on Orin Series**
 - [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
-- [x] [PX4 1.16.1](https://github.com/PX4/PX4-Autopilot/releases)
+- [x] [PX4 1.16.2](https://github.com/PX4/PX4-Autopilot/releases)
 - [x] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
 - [x] [YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)

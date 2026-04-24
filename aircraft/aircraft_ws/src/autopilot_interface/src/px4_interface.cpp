@@ -849,7 +849,7 @@ void PX4Interface::do_set_mode(int mode, int submode)
     send_vehicle_command(
         176,  // MAV_CMD_DO_SET_MODE
         1.0, // Flags (custom mode)
-        mode, // Custom Mode https://github.com/PX4/PX4-Autopilot/blob/v1.16.1/src/modules/commander/px4_custom_mode.h
+        mode, // Custom Mode https://github.com/PX4/PX4-Autopilot/blob/v1.16.2/src/modules/commander/px4_custom_mode.h
         submode, // Custom Sub Mode
         0.0, 0.0, 0.0, 0.0,  // Unused parameters
         0  // Confirmation

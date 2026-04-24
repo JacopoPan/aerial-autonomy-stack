@@ -25,7 +25,7 @@ mkdir -p "$CLONE_DIR"
 
 REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   # Simulation image
-  "https://github.com/PX4/PX4-Autopilot.git;v1.16.1;PX4-Autopilot"
+  "https://github.com/PX4/PX4-Autopilot.git;v1.16.2;PX4-Autopilot"
   "https://github.com/ArduPilot/ardupilot.git;Copter-4.6.3;ardupilot"
   "https://github.com/ArduPilot/ardupilot_gazebo.git;main;ardupilot_gazebo"
   "https://github.com/PX4/flight_review.git;main;flight_review"
