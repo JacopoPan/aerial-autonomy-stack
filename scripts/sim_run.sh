@@ -233,10 +233,9 @@ cleanup() {
   done
   echo "Stopping Docker containers (this will take a few seconds)..."
   if [ -n "$CONTAINERS_TO_STOP" ]; then
-      echo "$CONTAINERS_TO_STOP" | xargs docker stop
+      echo "$CONTAINERS_TO_STOP" | xargs docker stop -t 5
   fi
-  docker network rm $SIM_NET_NAME 2>/dev/null && echo "Removed $SIM_NET_NAME" || echo "Network $SIM_NET_NAME not found or already removed"
-  docker network rm $AIR_NET_NAME 2>/dev/null && echo "Removed $AIR_NET_NAME" || echo "Network $AIR_NET_NAME not found or already removed"
+  sleep 1 # Prevent Xorg crashes
   if [ -n "$DOCKER_PIDS" ]; then
     for dpid in $DOCKER_PIDS; do
       PARENT_PID=$(ps -o ppid= -p $dpid 2>/dev/null | tr -d ' ') # Determine process pids with a parent pid
@@ -245,6 +244,11 @@ cleanup() {
         kill $dpid
       fi
     done
+  fi
+  docker network rm $SIM_NET_NAME 2>/dev/null && echo "Removed $SIM_NET_NAME" || echo "Network $SIM_NET_NAME not found or already removed"
+  docker network rm $AIR_NET_NAME 2>/dev/null && echo "Removed $AIR_NET_NAME" || echo "Network $AIR_NET_NAME not found or already removed"
+  if command -v xhost >/dev/null 2>&1; then
+    xhost -local:docker >/dev/null
   fi
   echo "All-clear"
 }
