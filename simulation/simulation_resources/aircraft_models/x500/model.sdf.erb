@@ -662,6 +662,7 @@
       <motorType>velocity</motorType>
     </plugin>
 
+    <!--
     <include>
       <uri>model://sensor_camera</uri>
       <name>simple_camera</name>
@@ -669,6 +670,24 @@
     </include>
     <joint name="CameraJoint" type="fixed">
       <parent>base_link</parent>
+      <child>simple_camera::mono_cam/base_link</child>
+    </joint>
+    -->
+    <include>
+      <uri>model://sensor_gimbal</uri>
+      <name>simple_3d_gimbal</name>
+      <pose degrees="true"><%= camera_ext %></pose>
+    </include>
+    <joint name="gimbal_attach" type="fixed">
+      <parent>base_link</parent>
+      <child>simple_3d_gimbal::gimbal/base_link</child>
+    </joint>
+    <include>
+      <uri>model://sensor_camera</uri>
+      <name>simple_camera</name>
+    </include>
+    <joint name="CameraJoint" type="fixed">
+      <parent>simple_3d_gimbal::camera_link</parent>
       <child>simple_camera::mono_cam/base_link</child>
     </joint>
 

@@ -51,7 +51,7 @@ windows:
   - gz_sim:
       layout: tiled
       panes:
-        - clear && echo "So nice to have you with us, this is the simulation container."
+        - clear && echo "So nice to have you with us, this is the simulation container." && gz topic -l
         - python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
         - >
           <% unless camera %>
@@ -120,6 +120,10 @@ windows:
           /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
           /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image
           <%= "#{sim_subnet}.90.#{drone_id}" %> 5600 <%= cam_update_rate %>
+        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/state@sensor_msgs/msg/JointState[gz.msgs.Model"
+        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/pitch_cmd@std_msgs/msg/Float64]gz.msgs.Double"
+        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/roll_cmd@std_msgs/msg/Float64]gz.msgs.Double"
+        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/yaw_cmd@std_msgs/msg/Float64]gz.msgs.Double"
         # (optional/alternative) Use ros_gz_bridge to republish the camera frames into ROS2 and use tools like $ ros2 run rqt_image_view rqt_image_view
         # - >
         #   ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge
