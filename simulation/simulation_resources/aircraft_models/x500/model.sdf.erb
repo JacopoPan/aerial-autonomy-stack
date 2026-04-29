@@ -685,9 +685,10 @@
     <include>
       <uri>model://sensor_camera</uri>
       <name>simple_camera</name>
+      <pose degrees="true"><%= camera_ext %></pose>
     </include>
     <joint name="CameraJoint" type="fixed">
-      <parent>simple_3d_gimbal::camera_link</parent>
+      <parent>simple_3d_gimbal::pitch_link</parent>
       <child>simple_camera::mono_cam/base_link</child>
     </joint>
 
