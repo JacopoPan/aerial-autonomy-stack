@@ -65,6 +65,7 @@
       <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
+    <!-- Option 1: position control -->
     <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">
       <joint_name>yaw_joint</joint_name>
       <topic>/gimbal/yaw_cmd</topic> </plugin>
@@ -76,6 +77,23 @@
       <joint_name>pitch_joint</joint_name>
       <topic>/gimbal/pitch_cmd</topic>
     </plugin>
+
+    <!-- Option 2: velocity control (note that it might get stuck if joint limits are reached https://github.com/gazebosim/gz-sim/issues/1684) -->
+    <!-- <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>yaw_joint</joint_name>
+      <topic>/gimbal/yaw_cmd</topic>
+      <use_velocity_commands>true</use_velocity_commands>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>roll_joint</joint_name>
+      <topic>/gimbal/roll_cmd</topic>
+      <use_velocity_commands>true</use_velocity_commands>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>pitch_joint</joint_name>
+      <topic>/gimbal/pitch_cmd</topic>
+      <use_velocity_commands>true</use_velocity_commands>
+    </plugin> -->
 
     <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
       <joint_name>yaw_joint</joint_name>
