@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sdf version='1.9'>
   <model name='3d_gimbal'>
+    <self_collide>false</self_collide>
 
     <link name="gimbal/base_link">
       <inertial>
         <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz>
-        </inertia>
+        <inertia><ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz></inertia>
       </inertial>
       <visual name="base_vis">
         <geometry><box><size>0.04 0.04 0.01</size></box></geometry>
@@ -18,55 +17,52 @@
     <link name="yaw_link">
       <pose>0 0 -0.02 0 0 0</pose>
       <inertial>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz>
-        </inertia>
+        <mass>0.005</mass>
+        <inertia><ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz></inertia>
       </inertial>
       <visual name="yaw_vis">
         <geometry><box><size>0.01 0.01 0.04</size></box></geometry>
-        <material><ambient>0.8 0 0 1</ambient><diffuse>0.8 0 0 1</diffuse></material>
+        <material><ambient>1 0 0 1</ambient><diffuse>1 0 0 1</diffuse></material>
       </visual>
     </link>
     <joint name="yaw_joint" type="revolute">
       <parent>gimbal/base_link</parent><child>yaw_link</child>
       <axis><xyz>0 0 1</xyz><limit><lower>-3.14</lower><upper>3.14</upper></limit></axis>
+      <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
     <link name="roll_link">
       <pose>0.02 0 -0.04 0 0 0</pose>
       <inertial>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz>
-        </inertia>
+        <mass>0.005</mass>
+        <inertia><ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz></inertia>
       </inertial>
       <visual name="roll_vis">
         <geometry><box><size>0.04 0.01 0.01</size></box></geometry>
-        <material><ambient>0 0.8 0 1</ambient><diffuse>0 0.8 0 1</diffuse></material>
+        <material><ambient>0 1 0 1</ambient><diffuse>0 1 0 1</diffuse></material>
       </visual>
     </link>
     <joint name="roll_joint" type="revolute">
       <parent>yaw_link</parent><child>roll_link</child>
-      <axis><xyz>1 0 0</xyz><limit><lower>-0.78</lower><upper>0.78</upper></limit></axis>
+      <axis><xyz>1 0 0</xyz><limit><lower>-0.785</lower><upper>0.785</upper></limit></axis>
+      <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
     <link name="pitch_link">
-      <pose>0.04 0 -0.04 0 1.5708 0</pose>
+      <pose>0.04 0 -0.04 0 0 0</pose>
       <inertial>
-        <mass>0.001</mass>
-        <inertia>
-          <ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz>
-        </inertia>
+        <mass>0.005</mass>
+        <inertia><ixx>0.00001</ixx><iyy>0.00001</iyy><izz>0.00001</izz></inertia>
       </inertial>
       <visual name="pitch_vis">
-        <geometry><cylinder><radius>0.025</radius><length>0.05</length></cylinder></geometry>
-        <material><ambient>0 0 0.8 1</ambient><diffuse>0 0 0.8 1</diffuse></material>
+        <geometry><box><size>0.01 0.04 0.04</size></box></geometry>
+        <material><ambient>0 0 1 1</ambient><diffuse>0 0 1 1</diffuse></material>
       </visual>
     </link>
     <joint name="pitch_joint" type="revolute">
       <parent>roll_link</parent><child>pitch_link</child>
-      <axis><xyz>0 1 0</xyz><limit><lower>-1.57</lower><upper>0.78</upper></limit></axis>
+      <axis><xyz>0 1 0</xyz><limit><lower>-1.57</lower><upper>1.57</upper></limit></axis>
+      <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
     <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">

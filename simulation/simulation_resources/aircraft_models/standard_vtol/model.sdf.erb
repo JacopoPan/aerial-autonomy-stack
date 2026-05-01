@@ -811,6 +811,32 @@
     </plugin>
     <static>0</static>
 
+    <%
+      # Compute the gimbal pose based on the desired camera pose
+      cam_pose = camera_ext.split(' ').map(&:to_f)
+      gimbal_x = cam_pose[0] - 0.02 # Pull the gimbal base back by 2cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_z = cam_pose[2] + 0.05 # Pull the gimbal base up by 5cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_ext = "#{gimbal_x} #{cam_pose[1]} #{gimbal_z} #{cam_pose[3]} #{cam_pose[4]} #{cam_pose[5]}"
+    %>
+    <include>
+      <uri>model://sensor_gimbal</uri>
+      <name>simple_3d_gimbal</name>
+      <pose degrees="true"><%= gimbal_ext %></pose>
+    </include>
+    <joint name="GimbalJoint" type="fixed">
+      <parent>base_link</parent>
+      <child>simple_3d_gimbal::gimbal/base_link</child>
+    </joint>
+    <include>
+      <uri>model://sensor_camera</uri>
+      <name>simple_camera</name>
+      <pose degrees="true"><%= camera_ext %></pose>
+    </include>
+    <joint name="CameraJoint" type="fixed">
+      <parent>simple_3d_gimbal::pitch_link</parent>
+      <child>simple_camera::mono_cam/base_link</child>
+    </joint>
+    <!-- Alternatively, use fixed camera
     <include>
       <uri>model://sensor_camera</uri>
       <name>simple_camera</name>
@@ -820,6 +846,7 @@
       <parent>base_link</parent>
       <child>simple_camera::mono_cam/base_link</child>
     </joint>
+    -->
 
     <include>
       <uri>model://sensor_lidar</uri>
