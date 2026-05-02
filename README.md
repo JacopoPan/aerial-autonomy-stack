@@ -283,7 +283,7 @@ done
 > ```
 > </details>
 > <details>
-> <summary>Use <b>ROS2 drone motion primitives</b> from CLI <i>(click to expand)</i></summary>
+> <summary>Use <b>ROS2 drone and gimbal control primitives</b> from CLI <i>(click to expand)</i></summary>
 >
 > ```sh
 > # Takeoff action (quads and VTOLs)

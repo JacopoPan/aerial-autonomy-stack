@@ -27,7 +27,7 @@
     </link>
     <joint name="yaw_joint" type="revolute">
       <parent>gimbal/base_link</parent><child>yaw_link</child>
-      <axis><xyz>0 0 1</xyz><limit><lower>-3.14</lower><upper>3.14</upper></limit></axis>
+      <axis><xyz>0 0 1</xyz></axis>
       <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
@@ -61,7 +61,7 @@
     </link>
     <joint name="pitch_joint" type="revolute">
       <parent>roll_link</parent><child>pitch_link</child>
-      <axis><xyz>0 1 0</xyz><limit><lower>-1.57</lower><upper>1.57</upper></limit></axis>
+      <axis><xyz>0 1 0</xyz><limit><lower>-1.57</lower><upper>3.14</upper></limit></axis>
       <dynamics><damping>0.05</damping></dynamics>
     </joint>
 
