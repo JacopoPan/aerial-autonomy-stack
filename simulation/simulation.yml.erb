@@ -79,11 +79,9 @@ windows:
       model_name = is_quad ? "x500_#{sitl_instance}" : "standard_vtol_#{sitl_instance}"
       x_offset = drone[:index] * 2
       y_offset = is_quad ? x_offset : x_offset + 2
-      sensor_path = ''
     elsif autopilot == 'ardupilot'
       vehicle_config = is_quad ? '-v ArduCopter -f gazebo-iris' : '-v ArduPlane'
       model_name = is_quad ? "iris_with_ardupilot_#{drone_id}" : "alti_transition_quad_#{drone_id}"
-      sensor_path = is_quad ? 'model/iris/' : ''
     end
   %>
   <% if autopilot == 'px4' %>
@@ -118,23 +116,31 @@ windows:
         <% if camera %>
         - >
           /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
-          /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image
+          /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image
           <%= "#{sim_subnet}.90.#{drone_id}" %> 5600 <%= cam_update_rate %>
-        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/state@sensor_msgs/msg/JointState[gz.msgs.Model"
-        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/pitch_cmd@std_msgs/msg/Float64]gz.msgs.Double"
-        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/roll_cmd@std_msgs/msg/Float64]gz.msgs.Double"
-        - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /gimbal/yaw_cmd@std_msgs/msg/Float64]gz.msgs.Double"
+        - >
+          ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /world/<%= world %>/model/<%= model_name %>/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model
+          --ros-args -r /world/<%= world %>/model/<%= model_name %>/joint_state:=/gimbal_state
+        - >
+          ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/gimbal_3d/pitch_cmd@std_msgs/msg/Float64]gz.msgs.Double
+          --ros-args -r /model/<%= model_name %>/gimbal_3d/pitch_cmd:=gimbal_pitch_cmd
+        - >
+          ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/gimbal_3d/roll_cmd@std_msgs/msg/Float64]gz.msgs.Double
+          --ros-args -r /model/<%= model_name %>/gimbal_3d/roll_cmd:=gimbal_roll_cmd
+        - >
+          ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/gimbal_3d/yaw_cmd@std_msgs/msg/Float64]gz.msgs.Double
+          --ros-args -r /model/<%= model_name %>/gimbal_3d/yaw_cmd:=gimbal_yaw_cmd
         # (optional/alternative) Use ros_gz_bridge to republish the camera frames into ROS2 and use tools like $ ros2 run rqt_image_view rqt_image_view
         # - >
         #   ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge
-        #   /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image@sensor_msgs/msg/Image[gz.msgs.Image
-        #   --ros-args -r /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_camera/link/mono_cam/base_link/sensor/imager/image:=/camera_frames
+        #   /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image@sensor_msgs/msg/Image[gz.msgs.Image
+        #   --ros-args -r /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image:=/camera_frames
         <% end %>
         <% if lidar %>
         - >
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge 
-          /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked 
-          --ros-args -r /world/<%= world %>/model/<%= model_name %>/<%= sensor_path %>model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points:=/lidar_points
+          /world/<%= world %>/model/<%= model_name %>/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked
+          --ros-args -r /world/<%= world %>/model/<%= model_name %>/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points:=/lidar_points
         <% end %>
         - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
   <% end %>

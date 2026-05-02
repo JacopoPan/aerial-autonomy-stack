@@ -305,8 +305,8 @@ done
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
 >
 > # Gimbal status and position control (in radians)
-> ros2 topic echo /gimbal/state
-> ros2 topic pub -1 /gimbal/yaw_cmd std_msgs/msg/Float64 "{data: -1.57}"
+> ros2 topic echo /gimbal_state
+> ros2 topic pub -1 /gimbal_yaw_cmd std_msgs/msg/Float64 "{data: -1.57}"
 > ```
 > To analyze the flight logs in the `Simulation`'s Xterm terminal:
 > ```sh
