@@ -10,7 +10,7 @@ on:
 
 jobs:
   install-check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read

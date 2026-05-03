@@ -189,6 +189,7 @@ aerial-autonomy-stack
 <summary>Dependency management <i>(click to expand)</i></summary>
 
 - [x] Host OS: [Ubuntu 24.04/22.04 (LTS, ESM 4/2034)](https://ubuntu.com/about/release-cycle)
+    - **TODO: test on Ubuntu 26.04**
 - [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
     - **TODO: test on JP 6.2.2 [L4T 36.5.0, Ubuntu 22-based]**
 - [x] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)

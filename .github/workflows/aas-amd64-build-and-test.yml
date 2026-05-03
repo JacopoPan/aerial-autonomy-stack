@@ -23,7 +23,7 @@ jobs:
     uses: ./.github/workflows/simulation-amd64-build.yml
 
   integration-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: [build-aircraft, build-ground, build-simulation]
     timeout-minutes: 150
     permissions:
