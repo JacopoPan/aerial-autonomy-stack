@@ -1,7 +1,5 @@
 # aerial-autonomy-stack
 
-<img align="right" height="120" alt="mission-patch" src="https://github.com/user-attachments/assets/252cc420-9527-4342-9ffd-c6bec77ebdf3" />
-
 *Aerial autonomy stack* (AAS) is an all-in-one software stack to:
 
 1. **Develop** multi-drone autonomy—with ROS2, PX4, and ArduPilot
