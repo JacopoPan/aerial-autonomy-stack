@@ -1,7 +1,7 @@
 steps:
   - action: takeoff
     params:
-      takeoff_altitude: 30.0
+      takeoff_altitude: 40.0
       vtol_transition_heading: 330.0
       vtol_loiter_nord: 100.0
       vtol_loiter_east: 100.0
