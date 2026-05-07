@@ -41,8 +41,8 @@ simulation/simulation_resources/simulation_worlds/birch/meshes/birch-trunk-diff.
 simulation/simulation_resources/simulation_worlds/birch/meshes/simpler_birch.png
 simulation/simulation_resources/simulation_worlds/crash/meshes/crash.fbm/texture.jpg
 simulation/simulation_resources/simulation_worlds/crash/meshes/crash.fbx
-simulation/simulation_resources/simulation_worlds/duck/meshes/duck.fbx
-simulation/simulation_resources/simulation_worlds/duck/meshes/simpler_duck.fbx
+simulation/simulation_resources/simulation_worlds/duckie/meshes/duckie.fbx
+simulation/simulation_resources/simulation_worlds/duckie/meshes/simpler_duckie.fbx
 simulation/simulation_resources/simulation_worlds/gazebo/meshes/gazebo.fbx
 simulation/simulation_resources/simulation_worlds/jeep/meshes/car_jeep_ren.jpg
 simulation/simulation_resources/simulation_worlds/jeep/meshes/jeep.dae

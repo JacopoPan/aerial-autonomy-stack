@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <sdf version='1.10'>
-  <model name='duck'>
+  <model name='duckie'>
     <pose>0 0 0 0 0 0</pose>
     <link name='base_link'>
       <pose>0 0 0 0 0 0</pose>
@@ -26,7 +26,7 @@
         <geometry>
           <mesh>
             <scale>.01 .01 .01</scale>
-            <uri>model://duck/meshes/duck.fbx</uri>
+            <uri>model://duckie/meshes/duckie.fbx</uri>
           </mesh>
         </geometry>
         <!-- <material>

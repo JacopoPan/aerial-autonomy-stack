@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sdf version="1.9">
-  <world name="impalpable_greyness">
+  <world name="waterworld">
 
     <!-- Gazebo/PX4 pyhsics, it is overridden when using Ardupilot -->
     <physics type="ode">
@@ -214,15 +214,15 @@
       <ambient>0.4 0.4 0.4 1</ambient>
       <background>0.7 0.7 0.7 1</background>
       <shadows>true</shadows>
-      <!-- <sky></sky> -->
+      <sky></sky>
     </scene>
 
     <spherical_coordinates>
       <surface_model>EARTH_WGS84</surface_model>
       <world_frame_orientation>ENU</world_frame_orientation>
-      <latitude_deg>45.547731543301055</latitude_deg>
-      <longitude_deg>8.938851933598375</longitude_deg>
-      <elevation>179</elevation>
+      <latitude_deg>12.935829</latitude_deg>
+      <longitude_deg>100.870659</longitude_deg>
+      <elevation>0.0</elevation>
     </spherical_coordinates>
 
     <wind>
@@ -311,55 +311,6 @@
         </link>
       </model>
 
-      <model name="ground_plane">
-        <static>true</static>
-        <link name="link">
-          <collision name="collision">
-            <geometry>
-              <plane>
-                <normal>0 0 1</normal>
-                <size>1 1</size>
-              </plane>
-            </geometry>
-            <surface>
-              <friction>
-                <ode/>
-              </friction>
-              <bounce/>
-              <contact/>
-            </surface>
-          </collision>
-          <visual name="visual">
-            <geometry>
-              <plane>
-                <normal>0 0 1</normal>
-                <size>100 100</size>
-              </plane>
-            </geometry>
-            <material>
-              <ambient>0.8 0.8 0.8 1</ambient>
-              <diffuse>0.8 0.8 0.8 1</diffuse>
-              <specular>0.8 0.8 0.8 1</specular>
-            </material>
-          </visual>
-          <pose>0 0 0 0 -0 0</pose>
-          <inertial>
-            <pose>0 0 0 0 -0 0</pose>
-            <mass>1</mass>
-            <inertia>
-              <ixx>1</ixx>
-              <ixy>0</ixy>
-              <ixz>0</ixz>
-              <iyy>1</iyy>
-              <iyz>0</iyz>
-              <izz>1</izz>
-            </inertia>
-          </inertial>
-        </link>
-        <pose degrees="true">0 0 0 0 -0 0</pose>
-        <self_collide>false</self_collide>
-      </model>
-
       <model name="mario_coin">
         <pose degrees="true">0 0 15 30 90 0</pose>
         <static>true</static>
@@ -381,188 +332,42 @@
         </link>
       </model>
 
-      <model name="cylinder">
-        <pose>12 8 5 0 0 0</pose>
-        <static>true</static>
-        <link name="link">
-          <inertial>
-            <pose>0 0 0 0 0 0</pose>
-            <mass>10</mass>
-            <inertia>
-              <ixx>1</ixx>
-              <iyy>1</iyy>
-              <izz>1</izz>
-            </inertia>
-          </inertial>
-          <collision name='collision'>
-            <pose>0 0 0 0 0 0</pose>
-            <geometry>
-              <cylinder>
-                <radius>1</radius>
-                <length>10</length>
-              </cylinder>
-            </geometry>
-          </collision>
-          <visual name="visual">
-            <geometry>
-              <cylinder>
-                <radius>1</radius>
-                <length>10</length>
-              </cylinder>
-            </geometry>
-            <material>
-              <ambient>1 0 0 1.0</ambient>
-              <diffuse>1 0 0 1.0</diffuse>
-              <!-- <specular>1 0 0 1.0</specular> -->
-              <!-- <emissive>1 0 0 1.0</emissive> -->
-            </material>
-          </visual>
-        </link>
-      </model>
-
-      <model name="sphere">
-        <pose>20 0 2 0 0 0</pose>
-        <static>true</static>
-        <link name="link">
-          <inertial>
-            <pose>0 0 0 0 0 0</pose>
-            <mass>10</mass>
-            <inertia>
-              <ixx>1</ixx>
-              <iyy>1</iyy>
-              <izz>1</izz>
-            </inertia>
-          </inertial>
-          <collision name='collision'>
-            <pose>0 0 0 0 0 0</pose>
-            <geometry>
-              <sphere>
-                <radius>2</radius>
-              </sphere>
-            </geometry>
-          </collision>
-          <visual name="visual">
-            <geometry>
-              <sphere>
-                <radius>2</radius>
-              </sphere>
-            </geometry>
-            <material>
-              <ambient>0 1 0 1.0</ambient>
-              <diffuse>0 1 0 1.0</diffuse>
-              <!-- <specular>0 1 0 1.0</specular> -->
-              <!-- <emissive>0 1 0 1.0</emissive> -->
-            </material>
-          </visual>
-        </link>
-      </model>
-
-      <model name="sphere2">
-        <pose>-10 0 6 0 0 0</pose>
-        <static>true</static>
-        <link name="link">
-          <inertial>
-            <pose>0 0 0 0 0 0</pose>
-            <mass>10</mass>
-            <inertia>
-              <ixx>1</ixx>
-              <iyy>1</iyy>
-              <izz>1</izz>
-            </inertia>
-          </inertial>
-          <collision name='collision'>
-            <pose>0 0 0 0 0 0</pose>
-            <geometry>
-              <sphere>
-                <radius>6</radius>
-              </sphere>
-            </geometry>
-          </collision>
-          <visual name="visual">
-            <geometry>
-              <sphere>
-                <radius>6</radius>
-              </sphere>
-            </geometry>
-            <material>
-              <ambient>0 1 0 1.0</ambient>
-              <diffuse>0 1 0 1.0</diffuse>
-              <!-- <specular>0 1 0 1.0</specular> -->
-              <!-- <emissive>0 1 0 1.0</emissive> -->
-            </material>
-          </visual>
-        </link>
-      </model>
-
-      <model name="cube">
-        <pose>10 -10 3 0 0 0</pose>
-        <static>true</static>
-        <link name="link">
-          <inertial>
-            <pose>0 0 0 0 0 0</pose>
-            <mass>10</mass>
-            <inertia>
-              <ixx>1</ixx>
-              <iyy>1</iyy>
-              <izz>1</izz>
-            </inertia>
-          </inertial>
-          <collision name='collision'>
-            <pose>0 0 0 0 0 0</pose>
-            <geometry>
-              <box>
-                <size>4.0 4.0 6.0</size>
-              </box>
-            </geometry>
-          </collision>
-          <visual name="visual">
-            <geometry>
-              <box>
-                <size>4.0 4.0 6.0</size>
-              </box>
-            </geometry>
-            <material>
-              <ambient>0 0 1 1.0</ambient>
-              <diffuse>0 0 1 1.0</diffuse>
-              <!-- <specular>0 0 1 1.0</specular> -->
-              <!-- <emissive>0 0 1 1.0</emissive> -->
-            </material>
-          </visual>
-        </link>
-      </model>
-
       <include>
-        <uri>model://unicorn</uri>
-        <pose degrees="true">40 -20 3.4 0 0 -30</pose>
-        <static>true</static>
+        <pose>0 0 0 0 0 0</pose>
+        <uri>model://waves</uri>
       </include>
 
       <include>
-        <uri>model://rabbit</uri>
-        <pose degrees="true">20 20 1 0 0 30</pose>
-        <static>true</static>
+        <pose degrees="true">0 -0.5 0 0 0 90</pose>
+        <uri>model://barrage</uri>
+        <name>barrage</name>
+      </include>
+      <joint name="barrage_anchor_joint" type="fixed">
+        <parent>world</parent>
+        <child>barrage::buoy0::base_link</child> 
+      </joint>
+
+      <include>
+        <pose>5 0 0 0 0 3.14</pose>
+        <uri>model://duck</uri>
       </include>
 
       <include>
-        <uri>model://duckie</uri>
-        <pose degrees="true">2 0.5 0.07 0 0 -45</pose>
-        <static>true</static>
+        <pose>5 -5 0 0 0 0</pose>
+        <uri>model://spherical_buoy</uri>
       </include>
 
-      <!-- <include>
-        <uri>model://crash</uri>
-        <pose degrees="true">5 40 3.75 0 0 0</pose>
-      </include>
       <include>
-        <uri>model://subaru</uri>
-        <pose degrees="true">-5 30 2 0 0 0</pose>
-        <static>true</static>
-      </include> -->
+        <pose degrees="true">10 0 0 0 0 92</pose>
+        <uri>model://barrage</uri>
+        <name>barrage_1</name>
+      </include>
 
-      <!-- <include>
-        <uri>model://suburb</uri>
-        <pose degrees="true">25 -205 -0.6 0 0 180</pose>
-      </include> -->  
+      <include>
+        <pose degrees="true">20 0 0 0 0 86</pose>
+        <uri>model://barrage</uri>
+        <name>barrage_2</name>
+      </include>
         
     </model>
 

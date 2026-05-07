@@ -226,16 +226,16 @@ read -n 1 -s # Wait for user input
 cleanup() {
   DOCKER_PIDS=$(pgrep -f "docker run.*inst${INSTANCE}" 2>/dev/null || true)
   CONTAINER_NAMES=("${SIM_CONT_NAME}" "${GND_CONT_NAME}" "aircraft-container-inst${INSTANCE}")
-  CONTAINERS_TO_STOP=""
-  for name in "${CONTAINER_NAMES[@]}"; do
-      CONTAINERS_TO_STOP+=$(docker ps -a -q --filter name="${name}" 2>/dev/null || true)
-      CONTAINERS_TO_STOP+=" "
-  done
   echo "Stopping Docker containers (this will take a few seconds)..."
-  if [ -n "$CONTAINERS_TO_STOP" ]; then
-      echo "$CONTAINERS_TO_STOP" | xargs docker stop -t 5
-  fi
-  sleep 1 # Prevent Xorg crashes
+  for name in "${CONTAINER_NAMES[@]}"; do
+      CID=$(docker ps -a -q --filter name="${name}" 2>/dev/null || true)
+      if [ -n "$CID" ]; then
+          echo "Removing $name..."
+          docker stop -t 5 $CID >/dev/null 2>&1 || true
+          docker rm $CID >/dev/null 2>&1 || true
+          sleep 0.5
+      fi
+  done
   if [ -n "$DOCKER_PIDS" ]; then
     for dpid in $DOCKER_PIDS; do
       PARENT_PID=$(ps -o ppid= -p $dpid 2>/dev/null | tr -d ' ') # Determine process pids with a parent pid
