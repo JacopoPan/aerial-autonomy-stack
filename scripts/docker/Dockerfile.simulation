@@ -232,6 +232,23 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 ################################################################################
 FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-zmq-image AS simulation-dev-image
 
+# TEMP asv_wave_sim build
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libcgal-dev libfftw3-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+COPY /github_clones/asv_wave_sim /aas/github_ws/src/asv_wave_sim
+WORKDIR /aas/github_ws
+# RUN rosdep update
+# RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y
+# Explicitly use bash, not sh, to source and build the workspace
+# RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install \
+    --merge-install \
+    --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=17"
+WORKDIR /aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control
+RUN mkdir build && cd build && cmake .. && make
+
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
@@ -259,8 +276,9 @@ WORKDIR /aas/simulation_resources/aircraft_models/
 RUN ruby _create_sdfs_using_sensor_config.rb
 
 # Source the workspaces
+RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc
 RUN echo "source /aas/simulation_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/simulation_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/simulation_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

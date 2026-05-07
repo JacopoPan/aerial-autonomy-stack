@@ -28,6 +28,7 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/PX4/PX4-Autopilot.git;v1.16.2;PX4-Autopilot"
   "https://github.com/ArduPilot/ardupilot.git;Copter-4.6.3;ardupilot"
   "https://github.com/ArduPilot/ardupilot_gazebo.git;main;ardupilot_gazebo"
+  "https://github.com/srmainwaring/asv_wave_sim.git;master;asv_wave_sim"
   "https://github.com/PX4/flight_review.git;main;flight_review"
   # Ground image
   "https://github.com/mavlink/c_library_v2;master;c_library_v2"

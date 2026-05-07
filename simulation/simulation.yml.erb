@@ -66,9 +66,12 @@ windows:
           /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
+          GZ_SIM_SYSTEM_PLUGIN_PATH=$GZ_SIM_SYSTEM_PLUGIN_PATH:/aas/github_ws/install/lib
+          GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH:/aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control/build
+          GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/aas/github_ws/src/asv_wave_sim/gz-waves-models/models:/aas/github_ws/src/asv_wave_sim/gz-waves-models/world_models:/aas/github_ws/src/asv_wave_sim/gz-waves-models/worlds
           GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/aas/simulation_resources/aircraft_models:/aas/simulation_resources/simulation_worlds 
           GZ_SIM_PHYSICS_ENGINE_PATH=$GZ_SIM_PHYSICS_ENGINE_PATH:/usr/lib/x86_64-linux-gnu/gz-physics-7/engine-plugins/
-          gz sim -v2 <%= start_as_paused ? '' : '-r' %> <%= headless ? '-s' : '' %> <%= autopilot == 'px4' ? "#{world}.sdf" : "populated_ardupilot.sdf" %>   
+          gz sim -v2 <%= start_as_paused ? '' : '-r' %> <%= headless ? '-s' : '' %> waves.sdf
 
   <% drones.each_with_index do |drone, sitl_instance| %>
   <% 
