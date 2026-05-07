@@ -2,7 +2,7 @@
 <sdf version='1.10'>
   <model name="aruco_marker">
     <static>true</static>
-    <!-- <pose>0 0 0.001 0 0 0</pose> -->
+    <pose>0 0 0.001 0 0 0</pose>
     <link name='marker_link'>
       <visual name='base_visual'>
         <geometry>
