@@ -342,9 +342,20 @@
         <uri>model://barrage</uri>
         <name>barrage</name>
       </include>
+      <!-- Anchor the barrage to the world for PX4's pre-takeoff state estimation -->
       <joint name="barrage_anchor_joint" type="fixed">
         <parent>world</parent>
         <child>barrage::buoy0::base_link</child> 
+      </joint>
+      <!-- ArUco tag on the takeoff buoy -->
+      <include>
+        <pose degrees="true">0 -0.5 0.251 0 0 0</pose>
+        <uri>model://aruco</uri>
+        <name>aruco_marker_1</name>
+      </include>
+      <joint name="marker_joint_1" type="fixed">
+        <parent>barrage::buoy0::base_link</parent>
+        <child>aruco_marker_1::marker_link</child>
       </joint>
 
       <include>
@@ -368,6 +379,16 @@
         <uri>model://barrage</uri>
         <name>barrage_2</name>
       </include>
+      <!-- ArUco tag on the landing buoy -->
+      <include>
+        <pose degrees="true">20 0 0.251 0 0 0</pose>
+        <uri>model://aruco</uri>
+        <name>aruco_marker_2</name>
+      </include>
+      <joint name="marker_joint_2" type="fixed">
+        <parent>barrage_2::buoy0::base_link</parent>
+        <child>aruco_marker_2::marker_link</child>
+      </joint>
         
     </model>
 

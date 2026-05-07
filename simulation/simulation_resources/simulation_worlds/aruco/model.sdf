@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<sdf version='1.10'>
+  <model name="aruco_marker">
+    <static>true</static>
+    <!-- <pose>0 0 0.001 0 0 0</pose> -->
+    <link name='marker_link'>
+      <visual name='base_visual'>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.5 0.5</size>
+          </plane>
+        </geometry>
+        <material>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.4 0.4 0.4 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://aruco/materials/aruco_marker.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
