@@ -342,11 +342,12 @@
         <uri>model://barrage</uri>
         <name>barrage</name>
       </include>
-      <!-- Anchor the barrage to the world for PX4's pre-takeoff state estimation -->
-      <joint name="barrage_anchor_joint" type="fixed">
+      <!-- Anchor the barrage to the world for PX4's pre-takeoff state estimation; note that Gazebo will display the error below: -->
+      <!-- [Err] [WavefieldSampler.cc:169] point:  0.00400975 0.75 -0.082529 [Err] [WavefieldSampler.cc:171] Water patch is too small-->
+      <!-- <joint name="barrage_anchor_joint" type="fixed">
         <parent>world</parent>
         <child>barrage::buoy0::base_link</child> 
-      </joint>
+      </joint> -->
       <!-- ArUco tag on the takeoff buoy -->
       <include>
         <pose degrees="true">0 -0.5 0.251 0 0 90</pose>
