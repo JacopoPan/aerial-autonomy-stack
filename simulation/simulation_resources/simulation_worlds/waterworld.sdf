@@ -349,7 +349,7 @@
       </joint>
       <!-- ArUco tag on the takeoff buoy -->
       <include>
-        <pose degrees="true">0 -0.5 0.251 0 0 0</pose>
+        <pose degrees="true">0 -0.5 0.251 0 0 90</pose>
         <uri>model://aruco</uri>
         <name>aruco_marker_1</name>
       </include>
@@ -381,7 +381,7 @@
       </include>
       <!-- ArUco tag on the landing buoy -->
       <include>
-        <pose degrees="true">20 0 0.251 0 0 0</pose>
+        <pose degrees="true">20 0 0.251 0 0 86</pose>
         <uri>model://aruco</uri>
         <name>aruco_marker_2</name>
       </include>

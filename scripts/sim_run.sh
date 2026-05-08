@@ -231,7 +231,7 @@ cleanup() {
       CID=$(docker ps -a -q --filter name="${name}" 2>/dev/null || true)
       if [ -n "$CID" ]; then
           echo "Removing $name..."
-          docker stop -t 5 $CID >/dev/null 2>&1 || true
+          docker stop -t 2 $CID >/dev/null 2>&1 || true
           docker rm $CID >/dev/null 2>&1 || true
           sleep 0.5
       fi
