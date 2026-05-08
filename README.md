@@ -207,6 +207,21 @@ aerial-autonomy-stack
 - [x] [YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
     - **NOTE: updating to 1.24 from wheel requires switching to Python >3.11/Ubuntu 24**
+
+External repositories:
+- [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.16.2`
+- [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.16`
+- [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
+- [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
+- [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
+- [`srmainwaring/asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) tag/branch: `master`
+- [`mavlink/c_library_v2`](https://github.com/mavlink/c_library_v2) tag/branch: `master`
+- [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
+- [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
+- [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
+- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.23.2`
+- [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
+- [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>
 
 ## 1. Installation
@@ -253,7 +268,7 @@ AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./
 # AUTOPILOT=px4, ardupilot
 # HEADLESS/CAMERA/LIDAR=true, false
 # NUM_QUADS/NUM_VTOLS=0, 1, ...
-# WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town
+# WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
 # RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
 # INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 ```
@@ -395,11 +410,12 @@ done
 
 ![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
 
-> `WORLD`s (in clock-wise order): 
+> `WORLD`s:
 > *(i)* `apple_orchard`, a GIS world created using [BlenderGIS](https://github.com/domlysz/BlenderGIS)
 > / *(ii)* `impalpable_greyness`, an empty world with simple shapes
 > / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
+> / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) plugin
 
 ## 3. Jetson Deployment
 
