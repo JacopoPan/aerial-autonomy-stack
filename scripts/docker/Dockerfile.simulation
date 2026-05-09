@@ -192,7 +192,7 @@ RUN make px4_sitl
 ################################################################################
 # Stage 7 - 20GB ###############################################################
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-zmq-image
+FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-waves-zmq-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -219,19 +219,6 @@ RUN python3 -m venv /px4fr-env
 RUN /px4fr-env/bin/pip3 install --no-cache-dir --upgrade pip && \
     /px4fr-env/bin/pip3 install --no-cache-dir --resume-retries 5 -r requirements.txt
 
-# Install ZeroMQ
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libzmq3-dev \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pyzmq
-
-################################################################################
-# Stage 8 - 21+GB ##############################################################
-################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-zmq-image AS simulation-dev-image
-
 # Build the Gazebo wave plugin in github_ws/
 # Based on https://github.com/srmainwaring/asv_wave_sim/blob/master/README.md
 RUN apt-get update && \
@@ -248,6 +235,19 @@ RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install
 # Build the GUI plugin
 WORKDIR /aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control
 RUN mkdir build && cd build && cmake .. && make
+
+# Install ZeroMQ
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libzmq3-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install --no-cache-dir --upgrade pip \
+    && pip3 install --no-cache-dir --resume-retries 5 pyzmq
+
+################################################################################
+# Stage 8 - 21+GB ##############################################################
+################################################################################
+FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
 
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
