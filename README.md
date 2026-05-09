@@ -567,7 +567,7 @@ docker stop $(docker ps -q) && docker container prune -f && docker network prune
 -->
 
 ---
-![waves](https://github.com/user-attachments/assets/669a6b7c-3a94-49f1-bc28-1eeb1e68cf9e)
+![waves](https://github.com/user-attachments/assets/fd757549-33bd-434d-aac6-665c255b7160)
 
 > You've done a man's job, sir. I guess you're through, huh?
 
