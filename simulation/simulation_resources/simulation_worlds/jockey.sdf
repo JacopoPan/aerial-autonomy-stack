@@ -327,10 +327,5 @@
       <pose>0 0 0 0 0 0</pose>
     </include>
 
-    <include>
-      <uri>https://fuel.gazebosim.org/1.0/saiaravind19/models/helipad</uri>
-      <pose> 60.12 183.40 2.3 0 0 0.26 </pose>
-    </include>
-
   </world>
 </sdf>

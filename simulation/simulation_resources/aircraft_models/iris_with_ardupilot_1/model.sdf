@@ -1,0 +1,825 @@
+<?xml version='1.0'?>
+<sdf version="1.9">
+  <model name="iris_with_ardupilot_1">
+    
+    <model name='iris'>
+      <pose>0 0 0 0 0 0</pose>
+
+      <include>
+        <uri>model://grenade</uri>
+        <name>B1</name>
+        <pose>-0.140 0.0 -0.15 1.5707 0 0</pose>
+      </include>
+
+      <include>
+        <uri>model://fog_generator</uri>
+        <name>fog_emitter</name>
+        <pose>-0.140 0.0 -0.15 0 0 0</pose>
+      </include>
+
+      <joint name="fog_joint" type="fixed">
+          <parent>B1::link</parent>
+          <child>fog_emitter::fog_link</child>
+      </joint>
+
+      <!-- gz topic -t /iris_with_ardupilot_{N}/drop -m gz.msgs.Empty -p "" -->
+      <plugin
+        filename="gz-sim-detachable-joint-system"
+        name="gz::sim::systems::DetachableJoint">
+        <parent_link>base_link</parent_link>
+        <child_model>B1</child_model>
+        <child_link>link</child_link>
+        <topic>/iris_with_ardupilot_1/drop</topic>
+      </plugin>
+
+      <link name='base_link'>
+        <enable_wind>true</enable_wind>
+        <velocity_decay>
+          <linear>0.0</linear>
+          <angular>0.0</angular>
+        </velocity_decay>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>1.5</mass>
+          <inertia>
+            <ixx>0.008</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.015</iyy>
+            <iyz>0</iyz>
+            <izz>0.017</izz>
+          </inertia>
+        </inertial>
+        <collision name='base_collision'>
+          <pose>0 0 -0.08 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.47 0.47 0.23</size>
+            </box>
+          </geometry>
+          <surface>
+            <contact>
+              <ode>
+                <max_vel>100.0</max_vel>
+                <min_depth>0.001</min_depth>
+              </ode>
+            </contact>
+            <friction>
+              <ode>
+                <mu>100000.0</mu>
+                <mu2>100000.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='base_visual'>
+          <geometry>
+            <mesh>
+              <uri>model://iris_with_ardupilot/meshes/iris.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>1 1 1 1</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+
+        <visual name='front_left_leg_visual'>
+          <pose>0.123 0.22 -0.11 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.005</radius>
+              <length>0.17</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <visual name='front_right_leg_visual'>
+          <pose>0.123 -0.22 -0.11 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.005</radius>
+              <length>0.17</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <visual name='rear_left_leg_visual'>
+          <pose>-0.140 0.21 -0.11 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.005</radius>
+              <length>0.17</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <visual name='rear_right_leg_visual'>
+          <pose>-0.140 -0.21 -0.11 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <radius>0.005</radius>
+              <length>0.17</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.05 0.05 0.05</ambient>
+            <diffuse>0.05 0.05 0.05</diffuse>
+            <specular>0.01 0.01 0.01 1.0</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+      </link>
+      <link name='imu_link'>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.15</mass>
+          <inertia>
+            <ixx>0.00001</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.00002</iyy>
+            <iyz>0</iyz>
+            <izz>0.00002</izz>
+          </inertia>
+        </inertial>
+        <sensor name="imu_sensor" type="imu">
+          <pose degrees="true">0 0 0 180 0 0</pose>
+          <always_on>1</always_on>
+          <update_rate>1000.0</update_rate>
+        </sensor>
+      </link>
+      <joint name='imu_joint' type='revolute'>
+        <child>imu_link</child>
+        <parent>base_link</parent>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>0</lower>
+            <upper>0</upper>
+            <effort>0</effort>
+            <velocity>0</velocity>
+          </limit>
+          <dynamics>
+            <damping>1.0</damping>
+          </dynamics>
+        </axis>
+      </joint>
+      <link name='rotor_0'>
+        <pose>0.13 -0.22 0.023 0 0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.025</mass>
+          <inertia>
+            <ixx>9.75e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.000166704</iyy>
+            <iyz>0</iyz>
+            <izz>0.000167604</izz>
+          </inertia>
+        </inertial>
+        <collision name='rotor_0_collision'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.1</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='rotor_0_visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>model://iris_with_ardupilot/meshes/iris_prop_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0 0 1</ambient>
+            <diffuse>0 0 1</diffuse>
+            <specular>1 1 1 1</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <gravity>1</gravity>
+        <velocity_decay/>
+        <self_collide>0</self_collide>
+      </link>
+      <joint name='rotor_0_joint' type='revolute'>
+        <child>rotor_0</child>
+        <parent>base_link</parent>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>0.004</damping>
+          </dynamics>
+        </axis>
+        <physics>
+          <ode>
+            <implicit_spring_damper>1</implicit_spring_damper>
+          </ode>
+        </physics>
+      </joint>
+      <link name='rotor_1'>
+        <pose>-0.13 0.2 0.023 0 0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.025</mass>
+          <inertia>
+            <ixx>9.75e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.000166704</iyy>
+            <iyz>0</iyz>
+            <izz>0.000167604</izz>
+          </inertia>
+        </inertial>
+        <collision name='rotor_1_collision'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.1</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='rotor_1_visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>model://iris_with_ardupilot/meshes/iris_prop_ccw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0 0 1 1</ambient>
+            <diffuse>0 0 1 1</diffuse>
+            <specular>1 1 1 1</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <gravity>1</gravity>
+        <velocity_decay/>
+        <self_collide>0</self_collide>
+      </link>
+      <joint name='rotor_1_joint' type='revolute'>
+        <child>rotor_1</child>
+        <parent>base_link</parent>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>0.004</damping>
+          </dynamics>
+        </axis>
+        <physics>
+          <ode>
+            <implicit_spring_damper>1</implicit_spring_damper>
+          </ode>
+        </physics>
+      </joint>
+      <link name='rotor_2'>
+        <pose>0.13 0.22 0.023 0 0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.025</mass>
+          <inertia>
+            <ixx>9.75e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.000166704</iyy>
+            <iyz>0</iyz>
+            <izz>0.000167604</izz>
+          </inertia>
+        </inertial>
+        <collision name='rotor_2_collision'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.1</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='rotor_2_visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>model://iris_with_ardupilot/meshes/iris_prop_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0 1 0</ambient>
+            <diffuse>0 1 0</diffuse>
+            <specular>1 1 1 1</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <gravity>1</gravity>
+        <velocity_decay/>
+        <self_collide>0</self_collide>
+      </link>
+      <joint name='rotor_2_joint' type='revolute'>
+        <child>rotor_2</child>
+        <parent>base_link</parent>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>0.004</damping>
+          </dynamics>
+        </axis>
+        <physics>
+          <ode>
+            <implicit_spring_damper>1</implicit_spring_damper>
+          </ode>
+        </physics>
+      </joint>
+      <link name='rotor_3'>
+        <pose>-0.13 -0.2 0.023 0 0 0</pose>
+        <inertial>
+          <pose>0 0 0 0 0 0</pose>
+          <mass>0.025</mass>
+          <inertia>
+            <ixx>9.75e-06</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.000166704</iyy>
+            <iyz>0</iyz>
+            <izz>0.000167604</izz>
+          </inertia>
+        </inertial>
+        <collision name='rotor_3_collision'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <cylinder>
+              <length>0.005</length>
+              <radius>0.1</radius>
+            </cylinder>
+          </geometry>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <friction>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='rotor_3_visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <scale>1 1 1</scale>
+              <uri>model://iris_with_ardupilot/meshes/iris_prop_cw.dae</uri>
+            </mesh>
+          </geometry>
+          <material>
+            <ambient>0 1 0</ambient>
+            <diffuse>0 1 0</diffuse>
+            <specular>1 1 1 1</specular>
+            <pbr>
+              <metal>
+                <metalness>0.5</metalness>
+                <roughness>0.5</roughness>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <gravity>1</gravity>
+        <velocity_decay/>
+        <self_collide>0</self_collide>
+      </link>
+      <joint name='rotor_3_joint' type='revolute'>
+        <child>rotor_3</child>
+        <parent>base_link</parent>
+        <axis>
+          <xyz>0 0 1</xyz>
+          <limit>
+            <lower>-1e+16</lower>
+            <upper>1e+16</upper>
+          </limit>
+          <dynamics>
+            <damping>0.004</damping>
+          </dynamics>
+        </axis>
+        <physics>
+          <ode>
+            <implicit_spring_damper>1</implicit_spring_damper>
+          </ode>
+        </physics>
+      </joint>
+
+      <include>
+        <uri>model://sensor_camera</uri>
+        <name>simple_camera</name>
+        <pose>.175 0 -0.075 0 1.5707 0</pose>
+      </include>
+      <joint name="CameraJoint" type="fixed">
+        <parent>base_link</parent>
+        <child>simple_camera::mono_cam/base_link</child>
+      </joint>
+
+      <include>
+        <uri>model://sensor_lidar</uri>
+        <name>simple_lidar</name>
+        <pose>0 0 .08 0 0 0</pose>
+      </include>
+      <joint name="LidarJoint" type="fixed">
+        <parent>base_link</parent>
+        <child>simple_lidar::lidar/base_link</child>
+      </joint>
+
+    </model>
+
+    <!-- plugins -->
+    <plugin
+      filename="gz-sim-particle-emitter-system"
+      name="gz::sim::systems::ParticleEmitter">
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_0</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_0</link_name>
+    </plugin>
+
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_1</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_1</link_name>
+    </plugin>
+
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_2</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_2</link_name>
+    </plugin>
+
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_3</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>iris::rotor_3</link_name>
+    </plugin>
+
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>iris::rotor_0_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>iris::rotor_1_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>iris::rotor_2_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>iris::rotor_3_joint</joint_name>
+    </plugin>
+
+    <plugin name="ArduPilotPlugin"
+      filename="ArduPilotPlugin">
+      <!-- Port settings -->
+      <fdm_addr>127.0.0.1</fdm_addr>
+      <fdm_port_in>9002</fdm_port_in>
+      <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+      <lock_step>1</lock_step>
+      <have_32_channels>0</have_32_channels>
+
+      <!-- Frame conventions
+        Require by ArduPilot: change model and gazebo from XYZ to XY-Z coordinates
+      -->
+      <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
+      <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
+
+      <!-- Sensors -->
+      <imuName>iris::imu_link::imu_sensor</imuName>
+
+      <!--
+          incoming control command [0, 1]
+          so offset it by 0 to get [0, 1]
+          and divide max target by 1.
+          offset = 0
+          multiplier = 838 max rpm / 1 = 838
+        -->
+      <control channel="0">
+        <jointName>iris::rotor_0_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>838</multiplier>
+        <offset>0</offset>
+        <servo_min>1100</servo_min>
+        <servo_max>1900</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>2.5</cmd_max>
+        <cmd_min>-2.5</cmd_min>
+        <controlVelocitySlowdownSim>1</controlVelocitySlowdownSim>
+      </control>
+
+      <control channel="1">
+        <jointName>iris::rotor_1_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>838</multiplier>
+        <offset>0</offset>
+        <servo_min>1100</servo_min>
+        <servo_max>1900</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>2.5</cmd_max>
+        <cmd_min>-2.5</cmd_min>
+        <controlVelocitySlowdownSim>1</controlVelocitySlowdownSim>
+      </control>
+
+      <control channel="2">
+        <jointName>iris::rotor_2_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>-838</multiplier>
+        <offset>0</offset>
+        <servo_min>1100</servo_min>
+        <servo_max>1900</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>2.5</cmd_max>
+        <cmd_min>-2.5</cmd_min>
+        <controlVelocitySlowdownSim>1</controlVelocitySlowdownSim>
+      </control>
+
+      <control channel="3">
+        <jointName>iris::rotor_3_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>-838</multiplier>
+        <offset>0</offset>
+        <servo_min>1100</servo_min>
+        <servo_max>1900</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>2.5</cmd_max>
+        <cmd_min>-2.5</cmd_min>
+        <controlVelocitySlowdownSim>1</controlVelocitySlowdownSim>
+      </control>
+
+      <!-- Servo channel for payload drop -->
+      <control channel="8">
+        <type>COMMAND</type>
+        <jointName>iris::CameraJoint</jointName>
+        <cmd_topic>/iris_with_ardupilot_1/gripper/cmd</cmd_topic>
+        <multiplier>2000</multiplier>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <offset>0</offset>
+      </control>
+
+    </plugin>
+
+    <!-- Triggered publisher: converts servo command to drop signal -->
+    <plugin filename="gz-sim-triggered-publisher-system"
+      name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Double" topic="/iris_with_ardupilot_1/gripper/cmd">
+        <match field="data">2000</match>
+      </input>
+      <output type="gz.msgs.Empty" topic="/iris_with_ardupilot_1/drop"/>
+    </plugin>
+
+    <!-- Triggered publisher: Smoke ON (using correct ParticleEmitter message types) -->
+    <plugin filename="gz-sim-triggered-publisher-system"
+      name="gz::sim::systems::TriggeredPublisher">
+      <input type="gz.msgs.Double" topic="/iris_with_ardupilot_1/gripper/cmd">
+        <match field="data">2000</match>
+      </input>
+      <output type="gz.msgs.ParticleEmitter" topic="/model/iris_with_ardupilot_1/model/iris/model/fog_emitter/link/fog_link/particle_emitter/emitter/cmd">
+        emitting: {data: true}
+      </output>
+    </plugin>
+    
+  </model>
+</sdf>
