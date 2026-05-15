@@ -31,12 +31,16 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/srmainwaring/asv_wave_sim.git;master;asv_wave_sim"
   "https://github.com/PX4/flight_review.git;main;flight_review"
   # Ground image
-  "https://github.com/mavlink/c_library_v2;master;c_library_v2"
-  "https://github.com/mavlink-router/mavlink-router;master;mavlink-router"
+  "https://github.com/mavlink/c_library_v2.git;master;c_library_v2"
+  "https://github.com/mavlink-router/mavlink-router.git;master;mavlink-router"
   # Aircraft image
   "https://github.com/PX4/px4_msgs.git;release/1.16;px4_msgs"
   "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git;master;Micro-XRCE-DDS-Agent"
   "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
+  "https://github.com/rpng/open_vins.git;master;open_vins"
+  "https://github.com/MIT-SPARK/spark-fast-lio.git;main;spark-fast-lio"
+  "https://github.com/superxslam/SuperOdom.git;ros2;SuperOdom"
+  "https://github.com/hku-mars/FAST-LIVO2.git;main;FAST-LIVO2"
 )
 
 for repo_info in "${REPOS[@]}"; do
