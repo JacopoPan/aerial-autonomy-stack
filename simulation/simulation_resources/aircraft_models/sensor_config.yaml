@@ -7,6 +7,7 @@ sensors:
     update_rate: 8
     near_clip: 0.1
     far_clip: 2000
+    zoom_factor: 1.0 # Initial optical zoom (>1 zooms in by scaling HFOV by 1/zoom_factor); runtime control via /Drone<N>/camera/zoom_cmd
 
   lidar_intrinsics:
     horizontal_samples: 240

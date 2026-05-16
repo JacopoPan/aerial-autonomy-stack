@@ -6,6 +6,10 @@
   diagonal_pixels = Math.sqrt(camera_intrinsics['width'].to_f**2 + camera_intrinsics['height'].to_f**2)
   focal_length = diagonal_pixels / (2.0 * Math.tan(dfov_rad / 2.0))
   hfov_rad = 2.0 * Math.atan(camera_intrinsics['width'].to_f / (2.0 * focal_length))
+  # Optical zoom: scale HFOV by 1/zoom_factor (zoom_factor=2.0 halves HFOV i.e. 2x zoom-in)
+  zoom_factor = (camera_intrinsics['zoom_factor'] || 1.0).to_f
+  zoom_factor = 1.0 if zoom_factor <= 0.0
+  hfov_rad = hfov_rad / zoom_factor
 %>
 <sdf version='1.9'>
   <model name="sensor_camera">

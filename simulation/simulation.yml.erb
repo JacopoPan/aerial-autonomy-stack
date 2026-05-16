@@ -133,6 +133,9 @@ windows:
         - >
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/gimbal_3d/yaw_cmd@std_msgs/msg/Float64]gz.msgs.Double
           --ros-args -r /model/<%= model_name %>/gimbal_3d/yaw_cmd:=gimbal_yaw_cmd
+        - >
+          ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/camera/zoom_cmd@std_msgs/msg/Float64]gz.msgs.Double
+          --ros-args -r /model/<%= model_name %>/camera/zoom_cmd:=camera_zoom_cmd
         # (optional/alternative) Use ros_gz_bridge to republish the camera frames into ROS2 and use tools like $ ros2 run rqt_image_view rqt_image_view
         # - >
         #   ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge
