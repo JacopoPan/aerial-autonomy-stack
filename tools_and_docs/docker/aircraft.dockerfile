@@ -181,7 +181,79 @@ RUN wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
 RUN curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb'
 RUN apt update && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
 
-# Also install the Livox ROS2 driver only on Orin for deployment
+################################################################################
+# Stage 6 - 16GB ###############################################################
+################################################################################
+FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-odom-image
+
+# Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
+RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
+COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+
+
+
+
+################################################################################
+# WIP ##########################################################################
+################################################################################
+
+# Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
+RUN apt-get update && \
+    apt-get install -y libeigen3-dev libboost-all-dev libceres-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+
+# SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
+COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# SuperOdom, based on https://github.com/superxslam/SuperOdom#-3-installation
+WORKDIR /aas/github_apps/
+RUN git clone https://github.com/strasdat/Sophus.git \
+    && cd Sophus && git checkout 97e7161 \
+    && mkdir build && cd build \
+    && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    && make -j$(nproc) \
+    && make install
+WORKDIR /aas/github_apps/
+RUN git clone https://github.com/borglab/gtsam.git \
+    && cd gtsam && git checkout 4abef92 \
+    && mkdir build && cd build \
+    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. \
+    && make -j$(nproc) \
+    && make install
+WORKDIR /aas/github_apps/
+RUN apt-get update && \
+    apt-get install -y libgoogle-glog-dev \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/ceres-solver/ceres-solver.git \
+    && cd ceres-solver && git checkout f68321e7de8929fbcdb95dd42877531e64f72f66 \
+    && mkdir build && cd build \
+    && cmake .. \
+    && make -j$(nproc) \
+    && make install
+RUN pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
+# rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
+WORKDIR /aas/github_ws/src/
+RUN git clone https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+
+# Install the Livox ROS2 SDK and driver (SuperOdom build requirements)
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
 RUN mkdir build && cd build && \
@@ -198,17 +270,24 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
 
-################################################################################
-# Stage 6 - 16GB ###############################################################
-################################################################################
-FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
-# Install KISS-ICP
-RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
-COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
+COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+
+################################################################################
+# Stage 7 - 16+GB ##############################################################
+################################################################################
+FROM ros2-px4msgs-dds-mavros-yolo-odom-image AS ros2-px4msgs-dds-mavros-yolo-odom-zenoh-analysis-models-image
 
 # Install Zenoh
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
@@ -216,11 +295,6 @@ RUN apt-get update && \
     apt-get install -y zenoh-bridge-ros2dds \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-
-################################################################################
-# Stage 7 - 16+GB ##############################################################
-################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image
 
 # Add pymavlink and PlotJuggler for debugging, testing, and analysis
 RUN pip3 install --no-cache-dir --upgrade pip \
@@ -246,7 +320,7 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
 ################################################################################
 # Stage 8 - 16+GB ##############################################################
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image AS aircraft-dev-image
+FROM ros2-px4msgs-dds-mavros-yolo-odom-zenoh-analysis-models-image AS aircraft-dev-image
 
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
