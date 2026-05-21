@@ -1,48 +1,7 @@
 ################################################################################
-# Stage 1 ######################################################################
+# Stage 1 (Imported from aircraft.dockerfile build)
 ################################################################################
-FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 AS ros2-image
-
-# Tell apt (and other Debian tools) not to prompt for user input during package installs
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Update the package list and install basic dependencies
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        wget gosu htop vim ruby tmux xclip net-tools iproute2 iputils-ping netcat-openbsd \
-        python3-pip python3-venv \
-        mesa-utils \
-    && gem install tmuxinator \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install ROS2 Humble
-# Based on https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        locales \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN locale-gen en_US en_US.UTF-8
-RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
-ENV LANG=en_US.UTF-8
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        software-properties-common curl \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu \
-    $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-RUN apt update \
-    && apt install -y --no-install-recommends \
-        ros-humble-desktop ros-dev-tools \
-        ros-humble-bondcpp ros-humble-ament-cmake-clang-format \
-        ros-humble-vision-msgs \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
-RUN rosdep init
+FROM shared-ros2-base:latest AS ros2-image
 
 ################################################################################
 # Stage 2 ######################################################################
