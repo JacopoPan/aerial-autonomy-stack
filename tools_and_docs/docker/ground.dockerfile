@@ -1,12 +1,12 @@
 ################################################################################
-# Stage 1 imported from aircraft.dockerfile ####################################
+# Import ROS2 layer from aircraft.dockerfile ###################################
 ################################################################################
-FROM common-ros2-image:latest AS ros2-image
+FROM transitionary-ros2-image AS ros2-image
 
 ################################################################################
-# Stage 2 ######################################################################
+# Add QGroundControl ###########################################################
 ################################################################################
-FROM ros2-image AS ros2-qgc-zenoh-image
+FROM ros2-image AS ros2-qgc-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
@@ -34,17 +34,10 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Zenoh
-RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null \
-    && apt-get update && \
-    apt-get install -y zenoh-bridge-ros2dds \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-
 ################################################################################
-# Stage 3 ######################################################################
+# Add GStreamer and MAVLink ####################################################
 ################################################################################
-FROM ros2-qgc-zenoh-image AS ros2-qgc-zenoh-gst-mavlink-image
+FROM ros2-qgc-image AS ros2-qgc-gst-mavlink-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -76,9 +69,9 @@ RUN meson setup build . --buildtype=release \
 COPY /_github_clones/c_library_v2 /usr/local/include/mavlink/
 
 ################################################################################
-# Stage 4 ######################################################################
+# Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
-FROM ros2-qgc-zenoh-gst-mavlink-image AS ground-dev-image
+FROM ros2-qgc-gst-mavlink-image AS ground-dev-image
 
 # Build the ROS 2 workspace
 COPY ground/ground_ws/src /aas/ground_ws/src

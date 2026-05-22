@@ -1,12 +1,12 @@
 ################################################################################
-# Stage 1 & 2 imported from aircraft.dockerfile and ground.dockerfile ##########
+# Import ROS2 layer from aircraft.dockerfile, QGC layer from ground.dockerfile #
 ################################################################################
-FROM common-ros2-qgc-zenoh-image:latest AS ros2-qgc-zenoh-image
+FROM transitionary-ros2-qgc-image AS ros2-qgc-image
 
 ################################################################################
-# Stage 3 ######################################################################
+# Add Gazebo Sim ###############################################################
 ################################################################################
-FROM ros2-qgc-zenoh-image AS ros2-qgc-zenoh-gz-image
+FROM ros2-qgc-image AS ros2-qgc-gz-image
 
 # Gazebo Harmonic
 # Based on https://gazebosim.org/docs/harmonic/install_ubuntu/
@@ -25,9 +25,9 @@ RUN apt update \
 # Run with $ gz sim
 
 ################################################################################
-# Stage 4 ######################################################################
+# Add PX4 ######################################################################
 ################################################################################
-FROM ros2-qgc-zenoh-gz-image AS ros2-qgc-zenoh-gz-px4-image
+FROM ros2-qgc-gz-image AS ros2-qgc-gz-px4-image
 
 # PX4 SITL (NOTE: install PX4 tools first to avoid conflicts with ArduPilot, build later to customize)
 # Based on https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu.html
@@ -38,9 +38,9 @@ RUN bash ./Tools/setup/ubuntu.sh --no-sim-tools \
     && rm -rf /var/lib/apt/lists/*
 
 ################################################################################
-# Stage 5 ######################################################################
+# Add ArduPilot ################################################################
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4-image AS ros2-qgc-zenoh-gz-px4-ardupilot-image
+FROM ros2-qgc-gz-px4-image AS ros2-qgc-gz-px4-ardupilot-image
 
 # ArduPilot SITL (temporarily as arduuser, then re chown to root)
 # Based on https://ardupilot.org/dev/docs/building-setup-linux.html#building-setup-linux
@@ -79,7 +79,7 @@ RUN /aas/github_apps/ardupilot/Tools/autotest/sim_vehicle.py -v ArduCopter \
     && /aas/github_apps/ardupilot/Tools/autotest/sim_vehicle.py -v ArduPlane
 
 ################################################################################
-# Temporary stage to filter airframes ##########################################
+# Ephemeral stage to grab AAS PX4 custom airframes #############################
 ################################################################################
 FROM ubuntu:22.04 AS airframe_filter_stage
 COPY simulation/simulation_resources/aircraft_models/ /temp_folder
@@ -87,9 +87,9 @@ RUN mkdir /airframes
 RUN find /temp_folder -type f -regex '.*/[0-9]+_.*' -exec cp {} /airframes/ \;
 
 ################################################################################
-# Stage 6 ######################################################################
+# Build PX4 SITL with AAS airframes using the airframe_filter_stage stage ######
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-image
+FROM ros2-qgc-gz-px4-ardupilot-image AS ros2-qgc-gz-px4custom-ardupilot-image
 
 # Apply PX4 patch (DDS Agent on custom IP, ...) created with $ git diff > ../px4-v1.16.2.patch
 COPY simulation/simulation_resources/patches/px4-v1.16.2.patch /aas/github_apps/px4-v1.16.2.patch
@@ -113,9 +113,9 @@ RUN make px4_sitl
 # Run with $ /aas/github_apps/PX4-Autopilot/build/px4_sitl_default/bin/px4
 
 ################################################################################
-# Stage 7 ######################################################################
+# Add GStreamer, MAVLink, flight_review, wave simulation, ZeroMQ ###############
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-image AS ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-waves-zmq-image
+FROM ros2-qgc-gz-px4custom-ardupilot-image AS ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -168,9 +168,9 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 pyzmq
 
 ################################################################################
-# Stage 8 ######################################################################
+# Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
-FROM ros2-qgc-zenoh-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
 
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src

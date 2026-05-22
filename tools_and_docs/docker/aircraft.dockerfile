@@ -5,7 +5,7 @@ FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 AS base_amd64
 FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
 
 ################################################################################
-# Stage 1 ######################################################################
+# Add tools and ROS2 ###########################################################
 ################################################################################
 FROM base_${TARGETARCH} AS ros2-image
 
@@ -45,8 +45,15 @@ RUN apt update \
     && echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc \
     && rosdep init
 
+# Install Zenoh ROS2 bridge
+RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null \
+    && apt-get update && \
+    apt-get install -y zenoh-bridge-ros2dds \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
 ################################################################################
-# Stage 2 ######################################################################
+# Add PX4 messages #############################################################
 ################################################################################
 FROM ros2-image AS ros2-px4msgs-image
 
@@ -59,7 +66,7 @@ RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y && apt cl
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
 
 ################################################################################
-# Stage 3 ######################################################################
+# Add uXRCE-DDS agent ##########################################################
 ################################################################################
 FROM ros2-px4msgs-image AS ros2-px4msgs-dds-image
 
@@ -75,7 +82,7 @@ RUN mkdir build && cd build && \
 # Run with $ MicroXRCEAgent udp4 -p 8888
 
 ################################################################################
-# Stage 4 ######################################################################
+# Add MAVROS ###################################################################
 ################################################################################
 FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
@@ -88,7 +95,7 @@ RUN apt-get update && \
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################
-# Stage 5 ######################################################################
+# Add GStreamer, OpenCV, and Ultralytics YOLO ##################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 
@@ -119,7 +126,8 @@ RUN python3 -m venv /yolo-env \
 # Versus $ /yolo-env/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
 
 ################################################################################
-# Alternate stage for ONNX Runtime GPU: use CUDA in sim, TensorRT on Orin ######
+# amd64 stage for ONNX Runtime GPU: from wheel with CUDA in simulation #########
+# Mutually exclusive with the next stage #######################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
@@ -127,6 +135,10 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
+################################################################################
+# arm64 stage for ONNX Runtime GPU: compile for TensorRT support on Jetson #####
+# Mutually exclusive with the previous stage ###################################
+################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
@@ -158,7 +170,7 @@ RUN apt update && \
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
-# Install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+# Also install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
 # Based on https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
 WORKDIR /
 RUN apt update \
@@ -202,7 +214,7 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
-# Stage 6 ######################################################################
+# Add KISS-ICP #################################################################
 ################################################################################
 FROM image-with-hardware-specific-ort-deepstream-and-drivers_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image
 
@@ -213,15 +225,8 @@ WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
-# Install Zenoh
-RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null \
-    && apt-get update && \
-    apt-get install -y zenoh-bridge-ros2dds \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-
 ################################################################################
-# Stage 7 ######################################################################
+# Add analysis tools and YOLO models ###########################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-image AS ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image
 
@@ -247,7 +252,7 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
     rm yolo26n.pt
 
 ################################################################################
-# Stage 8 ######################################################################
+# Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-kissicp-zenoh-analysis-models-image AS aircraft-dev-image
 
