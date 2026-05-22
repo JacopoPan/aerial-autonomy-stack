@@ -95,8 +95,8 @@ fi
 unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
 if [ "$BUILD_DOCKER" = "true" ]; then
-  # The first build takes ~45' and ~70GB of disk usage (~23GB of content size)
-  docker build $BUILD_ARGS --target ros2-image -t shared-ros2-base:latest -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
+  # The first build takes ~45'
+  docker build $BUILD_ARGS --target ros2-image -t common-ros2-image:latest -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_ARGS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_ARGS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."

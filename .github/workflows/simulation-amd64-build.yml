@@ -85,4 +85,6 @@ jobs:
           fi
 
       - name: Build the simulation image
-        run: docker buildx build --push -t ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/simulation.dockerfile .
+        run: |
+          docker buildx build --load --target ros2-image -t common-ros2-base:latest -f ./tools_and_docs/docker/aircraft.dockerfile .
+          docker buildx build --push -t ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/simulation.dockerfile .
