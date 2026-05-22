@@ -86,5 +86,5 @@ jobs:
 
       - name: Build the ground image
         run: |
-          docker buildx build --load --target ros2-image -t common-ros2-image:latest -f ./tools_and_docs/docker/aircraft.dockerfile .
-          docker buildx build --push --build-context common-ros2-image:latest=docker-image://common-ros2-image:latest -t ghcr.io/jacopopan/ground-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/ground.dockerfile .
+          docker buildx build --target ros2-image --output type=oci,dest=/tmp/common-ros2-image -f ./tools_and_docs/docker/aircraft.dockerfile .
+          docker buildx build --push --build-context common-ros2-image:latest=oci-layout:///tmp/common-ros2-image -t ghcr.io/jacopopan/ground-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/ground.dockerfile .
