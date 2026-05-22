@@ -1,5 +1,5 @@
 ################################################################################
-# Stage 1 imported from aircraft.dockerfile build ##############################
+# Stage 1 imported from aircraft.dockerfile ####################################
 ################################################################################
 FROM common-ros2-image:latest AS ros2-image
 
@@ -11,8 +11,8 @@ FROM ros2-image AS ros2-qgc-zenoh-image
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
 WORKDIR /
-RUN useradd -m -s /bin/bash qgcuser
-RUN usermod -aG dialout qgcuser
+RUN useradd -m -s /bin/bash qgcuser \
+    && usermod -aG dialout qgcuser
 # RUN apt-get remove modemmanager -y
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -20,8 +20,8 @@ RUN apt update \
         libfuse2 \
         libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor-dev \
     && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN wget https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppImage && \
+    && rm -rf /var/lib/apt/lists/* \
+    && wget https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppImage && \
     chmod +x /QGroundControl-x86_64.AppImage && \
     /QGroundControl-x86_64.AppImage --appimage-extract && \
     rm /QGroundControl-x86_64.AppImage
@@ -35,8 +35,8 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Zenoh
-RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null
-RUN apt-get update && \
+RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null \
+    && apt-get update && \
     apt-get install -y zenoh-bridge-ros2dds \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
@@ -84,7 +84,7 @@ FROM ros2-qgc-zenoh-gst-mavlink-image AS ground-dev-image
 COPY ground/ground_ws/src /aas/ground_ws/src
 WORKDIR /aas/ground_ws
 RUN rosdep update
-RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y
+RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
