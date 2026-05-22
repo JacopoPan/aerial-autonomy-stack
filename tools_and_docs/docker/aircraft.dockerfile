@@ -177,8 +177,10 @@ RUN apt update \
     && meson build --prefix=/usr \
     && ninja -C build \
     && ninja -C build install \
+    && cd .. \
     && curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb' \
-    && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb
+    && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb \
+    && rm deepstream-7.1_7.1.0-1_arm64.deb glib-2.76.6.tar.xz
 
 # Also install the Livox ROS2 driver only on Orin for deployment
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2

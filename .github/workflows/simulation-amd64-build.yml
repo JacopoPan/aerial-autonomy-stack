@@ -86,6 +86,6 @@ jobs:
 
       - name: Build the simulation image
         run: |
-          docker buildx build --load --target ros2-image -t common-ros2-base:latest -f ./tools_and_docs/docker/aircraft.dockerfile .
-          docker buildx build --load --target ros2-qgc-zenoh-image -t common-ros2-qgc-zenoh-image:latest -f ./tools_and_docs/docker/ground.dockerfile .
-          docker buildx build --push -t ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/simulation.dockerfile .
+          docker buildx build --load --target ros2-image -t common-ros2-image:latest -f ./tools_and_docs/docker/aircraft.dockerfile .
+          docker buildx build --load --target ros2-qgc-zenoh-image --build-context common-ros2-image:latest=docker-image://common-ros2-image:latest -t common-ros2-qgc-zenoh-image:latest -f ./tools_and_docs/docker/ground.dockerfile .
+          docker buildx build --push --build-context common-ros2-qgc-zenoh-image:latest=docker-image://common-ros2-qgc-zenoh-image:latest -t ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/simulation.dockerfile .
