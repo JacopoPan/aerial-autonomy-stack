@@ -126,7 +126,7 @@ RUN python3 -m venv /yolo-env \
 # Versus $ /yolo-env/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
 
 ################################################################################
-# amd64 stage for ONNX Runtime GPU: from wheel with CUDA in simulation #########
+# amd64 stage for ONNX Runtime GPU: from wheel for CUDA support in simulation ##
 # Mutually exclusive with the next stage #######################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_amd64
@@ -136,7 +136,7 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 ################################################################################
-# arm64 stage for ONNX Runtime GPU: compile for TensorRT support on Jetson #####
+# arm64 stage for ONNX Runtime GPU: from source for TensorRT support on Jetson #
 # Mutually exclusive with the previous stage ###################################
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort-deepstream-and-drivers_arm64
