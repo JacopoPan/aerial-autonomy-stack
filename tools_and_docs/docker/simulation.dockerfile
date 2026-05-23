@@ -91,10 +91,10 @@ RUN find /temp_folder -type f -regex '.*/[0-9]+_.*' -exec cp {} /airframes/ \;
 ################################################################################
 FROM ros2-qgc-gz-px4-ardupilot-image AS ros2-qgc-gz-px4custom-ardupilot-image
 
-# Apply PX4 patch (DDS Agent on custom IP, ...) created with $ git diff > ../px4-v1.16.2.patch
-COPY simulation/simulation_resources/patches/px4-v1.16.2.patch /aas/github_apps/px4-v1.16.2.patch
+# Apply PX4 patch (DDS Agent on custom IP, ...) created with $ git diff > ../px4-v1.17.0.patch
+COPY simulation/simulation_resources/patches/px4-v1.17.0.patch /aas/github_apps/px4-v1.17.0.patch
 WORKDIR /aas/github_apps/PX4-Autopilot
-RUN git apply ../px4-v1.16.2.patch
+RUN git apply ../px4-v1.17.0.patch
 
 # Replace dds_topics.yaml with custom topics
 COPY simulation/simulation_resources/patches/dds_topics.yaml /aas/github_apps/PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml

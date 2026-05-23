@@ -25,7 +25,7 @@ mkdir -p "$CLONE_DIR"
 
 REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   # Simulation image
-  "https://github.com/PX4/PX4-Autopilot.git;v1.16.2;PX4-Autopilot"
+  "https://github.com/PX4/PX4-Autopilot.git;v1.17.0;PX4-Autopilot"
   "https://github.com/ArduPilot/ardupilot.git;Copter-4.6.3;ardupilot"
   "https://github.com/ArduPilot/ardupilot_gazebo.git;main;ardupilot_gazebo"
   "https://github.com/srmainwaring/asv_wave_sim.git;master;asv_wave_sim"
@@ -34,7 +34,7 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/mavlink/c_library_v2.git;master;c_library_v2"
   "https://github.com/mavlink-router/mavlink-router.git;master;mavlink-router"
   # Aircraft image
-  "https://github.com/PX4/px4_msgs.git;release/1.16;px4_msgs"
+  "https://github.com/PX4/px4_msgs.git;release/1.17;px4_msgs"
   "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git;master;Micro-XRCE-DDS-Agent"
   "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
 )
@@ -57,10 +57,6 @@ for repo_info in "${REPOS[@]}"; do
     TEMP_DIR="${TARGET_DIR}_temp"     
     rm -rf "$TEMP_DIR" # Clean up any failed clone from a previous run   
     git clone --depth 1 --shallow-submodules --branch "$branch" --recursive "$url" "$TEMP_DIR" && mv "$TEMP_DIR" "$TARGET_DIR"
-    # Dummy tag for the check in PX4-Autopilot/src/lib/version/px_update_git_header.py (fixed in v1.17 by @asherikov)
-    if [ "$dir" = "PX4-Autopilot" ]; then
-      (cd "$TARGET_DIR/platforms/nuttx/NuttX/nuttx" && git tag nuttx-0.0.0 HEAD)
-    fi
   fi
 done
 

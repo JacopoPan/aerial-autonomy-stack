@@ -65,16 +65,16 @@ PX4Interface::PX4Interface() : Node("px4_interface"),
         "fmu/out/vehicle_global_position", qos_profile_sub, // 100Hz
         std::bind(&PX4Interface::global_position_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_local_position_sub_= this->create_subscription<VehicleLocalPosition>(
-        "fmu/out/vehicle_local_position", qos_profile_sub, // 100Hz
+        "fmu/out/vehicle_local_position_v1", qos_profile_sub, // 100Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
         std::bind(&PX4Interface::local_position_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_odometry_sub_= this->create_subscription<VehicleOdometry>(
         "fmu/out/vehicle_odometry", qos_profile_sub, // 100Hz
         std::bind(&PX4Interface::odometry_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_status_sub_ = this->create_subscription<VehicleStatus>(
-        "fmu/out/vehicle_status_v1", qos_profile_sub, // 2Hz
+        "fmu/out/vehicle_status_v1", qos_profile_sub, // 2Hz, MESSAGE_VERSION = 1 -> _v1 since 1.16
         std::bind(&PX4Interface::status_callback, this, std::placeholders::_1), subscriber_options);
     airspeed_validated_sub_ = this->create_subscription<AirspeedValidated>(
-        "fmu/out/airspeed_validated", qos_profile_sub, // 10Hz
+        "fmu/out/airspeed_validated_v1", qos_profile_sub, // 10Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
         std::bind(&PX4Interface::airspeed_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_command_ack_sub_ = this->create_subscription<VehicleCommandAck>(
         "fmu/out/vehicle_command_ack", qos_profile_sub, // n/a
@@ -119,7 +119,6 @@ void PX4Interface::global_position_callback(const VehicleGlobalPosition::SharedP
     lon_ = msg->lon;
     alt_ = msg->alt; // AMSL
     alt_ellipsoid_ = msg->alt_ellipsoid; // TODO: double-check
-    // New to v1.16: bool lat_lon_valid, bool alt_valid
 }
 void PX4Interface::local_position_callback(const VehicleLocalPosition::SharedPtr msg)
 {
@@ -849,7 +848,7 @@ void PX4Interface::do_set_mode(int mode, int submode)
     send_vehicle_command(
         176,  // MAV_CMD_DO_SET_MODE
         1.0, // Flags (custom mode)
-        mode, // Custom Mode https://github.com/PX4/PX4-Autopilot/blob/v1.16.2/src/modules/commander/px4_custom_mode.h
+        mode, // Custom Mode https://github.com/PX4/PX4-Autopilot/blob/v1.17.0/src/modules/commander/px4_custom_mode.h
         submode, // Custom Sub Mode
         0.0, 0.0, 0.0, 0.0,  // Unused parameters
         0  // Confirmation

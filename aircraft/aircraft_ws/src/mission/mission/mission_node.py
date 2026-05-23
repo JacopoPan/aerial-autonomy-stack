@@ -86,8 +86,8 @@ class MissionNode(Node):
         self.create_subscription( # 100Hz
             VehicleGlobalPosition, 'fmu/out/vehicle_global_position', self.px4_global_position_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
-        self.create_subscription( # 10Hz
-            AirspeedValidated, '/fmu/out/airspeed_validated', self.airspeed_validated_callback,
+        self.create_subscription( # 10Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
+            AirspeedValidated, '/fmu/out/airspeed_validated_v1', self.airspeed_validated_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
         # MAVROS subscribers
         self.create_subscription( # 4Hz

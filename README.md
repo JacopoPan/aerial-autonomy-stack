@@ -466,8 +466,7 @@ aerial-autonomy-stack
 - [x] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
 - [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
-- [ ] [PX4 1.16.2](https://github.com/PX4/PX4-Autopilot/releases)
-    - **TODO: update to 1.17.0**
+- [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
 - [x] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
@@ -485,8 +484,8 @@ Transitive constraints (as of May 2026):
       - [GStreamer 1.20's `nvh264enc preset`s are no longer supported](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/deprecation-notices/index.html) beyond `nvidia-driver-580`; `nvidia-driver-595` requires [GStreamer 1.24](https://discourse.gstreamer.org/t/nvcodec-nvenc-nvidia-deprecates-support-for-old-videocodec-sdk-h-264-hevc-encoder-presets-with-driver-r550-in-q124/182), which is the default on Ubuntu 24 ([PR #57](https://github.com/JacopoPan/aerial-autonomy-stack/pull/57))
 
 External repositories:
-- [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.16.2`
-- [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.16`
+- [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
+- [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
 - [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`

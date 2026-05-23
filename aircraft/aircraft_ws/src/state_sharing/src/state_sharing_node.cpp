@@ -45,7 +45,7 @@ public:
                 qos_profile_sub, std::bind(&StateSharingNode::px4_global_pos_callback, this, std::placeholders::_1), subscriber_options);
 
             subscription_local_px4_ = this->create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-                "/Drone" + std::to_string(drone_id_) + "/fmu/out/vehicle_local_position",
+                "/Drone" + std::to_string(drone_id_) + "/fmu/out/vehicle_local_position_v1", // MESSAGE_VERSION = 1 -> _v1 since 1.17
                 qos_profile_sub, std::bind(&StateSharingNode::px4_local_pos_callback, this, std::placeholders::_1), subscriber_options);
         }
         else

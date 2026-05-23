@@ -1,5 +1,5 @@
 diff --git a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink b/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
-index 17ef445..ccf6907 100644
+index 17ef44521b..ccf6907a1b 100644
 --- a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
 +++ b/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
 @@ -4,6 +4,8 @@
@@ -21,45 +21,11 @@ index 17ef445..ccf6907 100644
  # Onboard link to camera
  mavlink start -x -u $udp_onboard_payload_port_local -r 4000 -f -m onboard -o $udp_onboard_payload_port_remote
  
-diff --git a/Tools/upload_log.py b/Tools/upload_log.py
-index a13f1b1..83a816a 100755
---- a/Tools/upload_log.py
-+++ b/Tools/upload_log.py
-@@ -25,10 +25,6 @@ except ImportError as e:
-     sys.exit(1)
- 
- 
--SERVER = 'https://logs.px4.io'
--#SERVER = 'http://localhost:5006' # for testing locally
--UPLOAD_URL = SERVER+'/upload'
--
- quiet = False
- 
- def ask_value(text, default=None):
-@@ -60,6 +56,8 @@ def main():
-     parser = ArgumentParser(description=__doc__)
-     parser.add_argument('--quiet', '-q', dest='quiet', action='store_true', default=False,
-             help='Quiet mode: do not ask for values which were not provided as parameters')
-+    parser.add_argument('--server', dest='server', type=str, default='https://logs.px4.io',
-+                    help='Server URL (default: https://logs.px4.io)')
-     parser.add_argument("--description", dest="description", type=str,
-                       help="Log description", default=None)
-     parser.add_argument("--feedback", dest="feedback", type=str,
-@@ -99,6 +97,9 @@ def main():
-     else:
-         email = args.email
- 
-+    SERVER = args.server
-+    UPLOAD_URL = SERVER + '/upload'
-+
-     payload = {'type': args.type, 'description': description,
-                'feedback': feedback, 'email': email, 'source': args.source}
- 
 diff --git a/src/modules/navigator/navigator_main.cpp b/src/modules/navigator/navigator_main.cpp
-index dc53c69..79b604e 100644
+index 69ca9896d4..f599c00b08 100644
 --- a/src/modules/navigator/navigator_main.cpp
 +++ b/src/modules/navigator/navigator_main.cpp
-@@ -648,6 +648,10 @@ void Navigator::run()
+@@ -652,6 +652,10 @@ void Navigator::run()
  
  				_vtol_takeoff.setTransitionAltitudeAbsolute(cmd.param7);
  
@@ -71,7 +37,7 @@ index dc53c69..79b604e 100644
  				_vtol_takeoff.setLoiterLocation(matrix::Vector2d(cmd.param5, cmd.param6));
  
 diff --git a/src/modules/navigator/vtol_takeoff.cpp b/src/modules/navigator/vtol_takeoff.cpp
-index 503a027..01d8a98 100644
+index 686886a911..760ad5f4e7 100644
 --- a/src/modules/navigator/vtol_takeoff.cpp
 +++ b/src/modules/navigator/vtol_takeoff.cpp
 @@ -71,8 +71,12 @@ VtolTakeoff::on_active()
@@ -90,7 +56,7 @@ index 503a027..01d8a98 100644
  				mission_item_to_position_setpoint(_mission_item, &pos_sp_triplet->current);
  				pos_sp_triplet->current.cruising_speed = -1.f;
 diff --git a/src/modules/navigator/vtol_takeoff.h b/src/modules/navigator/vtol_takeoff.h
-index 3ba32ce..1622098 100644
+index 3ba32ce7df..162209893d 100644
 --- a/src/modules/navigator/vtol_takeoff.h
 +++ b/src/modules/navigator/vtol_takeoff.h
 @@ -55,6 +55,7 @@ public:

@@ -31,7 +31,7 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     rclcpp::QoS qos_profile_pub(10);  // Depth of 10
     qos_profile_pub.durability(rclcpp::DurabilityPolicy::TransientLocal);  // Or rclcpp::DurabilityPolicy::Volatile
     offboard_mode_pub_ = this->create_publisher<OffboardControlMode>("fmu/in/offboard_control_mode", qos_profile_pub);
-    attitude_ref_pub_ = this->create_publisher<VehicleAttitudeSetpoint>("fmu/in/vehicle_attitude_setpoint", qos_profile_pub);
+    attitude_ref_pub_ = this->create_publisher<VehicleAttitudeSetpoint>("fmu/in/vehicle_attitude_setpoint_v1", qos_profile_pub); // MESSAGE_VERSION = 1 -> _v1 since 1.17
     rates_ref_pub_ = this->create_publisher<VehicleRatesSetpoint>("fmu/in/vehicle_rates_setpoint", qos_profile_pub);
     trajectory_ref_pub_ = this->create_publisher<TrajectorySetpoint>("fmu/in/trajectory_setpoint", qos_profile_pub);
 
@@ -63,13 +63,13 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
         "fmu/out/vehicle_global_position", qos_profile_sub, // 100Hz
         std::bind(&PX4Offboard::global_position_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_local_position_sub_= this->create_subscription<VehicleLocalPosition>(
-        "fmu/out/vehicle_local_position", qos_profile_sub, // 100Hz
+        "fmu/out/vehicle_local_position_v1", qos_profile_sub, // 100Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
         std::bind(&PX4Offboard::local_position_callback, this, std::placeholders::_1), subscriber_options);
     vehicle_odometry_sub_= this->create_subscription<VehicleOdometry>(
         "fmu/out/vehicle_odometry", qos_profile_sub, // 100Hz
         std::bind(&PX4Offboard::odometry_callback, this, std::placeholders::_1), subscriber_options);
     airspeed_validated_sub_ = this->create_subscription<AirspeedValidated>(
-        "fmu/out/airspeed_validated", qos_profile_sub, // 10Hz
+        "fmu/out/airspeed_validated_v1", qos_profile_sub, // 10Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
         std::bind(&PX4Offboard::airspeed_callback, this, std::placeholders::_1), subscriber_options);
 
     // Offboard flag subscriber
@@ -97,7 +97,6 @@ void PX4Offboard::global_position_callback(const VehicleGlobalPosition::SharedPt
     lon_ = msg->lon;
     alt_ = msg->alt; // AMSL
     alt_ellipsoid_ = msg->alt_ellipsoid; // TODO: double-check
-    // New to v1.16: bool lat_lon_valid, bool alt_valid
 }
 void PX4Offboard::local_position_callback(const VehicleLocalPosition::SharedPtr msg)
 {
@@ -285,7 +284,7 @@ void PX4Offboard::offboard_loop_callback()
     // https://docs.px4.io/v1.15/en/flight_modes/offboard.html
     } else if (offboard_flag_ == 1) { // Quad attitude reference
         offboard_mode.attitude = true;
-        VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/VehicleAttitudeSetpoint.msg
+        VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleAttitudeSetpoint.msg
         attitude_ref.timestamp = current_time_us;
         double pitch_rad = -5.0 * M_PI / 180.0; // Pitch to move forward (any duration, drops some altitude)
         attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
@@ -296,7 +295,7 @@ void PX4Offboard::offboard_loop_callback()
         attitude_ref_pub_->publish(attitude_ref);
     } else if (offboard_flag_ == 2) { // VTOL attitude reference
         offboard_mode.attitude = true;
-        VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/VehicleAttitudeSetpoint.msg
+        VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleAttitudeSetpoint.msg
         attitude_ref.timestamp = current_time_us;
         double pitch_rad = -30.0 * M_PI / 180.0; // Pitch to dive
         attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
@@ -307,7 +306,7 @@ void PX4Offboard::offboard_loop_callback()
         attitude_ref_pub_->publish(attitude_ref);
     } else if (offboard_flag_ == 3) { // Quad rates reference
         offboard_mode.body_rate = true;
-        VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/VehicleRatesSetpoint.msg
+        VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleRatesSetpoint.msg
         rates_ref.timestamp = current_time_us;
         rates_ref.roll= 0.0;
         rates_ref.pitch = 0.0;
@@ -316,14 +315,14 @@ void PX4Offboard::offboard_loop_callback()
         rates_ref_pub_->publish(rates_ref);
     } else if (offboard_flag_ == 4) { // VTOL rates reference
         offboard_mode.body_rate = true;
-        VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/VehicleRatesSetpoint.msg
+        VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleRatesSetpoint.msg
         rates_ref.timestamp = current_time_us;
         rates_ref.roll= 4.0; // Roll (2sec maneuver 1 roll, 3sec double roll)
         rates_ref.pitch = 0.0;
         rates_ref.thrust_body = {0.39, 0.0, 0.0};
         rates_ref_pub_->publish(rates_ref);
     } else if (offboard_flag_ == 5) { // Quad trajectory (position) reference
-        TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/TrajectorySetpoint.msg
+        TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.position = true;
         trajectory_ref.position = {0.0, 0.0, -50.0};
@@ -336,7 +335,7 @@ void PX4Offboard::offboard_loop_callback()
         // trajectory_ref.acceleration = {0.0, 0.0, -5.0};
         trajectory_ref_pub_->publish(trajectory_ref);
     } else if (offboard_flag_ == 6) { // VTOL trajectory (velocity) reference
-        TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.16/msg/TrajectorySetpoint.msg
+        TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.velocity = true;
         trajectory_ref.velocity = {20.0, 0.0, 0.0};
