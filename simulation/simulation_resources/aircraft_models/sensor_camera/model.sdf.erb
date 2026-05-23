@@ -36,8 +36,7 @@
           <diffuse>1 1 0 1.0</diffuse>
         </material>
       </visual>
-      <sensor name="imager" type="camera">
-      <!-- TODO: https://www.seeedstudio.com/IMX219-200-Camera-200-FOV-Applicable-for-Jetson-Nano-p-4609.html -->
+      <sensor name="imager" type="wideanglecamera">
         <camera>
           <horizontal_fov><%= hfov_rad.round(6) %></horizontal_fov>
           <image>
@@ -48,6 +47,20 @@
             <near><%= camera_intrinsics['near_clip'] %></near>
             <far><%= camera_intrinsics['far_clip'] %></far>
           </clip>
+          <!-- TODO: https://www.seeedstudio.com/IMX219-200-Camera-200-FOV-Applicable-for-Jetson-Nano-p-4609.html -->
+          <!-- Only for wideanglecamera, see lens options in https://github.com/gazebosim/gz-sensors/blob/main/src/WideAngleCameraSensor.cc -->
+          <!-- Lens types: custom, equidistant, equisolid_angle, orthographic, gnomonical, stereographic -->
+          <!--
+          <lens>
+            <type>custom</type>
+            <custom_function>
+              <c1>1.05</c1>
+              <c2>4</c2>
+              <f>1.0</f>
+              <fun>tan</fun>
+            </custom_function>
+          </lens>
+          -->
         </camera>
         <always_on>1</always_on>
         <update_rate><%= camera_intrinsics['update_rate'] %></update_rate>
