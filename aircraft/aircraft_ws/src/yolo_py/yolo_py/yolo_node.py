@@ -21,12 +21,12 @@ from cv_bridge import CvBridge
 CONF_THRESH = 0.5
 
 class YoloInferenceNode(Node):
-    def __init__(self, headless, hitl, remote_video_streams, dfov):
+    def __init__(self, headless, hitl, remote_video_streams, hfov):
         super().__init__('yolo_inference_node')
         self.headless = headless
         self.hitl = hitl
         self.remote_video_streams = remote_video_streams
-        self.dfov = dfov
+        self.hfov = hfov
         self.fx = None
         self.fy = None
         self.architecture = platform.machine()
@@ -141,18 +141,19 @@ class YoloInferenceNode(Node):
         stream_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"Stream Resolution: {stream_width}x{stream_height}")
 
-        # Calculate hfov, vfov, and focal lengths in pixels
-        diag_pixels = math.sqrt(stream_width**2 + stream_height**2)
-        if self.dfov <= 175.0: # Pinhole approximation for < 175.0deg FOV (simulated camera)
-            self.fx = diag_pixels / (2 * math.tan(math.radians(self.dfov) / 2))
-            self.fy = self.fx
-        else: # IMX219-200 CSI camera acquired with nvdewarper
+        # Pinhole approximation
+        if self.architecture == 'aarch64' and not self.hitl: # IMX219-200 CSI camera undistorted with nvdewarper
             vfov_rad = math.radians(98.05) # See imx219_dewarper_config.txt
             self.fy = (stream_height * 0.5) / math.tan(vfov_rad / 2.0)
             self.fx = self.fy
+        else: # Simulated camera
+            clipped_hfov = min(self.hfov, 175.0) # Clip for pinhole approximation
+            self.fx = stream_width / (2 * math.tan(math.radians(clipped_hfov) / 2))
+            self.fy = self.fx
         hfov = math.degrees(2 * math.atan(stream_width / (2 * self.fx)))
         vfov = math.degrees(2 * math.atan(stream_height / (2 * self.fy)))
-        print(f"DFOV {self.dfov}deg, HFOV {hfov:.2f}deg, VFOV {vfov:.2f}deg")
+        dfov = math.degrees(2 * math.atan(math.sqrt(stream_width**2 + stream_height**2) / (2 * self.fx)))
+        print(f"DFOV {dfov}deg, HFOV {hfov:.2f}deg, VFOV {vfov:.2f}deg")
 
         # Load YOLO model and runtime
         # Options, from fastest to most accurate, <10MB to >100MB: yolo26n, yolo26s, yolo26m, yolo26l, yolo26x, export in aircraft.dockerfile
@@ -427,12 +428,12 @@ def main(args=None):
     parser.add_argument('--headless', action='store_true', help="Run in headless mode.")
     parser.add_argument('--hitl', action='store_true', help="Open camerafrom gz-sim for HITL.")
     parser.add_argument('--remote-video-streams', action='store_true', help="Send video streams to the ground container.")
-    parser.add_argument('--dfov', type=float, default=100.0, help="Diagonal field of view in degrees.")
+    parser.add_argument('--hfov', type=float, default=100.0, help="Horizontal field of view in degrees.")
     cli_args, ros_args = parser.parse_known_args()
 
     rclpy.init(args=ros_args)
 
-    yolo_node = YoloInferenceNode(headless=cli_args.headless, hitl=cli_args.hitl, remote_video_streams=cli_args.remote_video_streams, dfov=cli_args.dfov)
+    yolo_node = YoloInferenceNode(headless=cli_args.headless, hitl=cli_args.hitl, remote_video_streams=cli_args.remote_video_streams, hfov=cli_args.hfov)
     yolo_node.run_inference_loop()
     
     yolo_node.destroy_node()

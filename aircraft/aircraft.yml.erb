@@ -25,9 +25,7 @@
   # Load simulated camera parameters from the sensor_config.yaml file
   require 'yaml'
   sensor_config = YAML.load_file('/aas/aircraft_resources/sensor_config.yaml')
-  raw_dfov_deg = sensor_config['sensors']['camera_intrinsics']['diagonal_fov_deg'].to_f
-  # Ensure the DFOV is capped as in sensor_camera/model.sdf.erb
-  dfov_deg = [raw_dfov_deg, 175.0].min
+  hfov_deg = sensor_config['sensors']['camera_intrinsics']['horizontal_fov_deg'].to_f
 %>
 
 name: drone
@@ -58,7 +56,7 @@ windows:
       layout: even-horizontal
       panes:
         <% if camera %>
-        - ros2 run yolo_py yolo_py <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %> --dfov <%= simulated_time ? dfov_deg : 200.0 %>
+        - ros2 run yolo_py yolo_py <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
         <% end %>
         <% if lidar %>
         - ros2 launch kiss_icp odometry.launch.py topic:=/lidar_points <%= headless ? 'visualize:=false' : '' %>
