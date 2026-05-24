@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <%
+  sensor_type = camera_intrinsics['wideangle'] == true ? 'wideanglecamera' : 'camera'
   dfov_deg = camera_intrinsics['diagonal_fov_deg'].to_f
   clipped_dfov_deg = [dfov_deg, 175.0].min # Cap DFOV to <180 degrees to avoid singularities in the pinhole model
   dfov_rad = clipped_dfov_deg * (Math::PI / 180.0)
@@ -36,7 +37,7 @@
           <diffuse>1 1 0 1.0</diffuse>
         </material>
       </visual>
-      <sensor name="imager" type="wideanglecamera">
+      <sensor name="imager" type="<%= sensor_type %>">
         <camera>
           <horizontal_fov><%= hfov_rad.round(6) %></horizontal_fov>
           <image>
@@ -48,7 +49,7 @@
             <far><%= camera_intrinsics['far_clip'] %></far>
           </clip>
           <!-- TODO: https://www.seeedstudio.com/IMX219-200-Camera-200-FOV-Applicable-for-Jetson-Nano-p-4609.html -->
-          <!-- Only for wideanglecamera, see lens options in https://github.com/gazebosim/gz-sensors/blob/main/src/WideAngleCameraSensor.cc -->
+          <!-- Only for wideanglecamera, add lens options in https://github.com/gazebosim/gz-sensors/blob/main/src/WideAngleCameraSensor.cc -->
           <!-- Lens types: custom, equidistant, equisolid_angle, orthographic, gnomonical, stereographic -->
           <!--
           <lens>
