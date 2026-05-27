@@ -3,6 +3,7 @@
   headless = ENV.fetch('HEADLESS', 'true') == 'true'
   camera = ENV.fetch('CAMERA', 'true') == 'true'
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
+  odom = ENV.fetch('ODOM', 'none')
 
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   air_subnet = ENV.fetch('AIR_SUBNET', '10.22')
@@ -61,6 +62,20 @@ windows:
         <% if lidar %>
         - ros2 launch kiss_icp odometry.launch.py topic:=/lidar_points <%= headless ? 'visualize:=false' : '' %>
         <% end %>
+
+  <% if odom != 'none' %>
+  - odom:
+      layout: even-horizontal
+      panes:
+        <% case odom %>
+        <% when 'openvins' %>
+        - echo "openvins"
+        <% when 'fastlio' %>
+        - echo "fastlio"
+        <% when 'superodom' %>
+        - echo "superodom"
+        <% end %>
+  <% end %>
 
   <% if autopilot == 'px4' %>
   - uxrce_dds_and_zenoh:
