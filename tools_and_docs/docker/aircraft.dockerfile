@@ -243,27 +243,33 @@ WORKDIR /aas/github_ws
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom dependencies, based on https://github.com/superxslam/SuperOdom#-3-installation
+# Sophus on 2021's commit https://github.com/strasdat/Sophus/commit/97e7161
 WORKDIR /aas/github_apps/
-RUN git clone https://github.com/strasdat/Sophus.git \
-    && cd Sophus && git checkout 97e7161 \
+RUN mkdir Sophus \
+    && wget -qO- https://github.com/strasdat/Sophus/archive/97e7161.tar.gz | tar -xz -C Sophus --strip-components=1 \
+    && cd Sophus \
     && mkdir build && cd build \
     && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && make -j$(nproc) \
     && make install
+# gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92
 WORKDIR /aas/github_apps/
-RUN git clone https://github.com/borglab/gtsam.git \
-    && cd gtsam && git checkout 4abef92 \
+RUN mkdir gtsam \
+    && wget -qO- https://github.com/borglab/gtsam/archive/4abef92.tar.gz | tar -xz -C gtsam --strip-components=1 \
+    && cd gtsam \
     && mkdir build && cd build \
     && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. \
     && make -j$(nproc) \
     && make install
+# f68321e tag is release 2.1.0 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
 WORKDIR /aas/github_apps/
 RUN apt-get update && \
     apt-get install -y libgoogle-glog-dev \
     && apt clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/ceres-solver/ceres-solver.git \
-    && cd ceres-solver && git checkout f68321e7de8929fbcdb95dd42877531e64f72f66 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir ceres-solver \
+    && wget -qO- https://github.com/ceres-solver/ceres-solver/archive/f68321e.tar.gz | tar -xz -C ceres-solver --strip-components=1 \
+    && cd ceres-solver \
     && mkdir build && cd build \
     && cmake .. \
     && make -j$(nproc) \
@@ -271,8 +277,7 @@ RUN git clone https://github.com/ceres-solver/ceres-solver.git \
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
-WORKDIR /aas/github_ws/src/
-RUN git clone https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
+COPY /_github_clones/rviz_2d_overlay_plugins /aas/github_ws/src/rviz_2d_overlay_plugins
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
