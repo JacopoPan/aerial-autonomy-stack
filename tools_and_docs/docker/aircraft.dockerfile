@@ -1,7 +1,7 @@
 ################################################################################
 # Pick amd64 (for simulation) or arm64 (on Jetson) image from the NGC Catalog ##
 ################################################################################
-FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-runtime-ubuntu22.04 AS base_amd64
+FROM nvcr.io/nvidia/cuda:12.9.2-cudnn-runtime-ubuntu22.04 AS base_amd64
 FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
 
 ################################################################################
