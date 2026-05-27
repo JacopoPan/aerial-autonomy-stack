@@ -48,7 +48,7 @@ RUN apt update \
 # Install Zenoh ROS2 bridge
 RUN echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" | sudo tee -a /etc/apt/sources.list > /dev/null \
     && apt-get update && \
-    apt-get install -y zenoh-bridge-ros2dds \
+    apt-get install -y --no-install-recommends zenoh-bridge-ros2dds \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -88,7 +88,8 @@ FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
 # MAVROS
 RUN apt-get update && \
-    apt-get install -y ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
+    apt-get install -y --no-install-recommends \
+    ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
@@ -228,7 +229,7 @@ RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
-    apt-get install -y libeigen3-dev libboost-all-dev libceres-dev \
+    apt-get install -y --no-install-recommends libeigen3-dev libboost-all-dev libceres-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
@@ -264,7 +265,7 @@ RUN mkdir gtsam \
 # f68321e tag is release 2.1.0 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
 WORKDIR /aas/github_apps/
 RUN apt-get update && \
-    apt-get install -y libgoogle-glog-dev \
+    apt-get install -y --no-install-recommends libgoogle-glog-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir ceres-solver \
@@ -298,7 +299,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 RUN apt-get update && \
-    apt-get install -y ros-humble-plotjuggler \
+    apt-get install -y --no-install-recommends ros-humble-plotjuggler \
     ros-humble-plotjuggler-ros \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*

@@ -133,7 +133,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 
 # Install https://github.com/PX4/flight_review to inspect PX4 SITL logs
 RUN apt-get update && \
-    apt-get install -y sqlite3 libfftw3-bin libfftw3-dev \
+    apt-get install -y --no-install-recommends sqlite3 libfftw3-bin libfftw3-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/flight_review /aas/github_apps/flight_review

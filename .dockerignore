@@ -19,3 +19,6 @@ _github_clones/PX4-Autopilot/Tools/simulation/jmavsim/
 _github_clones/PX4-Autopilot/Tools/simulation/flightgear/
 _github_clones/PX4-Autopilot/Tools/simulation/jsbsim/
 _github_clones/PX4-Autopilot/docs/
+
+# Ignore OpenVINS data
+_github_clones/open_vins/ov_data/
