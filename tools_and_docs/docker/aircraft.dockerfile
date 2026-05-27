@@ -253,7 +253,7 @@ RUN mkdir Sophus \
     && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     && make -j$(nproc) \
     && make install
-# gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92
+# gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92, also required by KISS-Matcher
 WORKDIR /aas/github_apps/
 RUN mkdir gtsam \
     && wget -qO- https://github.com/borglab/gtsam/archive/4abef92.tar.gz | tar -xz -C gtsam --strip-components=1 \
@@ -288,6 +288,12 @@ COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+# Install KISS-Matcher, based on https://github.com/MIT-SPARK/KISS-Matcher/tree/main/ros#gear-how-to-build--run
+COPY /_github_clones/KISS-Matcher /aas/github_ws/src/KISS-Matcher
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace, pass CMAKE_POLICY_VERSION_MINIMUM as env var for nested builds
+RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
