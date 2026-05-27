@@ -21,12 +21,14 @@ from cv_bridge import CvBridge
 CONF_THRESH = 0.5
 
 class YoloInferenceNode(Node):
-    def __init__(self, headless, hitl, remote_video_streams, hfov):
+    def __init__(self, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher):
         super().__init__('yolo_inference_node')
         self.headless = headless
         self.hitl = hitl
         self.remote_video_streams = remote_video_streams
         self.hfov = hfov
+        self.ros2_frame_publisher = ros2_frame_publisher
+
         self.fx = None
         self.fy = None
         self.architecture = platform.machine()
@@ -45,7 +47,8 @@ class YoloInferenceNode(Node):
         
         # Create publishers
         self.detection_publisher = self.create_publisher(Detection2DArray, 'detections', 10)
-        # self.image_publisher = self.create_publisher(Image, 'raw_frames', 10)
+        if self.ros2_frame_publisher:
+            self.image_publisher = self.create_publisher(Image, 'raw_frames', 10)
         self.bridge = CvBridge()
 
         # Pre-allocate reusable arrays for scaling to avoid allocation in hot loops
@@ -218,8 +221,8 @@ class YoloInferenceNode(Node):
                 continue
 
             # Publish raw frames in ROS
-            # if not self.headless:
-            #     self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
+            if self.ros2_frame_publisher:
+                self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
             
             # Inference
             with Profiler("do_yolo (includes ONNX Runtime)"):
@@ -429,11 +432,13 @@ def main(args=None):
     parser.add_argument('--hitl', action='store_true', help="Open camerafrom gz-sim for HITL.")
     parser.add_argument('--remote-video-streams', action='store_true', help="Send video streams to the ground container.")
     parser.add_argument('--hfov', type=float, default=100.0, help="Horizontal field of view in degrees.")
+    parser.add_argument('--ros2-frame-publisher', action='store_true', help="Publish raw frames to ROS 2.")
     cli_args, ros_args = parser.parse_known_args()
 
     rclpy.init(args=ros_args)
 
-    yolo_node = YoloInferenceNode(headless=cli_args.headless, hitl=cli_args.hitl, remote_video_streams=cli_args.remote_video_streams, hfov=cli_args.hfov)
+    yolo_node = YoloInferenceNode(headless=cli_args.headless, hitl=cli_args.hitl, remote_video_streams=cli_args.remote_video_streams,
+        hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher)
     yolo_node.run_inference_loop()
     
     yolo_node.destroy_node()
