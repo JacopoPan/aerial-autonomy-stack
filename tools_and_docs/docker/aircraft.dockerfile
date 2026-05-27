@@ -229,7 +229,6 @@ RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
     apt-get install -y libeigen3-dev libboost-all-dev libceres-dev \
-    libopencv-contrib-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
