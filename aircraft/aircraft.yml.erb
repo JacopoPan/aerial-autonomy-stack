@@ -57,7 +57,7 @@ windows:
       layout: even-horizontal
       panes:
         <% if camera %>
-        - ros2 run yolo_py yolo_py <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
+        - ros2 run yolo_py yolo_py <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
         <% end %>
         <% if lidar %>
         - ros2 launch kiss_icp odometry.launch.py topic:=/lidar_points <%= headless ? 'visualize:=false' : '' %>
@@ -69,11 +69,12 @@ windows:
       panes:
         <% case odom %>
         <% when 'openvins' %>
-        - echo "openvins"
+        - ros2 launch ov_msckf
         <% when 'fastlio' %>
-        - echo "fastlio"
+        - ros2 launch spark_fast_lio
+        - ros2 launch kiss_matcher_ros
         <% when 'superodom' %>
-        - echo "superodom"
+        - ros2 launch super_odometry
         <% end %>
   <% end %>
 
