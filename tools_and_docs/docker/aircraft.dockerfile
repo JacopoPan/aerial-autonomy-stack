@@ -234,8 +234,9 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
 WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace, limit resource usage to avoid freezes on resource-constrained hosts
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+# Explicitly use bash, not sh, to source and build the workspace
+# Limit resource usage to avoid freezes on resource-constrained hosts and using flag --cmake-args -DENABLE_ARUCO_TAGS=OFF (the Jetson base image lacks libopencv-contrib-dev)
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DENABLE_ARUCO_TAGS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
 COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
