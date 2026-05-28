@@ -14,6 +14,7 @@ import math
 import platform
 
 from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D, ObjectHypothesis, ObjectHypothesisWithPose
+from std_msgs.msg import Header
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
@@ -48,7 +49,7 @@ class YoloInferenceNode(Node):
         # Create publishers
         self.detection_publisher = self.create_publisher(Detection2DArray, 'detections', 10)
         if self.ros2_frame_publisher:
-            self.image_publisher = self.create_publisher(Image, 'raw_frames', 10)
+            self.image_publisher = self.create_publisher(Image, 'camera_frames', 10)
         self.bridge = CvBridge()
 
         # Pre-allocate reusable arrays for scaling to avoid allocation in hot loops
@@ -222,7 +223,11 @@ class YoloInferenceNode(Node):
 
             # Publish raw frames in ROS
             if self.ros2_frame_publisher:
-                self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8"))
+                msg_header = Header(
+                    stamp=self.get_clock().now().to_msg(),
+                    frame_id="camera_frame"
+                )
+                self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8", header=msg_header))
             
             # Inference
             with Profiler("do_yolo (includes ONNX Runtime)"):
