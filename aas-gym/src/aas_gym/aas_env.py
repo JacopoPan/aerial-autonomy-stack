@@ -21,6 +21,7 @@ class AASEnv(gym.Env):
             autopilot: str="px4",
             camera: bool=True,
             lidar: bool=True,
+            odom: str="none",
             num_quads: int=1,
             render_mode=None
         ):
@@ -57,6 +58,7 @@ class AASEnv(gym.Env):
         self.AUTOPILOT = autopilot
         self.CAMERA = camera
         self.LIDAR = lidar
+        self.ODOM = odom
         self.NUM_QUADS = num_quads
         self.NUM_VTOLS = 0
         self.WORLD = "impalpable_greyness"
@@ -235,6 +237,7 @@ class AASEnv(gym.Env):
                     "HEADLESS": str(self.HEADLESS).lower(),
                     "CAMERA": str(self.CAMERA).lower(),
                     "LIDAR": str(self.LIDAR).lower(),
+                    "ODOM": self.ODOM,
                     "DRONE_TYPE": drone_type,
                     "DRONE_ID": str(i),
                     "SIMULATED_TIME": "true",

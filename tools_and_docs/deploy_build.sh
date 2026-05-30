@@ -62,7 +62,6 @@ for repo_info in "${REPOS[@]}"; do
 done
 
 if [ "$BUILD_DOCKER" = "true" ]; then
-  # The first build takes ~50'
   docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 else
   echo -e "Skipping Docker build"

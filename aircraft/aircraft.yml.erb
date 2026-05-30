@@ -76,6 +76,7 @@ windows:
         <% when 'superodom' %>
         - ros2 launch super_odometry
         <% end %>
+        - ros2 run imu_publisher imu_publisher --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
   <% end %>
 
   <% if autopilot == 'px4' %>
