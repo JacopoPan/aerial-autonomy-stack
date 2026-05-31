@@ -38,10 +38,13 @@
   gym_step_size = (physics_freq_hz / gym_freq_hz).to_i
   gym_step_size = 1 if gym_step_size < 1
 
-  # Load sensor update rates from the sensor_config.yaml file
+  # Load sensor information from the sensor_config.yaml file
   require 'yaml'
   sensor_config = YAML.load_file('/aas/simulation_resources/aircraft_models/sensor_config.yaml')
   cam_update_rate = sensor_config['sensors']['camera_intrinsics']['update_rate']
+  stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
+
+  camera_streams = stereo_cam ? [{name: '_left', port: 5600}, {name: '_right', port: 5601}] : [{name: '', port: 5600}]
 %>
 
 name: sim
@@ -117,10 +120,12 @@ windows:
           <% end %>
   <% end %>
         <% if camera %>
+        <% camera_streams.each do |stream| %>
         - >
           /aas/simulation_resources/comms/gz_gst_bridge/build/gz_gst_bridge
-          /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image
-          <%= "#{sim_subnet}.90.#{drone_id}" %> 5600 <%= cam_update_rate %>
+          /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager<%= stream[:name] %>/image
+          <%= "#{sim_subnet}.90.#{drone_id}" %> <%= stream[:port] %> <%= cam_update_rate %>
+        <% end %>
         - >
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /world/<%= world %>/model/<%= model_name %>/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model
           --ros-args -r /world/<%= world %>/model/<%= model_name %>/joint_state:=/gimbal_state
@@ -133,11 +138,6 @@ windows:
         - >
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /model/<%= model_name %>/gimbal_3d/yaw_cmd@std_msgs/msg/Float64]gz.msgs.Double
           --ros-args -r /model/<%= model_name %>/gimbal_3d/yaw_cmd:=gimbal_yaw_cmd
-        # (optional/alternative) Use ros_gz_bridge to republish the camera frames into ROS2 and use tools like $ ros2 run rqt_image_view rqt_image_view
-        # - >
-        #   ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge
-        #   /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image@sensor_msgs/msg/Image[gz.msgs.Image
-        #   --ros-args -r /world/<%= world %>/model/<%= model_name %>/model/simple_camera/link/mono_cam/base_link/sensor/imager/image:=/camera_frames
         <% end %>
         <% if lidar %>
         - >

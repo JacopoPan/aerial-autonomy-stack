@@ -85,6 +85,9 @@ RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install
 COPY ground/ground_resources/ /aas/ground_resources
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
 
+# Copy sensor configuration
+COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/ground_resources/sensor_config.yaml
+
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash

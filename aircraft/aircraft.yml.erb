@@ -23,10 +23,14 @@
 
   gymnasium = ENV.fetch('GYMNASIUM', 'false') == 'true'
 
-  # Load simulated camera parameters from the sensor_config.yaml file
+  # Load sensor information from the sensor_config.yaml file
   require 'yaml'
   sensor_config = YAML.load_file('/aas/aircraft_resources/sensor_config.yaml')
   hfov_deg = sensor_config['sensors']['camera_intrinsics']['horizontal_fov_deg'].to_f
+  stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
+
+  stereo_cam = false unless simulated_time # Stereo camera is for simulation only
+  camera_ids = stereo_cam ? [0, 1] : [0] # In simulation, these will be UDP ports 5600, 5601, etc.
 %>
 
 name: drone
@@ -57,7 +61,9 @@ windows:
       layout: even-horizontal
       panes:
         <% if camera %>
-        - ros2 run yolo_py yolo_py <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
+        <% camera_ids.each do |cam_id| %>
+        - ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
+        <% end %>
         <% end %>
         <% if lidar %>
         - ros2 launch kiss_icp odometry.launch.py topic:=/lidar_points <%= headless ? 'visualize:=false' : '' %>

@@ -22,14 +22,16 @@ from cv_bridge import CvBridge
 CONF_THRESH = 0.5
 
 class YoloInferenceNode(Node):
-    def __init__(self, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher):
+    def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher):
         super().__init__('yolo_inference_node')
+        self.camera_id = camera_id
         self.headless = headless
         self.hitl = hitl
         self.remote_video_streams = remote_video_streams
         self.hfov = hfov
         self.ros2_frame_publisher = ros2_frame_publisher
 
+        self.udp_port = 5600 + self.camera_id  # 0 -> 5600, 1 -> 5601
         self.fx = None
         self.fy = None
         self.architecture = platform.machine()
@@ -47,9 +49,9 @@ class YoloInferenceNode(Node):
         self.input_name = None
         
         # Create publishers
-        self.detection_publisher = self.create_publisher(Detection2DArray, 'detections', 10)
+        self.detection_publisher = self.create_publisher(Detection2DArray, f'detections_{self.camera_id}', 10)
         if self.ros2_frame_publisher:
-            self.image_publisher = self.create_publisher(Image, 'camera_frames', 10)
+            self.image_publisher = self.create_publisher(Image, f'camera_frames_{self.camera_id}', 10)
         self.bridge = CvBridge()
 
         # Pre-allocate reusable arrays for scaling to avoid allocation in hot loops
@@ -62,7 +64,7 @@ class YoloInferenceNode(Node):
         if self.architecture == 'x86_64':
             # # GPU pipeline: TODO NOT WORKING
             # gst_pipeline_string = (
-            #     "udpsrc port=5600 ! "
+            #     f"udpsrc port={self.udp_port} ! "
             #     "application/x-rtp, media=(string)video, encoding-name=(string)H264 ! "
             #     "rtph264depay ! "
             #     "h264parse ! "
@@ -74,7 +76,7 @@ class YoloInferenceNode(Node):
             # )
             # CPU pipeline
             gst_pipeline_string = (
-                "udpsrc port=5600 ! "
+                f"udpsrc port={self.udp_port} ! "
                 "application/x-rtp, media=(string)video, encoding-name=(string)H264 ! "
                 "rtph264depay ! "
                 "avdec_h264 ! " # Use CPU decoder
@@ -86,7 +88,7 @@ class YoloInferenceNode(Node):
             if self.hitl: # For HITL, acquire UDP stream from gz-sim
                 # GPU pipeline:
                 gst_pipeline_string = (
-                "udpsrc port=5600 ! "
+                    f"udpsrc port={self.udp_port} ! "
                     "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264 ! "
                     "rtpjitterbuffer latency=100 drop-on-latency=true ! " # Handle network jitter while adding latency (in ms)
                     "rtph264depay ! "
@@ -111,7 +113,7 @@ class YoloInferenceNode(Node):
             else: # Default, acquire CSI camera 
                 # GPU pipeline:
                 gst_pipeline_string = (
-                    "nvarguscamerasrc sensor-id=0 ! "
+                    f"nvarguscamerasrc sensor-id={self.camera_id} ! "
                     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
                     "nvvidconv ! "
                     "video/x-raw(memory:NVMM), format=RGBA ! "
@@ -198,9 +200,9 @@ class YoloInferenceNode(Node):
 
         if not self.headless:
             drone_id = os.getenv('DRONE_ID', '1')
-            self.WINDOW_NAME = f"YOLO (Aircraft {drone_id})"
+            self.WINDOW_NAME = f"YOLO (Aircraft {drone_id} - Cam {self.camera_id})"
             cv2.namedWindow(self.WINDOW_NAME, cv2.WINDOW_NORMAL)
-            cv2.moveWindow(self.WINDOW_NAME, 800+(int(drone_id)-1)*25, 5+(int(drone_id)-1)*200)
+            cv2.moveWindow(self.WINDOW_NAME, 800+(int(drone_id)-1)*25 + (self.camera_id*400), 5+(int(drone_id)-1)*200)
             # cv2.resizeWindow(self.WINDOW_NAME, 400, 200)
 
         # Start the video capture thread
@@ -225,7 +227,7 @@ class YoloInferenceNode(Node):
             if self.ros2_frame_publisher:
                 msg_header = Header(
                     stamp=self.get_clock().now().to_msg(),
-                    frame_id="camera_frame"
+                    frame_id=f"camera_frame_{self.camera_id}"
                 )
                 self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8", header=msg_header))
             
@@ -243,12 +245,13 @@ class YoloInferenceNode(Node):
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            # Only on Jetson, stream to the ground station via UDP using GStreamer on ports 5001, 5002, ..., based on DRONE_ID
+            # Only on Jetson, stream to the ground station via UDP using GStreamer
+            # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
             if self.remote_video_streams and (self.architecture == 'aarch64'):
                 if not hasattr(self, 'gnd_stream_writer'):
                     h, w = frame.shape[:2]
                     gnd_ip = os.getenv('AIR_SUBNET', '10.22') + '.90.' + os.getenv('GROUND_ID', '101')
-                    port = 5000 + int(os.getenv('DRONE_ID', '1'))
+                    port = 5000 + int(os.getenv('DRONE_ID', '1')) + (self.camera_id * 100)
                     gst_out = (
                         "appsrc do-timestamp=true ! video/x-raw, format=BGR ! queue max-size-buffers=2 leaky=downstream ! "
                         "videoconvert ! videorate drop-only=true ! "
@@ -433,6 +436,7 @@ class Profiler:
 
 def main(args=None):
     parser = argparse.ArgumentParser(description="YOLO ROS2 Inference Node.")
+    parser.add_argument('--camera-id', type=int, default=0, help="Generic camera ID (0 for mono/left, 1 for right).")
     parser.add_argument('--headless', action='store_true', help="Run in headless mode.")
     parser.add_argument('--hitl', action='store_true', help="Open camerafrom gz-sim for HITL.")
     parser.add_argument('--remote-video-streams', action='store_true', help="Send video streams to the ground container.")
@@ -442,8 +446,8 @@ def main(args=None):
 
     rclpy.init(args=ros_args)
 
-    yolo_node = YoloInferenceNode(headless=cli_args.headless, hitl=cli_args.hitl, remote_video_streams=cli_args.remote_video_streams,
-        hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher)
+    yolo_node = YoloInferenceNode(camera_id=cli_args.camera_id, headless=cli_args.headless, hitl=cli_args.hitl,
+        remote_video_streams=cli_args.remote_video_streams, hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher)
     yolo_node.run_inference_loop()
     
     yolo_node.destroy_node()

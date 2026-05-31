@@ -9,6 +9,14 @@
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
   ssh_connections = ENV.fetch('SSH_CONNECTIONS', 'false') == 'true'
+
+  # Load sensor information from the sensor_config.yaml file
+  require 'yaml'
+  sensor_config = YAML.load_file('/aas/ground_resources/sensor_config.yaml')
+  stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
+
+  stereo_cam = false unless simulated_time # Stereo camera is for simulation only
+  camera_ids = stereo_cam ? [0, 1] : [0]
 %>
 
 name: ground
@@ -87,7 +95,9 @@ windows:
       layout: tiled
       panes:
         <% (1..(num_quads + num_vtols)).each do |drone_id| %>
-        - python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id %> --name "Aircraft <%= drone_id %>"
+        <% camera_ids.each do |cam_id| %>
+        - python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"
+        <% end %>
         <% end %>
   <% end %>
 

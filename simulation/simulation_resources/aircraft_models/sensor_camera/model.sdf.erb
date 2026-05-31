@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <%
   sensor_type = camera_intrinsics['wideangle'] == true ? 'wideanglecamera' : 'camera'
+  is_stereo = camera_intrinsics['stereo'] == true
+  camera_list = is_stereo ? [{name: '_left', y: 0.05}, {name: '_right', y: -0.05}] : [{name: '', y: 0.0}]
   hfov_rad = camera_intrinsics['horizontal_fov_deg'].to_f * (Math::PI / 180.0)
 %>
 <sdf version='1.9'>
@@ -19,8 +21,9 @@
           <izz>0.00004</izz>
         </inertia>
       </inertial>
-      <visual name="visual">
-        <pose degrees="true">0 0 0 0 -90 0</pose>
+      <% camera_list.each do |cam| %>
+      <visual name="visual<%= cam[:name] %>">
+        <pose degrees="true">0 <%= cam[:y] %> 0 0 -90 0</pose>
         <geometry>
           <cone>
             <radius>0.025</radius>
@@ -32,7 +35,8 @@
           <diffuse>1 1 0 1.0</diffuse>
         </material>
       </visual>
-      <sensor name="imager" type="<%= sensor_type %>">
+      <sensor name="imager<%= cam[:name] %>" type="<%= sensor_type %>">
+        <pose>0 <%= cam[:y] %> 0 0 0 0</pose>
         <camera>
           <horizontal_fov><%= hfov_rad.round(6) %></horizontal_fov>
           <image>
@@ -63,6 +67,21 @@
         <visualize>false</visualize>
         <!-- <topic>rgb_camera</topic> -->
       </sensor>
+      <% end %>
+      <% if is_stereo %>
+      <visual name="stereo_link_bar">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.02 0.1 0.02</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient>
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+        </material>
+      </visual>
+      <% end %>
       <gravity>true</gravity>
       <velocity_decay/>
     </link>
