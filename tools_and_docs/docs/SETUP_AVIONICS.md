@@ -231,6 +231,18 @@ In QGroundControl -> "Vehicle Configuration" -> "Parameters" set:
 SERIAL2_BAUD 921600
 SERIAL2_OPTIONS 0
 SERIAL2_PROTOCOL MAVLink2
+
+# Stream rates for MAVROS
+SR2_ADSB         5
+SR2_EXTRA1       50
+SR2_EXTRA2       10
+SR2_EXTRA3       2
+SR2_EXT_STAT     1
+SR2_PARAMS       10
+SR2_POSITION     10
+SR2_RAW_CTRL     1
+SR2_RAW_SENS     50
+SR2_RC_CHAN      1
 ```
 
 > [!CAUTION]
@@ -275,7 +287,19 @@ BRD_SER1_RTSCTS     Auto
 SERIAL1_BAUD        57600
 SERIAL1_OPTIONS     0
 SERIAL1_PROTOCOL    MAVLink2
-# All these (except SERIAL1_PROTOCOL) are default values and tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
+
+# Stream rates for the telemetry radio/QGC
+SR1_ADSB         5
+SR1_EXTRA1       10
+SR1_EXTRA2       4
+SR1_EXTRA3       2
+SR1_EXT_STAT     2
+SR1_PARAMS       10
+SR1_POSITION     5
+SR1_RAW_CTRL     2
+SR1_RAW_SENS     2
+SR1_RC_CHAN      2
+# Tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
 ```
 
 ## RC Input

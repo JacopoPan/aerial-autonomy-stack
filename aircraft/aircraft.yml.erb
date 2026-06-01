@@ -99,7 +99,6 @@ windows:
           sudo sed -i '0,/ros__parameters:/s/ros__parameters:/ros__parameters:\n    use_sim_time: true/' /opt/ros/humble/share/mavros/launch/apm_config.yaml && 
           ros2 launch mavros apm.launch fcu_url:=udp://<%= "#{sim_subnet}.90.#{drone_id}" %>:8888@8888 tgt_system:=<%= drone_id %>
           <% else %>
-          python3 /aas/aircraft_resources/patches/request_mavlink_streams.py --device '/dev/ttyTHS1' --baudrate 921600 --target-system <%= drone_id %> --target-component 1 --rate 4 &&
           ros2 launch mavros apm.launch fcu_url:=/dev/ttyTHS1:921600 tgt_system:=<%= drone_id %>
           <% end %>
   <% end %>
