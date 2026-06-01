@@ -288,7 +288,7 @@ SERIAL1_BAUD        57600
 SERIAL1_OPTIONS     0
 SERIAL1_PROTOCOL    MAVLink2
 
-# Stream rates for the telemetry radio/QGC
+# Stream rates for the telemetry radio (potentially modified by QGC)
 SR1_ADSB         5
 SR1_EXTRA1       10
 SR1_EXTRA2       4

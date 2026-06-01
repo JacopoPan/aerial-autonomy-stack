@@ -96,7 +96,7 @@ windows:
       panes:
         <% (1..(num_quads + num_vtols)).each do |drone_id| %>
         <% camera_ids.each do |cam_id| %>
-        - python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"
+        - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"; do sleep 2; done
         <% end %>
         <% end %>
   <% end %>
