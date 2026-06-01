@@ -1,8 +1,8 @@
 sensors:
 
   camera_intrinsics:
-    wideangle: true
-    stereo: false
+    wideangle: false
+    stereo: true
     horizontal_fov_deg: 100.0 # Must be <180 if wideangle is false
     width: 320
     height: 240

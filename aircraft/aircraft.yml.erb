@@ -62,7 +62,7 @@ windows:
       panes:
         <% if camera %>
         <% camera_ids.each do |cam_id| %>
-        - ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>
+        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
         <% end %>
         <% end %>
         <% if lidar %>
