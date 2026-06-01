@@ -31,7 +31,7 @@ public:
                 rclcpp::SensorDataQoS(),
                 std::bind(&ImuPublisherNode::px4_callback, this, std::placeholders::_1));   
             RCLCPP_INFO(this->get_logger(), "imu_publisher_node started for PX4 (convert from FRD to FLU)");
-        } else if (autopilot == "ardupilot") { // Subscribe to the MAVROS raw IMU topic (4Hz)
+        } else if (autopilot == "ardupilot") { // Subscribe to the MAVROS raw IMU topic (50Hz)
             ardupilot_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
                 "/mavros/imu/data_raw",
                 rclcpp::SensorDataQoS(),

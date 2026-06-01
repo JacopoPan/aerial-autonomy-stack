@@ -110,9 +110,10 @@ windows:
           <%= vehicle_config %> --model JSON
           -I <%= sitl_instance %> --sysid <%= drone_id %>
           --speedup <%= speedup %>
+          --mavproxy-args="--streamrate=-1"
           --add-param-file=/aas/simulation_resources/aircraft_models/<%= model_name %>/ardupilot-4.6.params
           -l $(python3 /aas/simulation_resources/patches/extract_spherical_coords.py /aas/simulation_resources/simulation_worlds/<%= world %>.sdf)
-          --out=udp:<%= "#{sim_subnet}.90.#{drone_id}" %>:8888
+          -A "--serial1=udpclient:<%= "#{sim_subnet}.90.#{drone_id}" %>:8888"
           <% if gnd_container %>
           --out=udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 16540 + sitl_instance %>
           <% else %>

@@ -57,16 +57,16 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
 
     // MAVROS subscribers
     mavros_global_position_global_sub_= this->create_subscription<NavSatFix>(
-        "/mavros/global_position/global", qos_profile_sub, // 4Hz
+        "/mavros/global_position/global", qos_profile_sub, // ~10Hz
         std::bind(&ArdupilotGuided::global_position_global_sub_callback, this, std::placeholders::_1), subscriber_options);
     mavros_local_position_odom_sub_= this->create_subscription<Odometry>(
-        "/mavros/local_position/odom", qos_profile_sub, // 4Hz
+        "/mavros/local_position/odom", qos_profile_sub, // ~10Hz
         std::bind(&ArdupilotGuided::local_position_odom_callback, this, std::placeholders::_1), subscriber_options);
     mavros_global_position_local_sub_ = this->create_subscription<Odometry>(
-        "/mavros/global_position/local", qos_profile_sub, // 4Hz
+        "/mavros/global_position/local", qos_profile_sub, // ~10Hz
         std::bind(&ArdupilotGuided::global_position_local_callback, this, std::placeholders::_1), subscriber_options);
     mavros_vfr_hud_sub_ = this->create_subscription<VfrHud>(
-        "/mavros/vfr_hud", qos_profile_sub, // 4Hz
+        "/mavros/vfr_hud", qos_profile_sub, // ~10Hz
         std::bind(&ArdupilotGuided::vfr_hud_callback, this, std::placeholders::_1), subscriber_options);
 
     // Offboard flag subscriber
