@@ -402,6 +402,7 @@ aerial-autonomy-stack
 │   ├── aircraft_ws
 │   │   └── src
 │   │       ├── autopilot_interface                   # Ardupilot/PX4 high-level actions (Takeoff, Orbit, Offboard, Land)
+│   │       ├── imu_publisher                         # Multiplexer between PX4/DDS and ArduPilot/MAVROS sensor topics
 │   │       ├── mission                               # Orchestrator of the actions in `autopilot_interface`
 │   │       ├── offboard_control                      # Low-level references for the Offboard action in `autopilot_interface`
 │   │       ├── state_sharing                         # Publisher of the `/state_sharing_drone_N` topic broadcasted by Zenoh
