@@ -81,6 +81,8 @@ windows:
         - ros2 launch kiss_matcher_ros run_kiss_matcher_sam.launch.yaml
         <% when 'superodom' %>
         - ros2 launch super_odometry livox_mid360.launch.py
+        <% when 'mimosa' %>
+        - ros2 launch mimosa parrot_launch.py
         <% end %>
         - ros2 run imu_publisher imu_publisher --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
   <% end %>
