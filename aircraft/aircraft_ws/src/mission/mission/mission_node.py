@@ -90,10 +90,10 @@ class MissionNode(Node):
             AirspeedValidated, '/fmu/out/airspeed_validated_v1', self.airspeed_validated_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
         # MAVROS subscribers
-        self.create_subscription( # ~10Hz
+        self.create_subscription( # 10Hz
             NavSatFix, '/mavros/global_position/global', self.mavros_global_position_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
-        self.create_subscription( # ~10Hz
+        self.create_subscription( # 10Hz
             VfrHud, '/mavros/vfr_hud', self.vfr_hud_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
         # Perception subscribers

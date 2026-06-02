@@ -60,16 +60,16 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
 
     // MAVROS subscribers
     mavros_global_position_global_sub_= this->create_subscription<NavSatFix>(
-        "/mavros/global_position/global", qos_profile_sub, // ~10Hz
+        "/mavros/global_position/global", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::global_position_global_sub_callback, this, std::placeholders::_1), subscriber_options);
     mavros_local_position_odom_sub_= this->create_subscription<Odometry>(
-        "/mavros/local_position/odom", qos_profile_sub, // ~10Hz
+        "/mavros/local_position/odom", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::local_position_odom_callback, this, std::placeholders::_1), subscriber_options);
     mavros_global_position_local_sub_ = this->create_subscription<Odometry>(
-        "/mavros/global_position/local", qos_profile_sub, // ~10Hz
+        "/mavros/global_position/local", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::global_position_local_callback, this, std::placeholders::_1), subscriber_options);
     mavros_vfr_hud_sub_ = this->create_subscription<VfrHud>(
-        "/mavros/vfr_hud", qos_profile_sub, // ~10Hz
+        "/mavros/vfr_hud", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::vfr_hud_callback, this, std::placeholders::_1), subscriber_options);
     mavros_home_position_home_sub_ = this->create_subscription<HomePosition>(
         "/mavros/home_position/home", qos_profile_sub, // 1Hz
