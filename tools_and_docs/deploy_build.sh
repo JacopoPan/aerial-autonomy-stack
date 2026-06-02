@@ -8,10 +8,13 @@ set -e
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-BUILD_ARGS=""
+# By default, skip building advanced odometry, SLAM packages
+BUILD_ADVANCED_ODOM=${EXTRAS:-false}
+
+BUILD_OPTS=""
 if [ "${CLEAN_BUILD:-false}" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
-  BUILD_ARGS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
+  BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi aircraft-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
 fi
@@ -62,7 +65,7 @@ for repo_info in "${REPOS[@]}"; do
 done
 
 if [ "$BUILD_DOCKER" = "true" ]; then
-  docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 else
   echo -e "Skipping Docker build"
 fi

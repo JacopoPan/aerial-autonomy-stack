@@ -1,3 +1,5 @@
+# Use an ARG to selectively build or skip the advanced odometry, SLAM packages
+ARG BUILD_ADVANCED_ODOM=true
 ################################################################################
 # Pick amd64 (for simulation) or arm64 (on Jetson) image from the NGC Catalog ##
 ################################################################################
@@ -200,7 +202,7 @@ RUN apt update \
 ################################################################################
 # Add odometry packages ########################################################
 ################################################################################
-FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-ort-odom-image
+FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image
 
 # Install the Livox SDK (SuperOdom requirement)
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
@@ -226,6 +228,19 @@ COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+
+################################################################################
+# Empty branch to skip the build of advanced odometry, SLAM packages ###########
+# Mutually exclusive with the next stage #######################################
+################################################################################
+FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-false
+# Do nothing
+
+################################################################################
+# Branch including the build of advanced odometry, SLAM packages ###############
+# Mutually exclusive with the previous stage ###################################
+################################################################################
+FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-true
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
@@ -299,7 +314,7 @@ RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/humble/setup.bash 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-image AS ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image
+FROM advanced-odom-${BUILD_ADVANCED_ODOM} AS ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image
 
 # Add pymavlink and PlotJuggler for debugging, testing, and analysis
 RUN pip3 install --no-cache-dir --upgrade pip \

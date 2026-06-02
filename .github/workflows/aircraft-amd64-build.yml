@@ -85,4 +85,4 @@ jobs:
           fi
 
       - name: Build the aircraft
-        run: docker buildx build --push -t ghcr.io/jacopopan/aircraft-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/aircraft.dockerfile .
+        run: docker buildx build --push --build-arg BUILD_ADVANCED_ODOM=true -t ghcr.io/jacopopan/aircraft-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/aircraft.dockerfile .

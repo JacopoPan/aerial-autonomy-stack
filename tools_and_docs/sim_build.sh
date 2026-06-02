@@ -6,10 +6,13 @@ set -e
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-BUILD_ARGS=""
+# By default, skip building advanced odometry, SLAM packages
+BUILD_ADVANCED_ODOM=${EXTRAS:-false}
+
+BUILD_OPTS=""
 if [ "${CLEAN_BUILD:-false}" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
-  BUILD_ARGS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
+  BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi transitional-ros2-image:latest transitional-ros2-qgc-image:latest \
     aircraft-image:latest ground-image:latest simulation-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
@@ -100,12 +103,12 @@ unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
 if [ "$BUILD_DOCKER" = "true" ]; then
   # Build common layers reused between images
-  docker build $BUILD_ARGS --target ros2-image -t transitional-ros2-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
-  docker build $BUILD_ARGS --target ros2-qgc-image -t transitional-ros2-qgc-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS --target ros2-image -t transitional-ros2-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS --target ros2-qgc-image -t transitional-ros2-qgc-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
   # Build the 3 main images
-  docker build $BUILD_ARGS -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
-  docker build $BUILD_ARGS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
-  docker build $BUILD_ARGS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
+  docker build $BUILD_OPTS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
 else
   echo -e "Skipping Docker builds"
 fi

@@ -51,4 +51,4 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build the aircraft image
-        run: docker buildx build -t aircraft-image -f ./tools_and_docs/docker/aircraft.dockerfile .
+        run: docker buildx build --build-arg BUILD_ADVANCED_ODOM=true -t aircraft-image -f ./tools_and_docs/docker/aircraft.dockerfile .
