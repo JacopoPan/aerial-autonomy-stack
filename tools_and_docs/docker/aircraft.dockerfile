@@ -311,6 +311,8 @@ WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace, pass CMAKE_POLICY_VERSION_MINIMUM as env var for nested builds
 RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
+# TODO: add https://github.com/ntnu-arl/mimosa/tree/dev/ros2
+
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
 ################################################################################
