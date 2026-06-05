@@ -250,7 +250,7 @@ RUN apt-get update && \
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-# Limit resource usage to avoid freezes on resource-constrained hosts and using flag --cmake-args -DENABLE_ARUCO_TAGS=OFF (the Jetson base image lacks libopencv-contrib-dev)
+# Limiting resource usage to avoid freezes on resource-constrained hosts and using flag --cmake-args -DENABLE_ARUCO_TAGS=OFF (the Jetson base image lacks libopencv-contrib-dev)
 RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DENABLE_ARUCO_TAGS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
@@ -337,8 +337,8 @@ RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/
     colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release \
     -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_USE_QUATERNIONS=ON -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_WITH_TBB=OFF \
     -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF"
-# Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
+# Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
     colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
