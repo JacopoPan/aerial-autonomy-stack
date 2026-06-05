@@ -88,6 +88,14 @@ windows:
           mavlink-routerd -t 0 -e 127.0.0.1:14573 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14572 -e <%= "#{sim_subnet}.90.#{drone_id}" %>:14571 /dev/ttyACM0:57600
           <% end %>
   <% end %>
+
+  - rcpilot:
+      layout: even-horizontal
+      panes:
+        - >
+          python3 -c "import yaml; cfg = yaml.safe_load(open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml')); cfg['communication']['mavsys']['ros__parameters']['clients']['drone']['connection_string'] = 'udp:<%= "#{sim_subnet}.90.#{drone_id}" %>:14572'; yaml.dump(cfg, open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml', 'w'))" &&
+          ros2 launch bringup rcpilot.dev.launch.py
+
   <% end %>
 
   <% if record_rosbag %>

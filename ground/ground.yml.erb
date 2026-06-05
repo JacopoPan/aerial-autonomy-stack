@@ -36,6 +36,20 @@ windows:
           %>
           mavlink-routerd <%= ground_ip %>:<%= master_port %> -e <%= ground_ip %>:<%= slave_port_1 %> -e <%= ground_ip %>:<%= slave_port_2 %>
   <% end %>
+
+  - rcpilot:
+      layout: even-horizontal
+      panes:
+        <% num_quads.times do |i| %>
+        - >
+          python3 -c "import yaml; cfg = yaml.safe_load(open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml')); cfg['communication']['mavsys']['ros__parameters']['clients']['drone']['connection_string'] = 'udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14000 + 100 * (i + 1) %>'; yaml.dump(cfg, open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml', 'w'))" &&
+          ros2 launch bringup rcpilot.dev.launch.py
+        <% end %>
+        <% num_vtols.times do |i| %>
+        - >
+          python3 -c "import yaml; cfg = yaml.safe_load(open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml')); cfg['communication']['mavsys']['ros__parameters']['clients']['drone']['connection_string'] = 'udp:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 14000 + 100 * (num_quads + i + 1) %>'; yaml.dump(cfg, open('/workspaces/rcpilot/install/bringup/share/bringup/config/config.dev.yaml', 'w'))" &&
+          ros2 launch bringup rcpilot.dev.launch.py
+        <% end %>
   <% end %>
 
   - zenoh_and_qgc:

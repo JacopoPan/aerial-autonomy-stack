@@ -128,7 +128,33 @@ RUN meson setup build . --buildtype=release \
 
 
 ################################################################################
-# Stage 5 - ?+GB ###############################################################
+# Stage 5 - Install rcpilot ##################################################
+################################################################################
+
+RUN apt update \
+    && apt install -y --no-install-recommends \
+        ros-humble-geographic-msgs clang \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install rcpilot
+COPY github_clones/rcpilot /workspaces/rcpilot
+WORKDIR /workspaces/rcpilot
+
+# Copy MAVKit to the expected location for rcpilot SDK
+COPY github_clones/MAVKit /workspaces/rcpilot/sdk/py/rcpilot/mavkit
+
+# Initialize git repository and update submodules
+RUN git config --global --add safe.directory /workspaces/rcpilot && \ 
+    git submodule sync && \
+    git submodule update --init --recursive
+
+# Build rcpilot SDK and workspace
+RUN ./install-sdk.bash cpp python && \
+    bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip localization"
+
+################################################################################
+# Stage 6 - ?+GB ###############################################################
 ################################################################################
 # Install YOLO with --no-deps to avoid installing opencv from pip, upgrade sympy and install ultralytics dependencies manually
 RUN pip3 install --no-cache-dir --upgrade pip \
@@ -166,6 +192,7 @@ COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QG
 
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
+RUN echo "source /workspaces/rcpilot/install/setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash
 
 SHELL ["/bin/bash", "-c"]
