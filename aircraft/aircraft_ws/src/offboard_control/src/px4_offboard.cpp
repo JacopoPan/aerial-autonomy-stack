@@ -146,46 +146,40 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     ground_tracks_ = msg; // Save the smart pointer to the latest message
 
-    double label48_lat = 0.0;
-    double label48_lon = 0.0;
-    double label48_alt = 0.0;
-    double label48_vn = 0.0;
-    double label48_ve = 0.0;
-    double label48_vd = 0.0;
-    bool label48_found = false;
-    for (const auto& track : ground_tracks_->tracks) {
-        if (track.label == 48) {
-            label48_lat = track.latitude_deg;
-            label48_lon = track.longitude_deg;
-            label48_alt = track.altitude_m;
-            label48_vn = track.velocity_n_m_s;
-            label48_ve = track.velocity_e_m_s;
-            label48_vd = track.velocity_d_m_s;
-            label48_found = true;
-            break;
-        }
-    }
-    if (!label48_found) {
-        RCLCPP_WARN_ONCE(get_logger(), "Label 48 not found in tracks.");
-        return;
-    }
+    // Verify LLA position of own reference point (used in PX4 local position)
     double reference_lat = ref_lat_;
     double reference_lon = ref_lon_;
     double reference_alt = ref_alt_;
-    if (std::isnan(reference_lat) || std::isnan(reference_lon)) {
+    if (std::isnan(reference_lat) || std::isnan(reference_lon) || std::isnan(reference_alt)) {
         RCLCPP_WARN_ONCE(get_logger(), "Waiting for reference position");
         return;
     }
-    // Predict position
-    const double prediction_time_sec = 0.0; // TODO: enable prediction
-    double target_ground_speed = std::sqrt(label48_vn * label48_vn + label48_ve * label48_ve);
-    double target_course_rad = std::atan2(label48_ve, label48_vn); // Azimuth from North
-    double target_course_deg = target_course_rad * 180.0 / M_PI;
-    double distance_traveled = target_ground_speed * prediction_time_sec;
-    double future_lat, future_lon;
-    geod.Direct(label48_lat, label48_lon, target_course_deg, distance_traveled, future_lat, future_lon);
-    double future_alt = label48_alt - (label48_vd * prediction_time_sec) + 2.0; // HARDCODED: track from above the target to avoid collisions
-    // Compute NED position of label48
+
+    // Find label 48
+    constexpr int TARGET_LABEL = 48; // 'o muorto che pparla
+    auto target_it = std::find_if(ground_tracks_->tracks.begin(), ground_tracks_->tracks.end(),
+                                  [](const auto& track) { return track.label == TARGET_LABEL; });
+    if (target_it == ground_tracks_->tracks.end()) {
+        RCLCPP_WARN_ONCE(get_logger(), "Label %d not found in tracks.", TARGET_LABEL);
+        return;
+    }
+    const auto& target_track = *target_it; // Bind a reference without copying
+
+    // Predict LLA position of label 48
+    constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
+    constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
+
+    double target_ground_speed = std::hypot(target_track.velocity_n_m_s, target_track.velocity_e_m_s);
+    double target_course_rad = std::atan2(target_track.velocity_e_m_s, target_track.velocity_n_m_s); // Azimuth from North
+    double target_course_deg = target_course_rad * (180.0 / M_PI);
+    double distance_traveled = target_ground_speed * PREDICTION_TIME_SEC;
+
+    double future_lat = 0.0, future_lon = 0.0;
+    geod.Direct(target_track.latitude_deg, target_track.longitude_deg, target_course_deg, distance_traveled,
+                future_lat, future_lon);
+    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC) + ALT_SAFETY_MARGIN;
+
+    // Compute GeographicLib ENU position of label48 w.r.t. PX4 vehicle (using NED)
     const GeographicLib::LocalCartesian proj(reference_lat, reference_lon, reference_alt);
     proj.Forward(future_lat, future_lon, future_alt, traj_ref_east, traj_ref_north, traj_ref_up);
 }
