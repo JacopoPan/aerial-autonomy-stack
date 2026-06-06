@@ -281,7 +281,7 @@ void PX4Offboard::offboard_loop_callback()
     if (offboard_flag_ == 0) {
         return; // Do not publish anything else if not in an OFFBOARD state
     // TODO: implement custom offboard control logic here
-    // https://docs.px4.io/v1.15/en/flight_modes/offboard.html
+    // https://docs.px4.io/v1.17/en/flight_modes/offboard.html
     } else if (offboard_flag_ == 1) { // Quad attitude reference
         offboard_mode.attitude = true;
         VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleAttitudeSetpoint.msg
