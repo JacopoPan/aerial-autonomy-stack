@@ -47,7 +47,6 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/MIT-SPARK/spark-fast-lio.git;main;spark-fast-lio"
   "https://github.com/MIT-SPARK/KISS-Matcher.git;main;KISS-Matcher"
   "https://github.com/superxslam/SuperOdom.git;ros2;SuperOdom"
-  "https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git;main;rviz_2d_overlay_plugins"
   "https://github.com/ntnu-arl/mimosa.git;dev/ros2;mimosa"
   "https://github.com/JacopoPan/rovio_ros2.git;feat/ros2;rovio"
 )

@@ -294,7 +294,8 @@ RUN apt-get update && \
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
-COPY /_github_clones/rviz_2d_overlay_plugins /aas/github_ws/src/rviz_2d_overlay_plugins
+RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
+    wget -qO- https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/refs/heads/main.tar.gz | tar -xz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
