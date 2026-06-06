@@ -1,0 +1,36 @@
+steps:
+  - action: takeoff
+    params:
+      takeoff_altitude: 30.0
+      
+  - action: wait
+    params:
+      duration: 5.0
+
+  - action: speed
+    params:
+     speed: 3.0
+
+  - action: wait
+    params:
+      duration: 5.0
+
+  - action: reposition
+    params:
+     east: 0.0
+     north: 20.0
+     altitude: 40.0
+
+  - action: wait
+    params:
+      duration: 15.0
+
+  - action: orbit
+    params:
+      east: -50.0
+      north: 120.0
+      altitude: 50.0
+      radius: 80.0
+
+run_with:
+  ros2 run mission mission --conops /aas/aircraft_resources/missions/inf_loiter.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true

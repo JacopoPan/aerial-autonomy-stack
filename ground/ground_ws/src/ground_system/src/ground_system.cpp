@@ -7,12 +7,14 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     this->declare_parameter("ip", "0.0.0.0");
     this->declare_parameter("base_port", 18540);
     this->declare_parameter("rate", 10.0);
+    this->declare_parameter("target_id", 0);
 
     // Get Parameters
     num_drones_ = this->get_parameter("num_drones").as_int();
     ip_ = this->get_parameter("ip").as_string();
     base_port_ = this->get_parameter("base_port").as_int();
     publish_rate_ = this->get_parameter("rate").as_double();
+    target_id_ = this->get_parameter("target_id").as_int();
 
     // Random Seed
     rng_.seed(std::random_device()());
@@ -121,9 +123,10 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
 
 void GroundSystem::publish_swarm_obs()
 {
-    const double POS_STD_DEV_DEG = 1e-5;
-    const double ALT_STD_DEV_M = 0.5;
-    const double VEL_STD_DEV_MS = 0.1;
+    // TODO: add realistic noise model
+    const double POS_STD_DEV_DEG = 0.0; // 1e-5;
+    const double ALT_STD_DEV_M = 0.0; // 0.5;
+    const double VEL_STD_DEV_MS = 0.0; // 0.1;
 
     ground_system_msgs::msg::SwarmObs swarm_msg;
     swarm_msg.header.stamp = this->now();
@@ -141,15 +144,15 @@ void GroundSystem::publish_swarm_obs()
 
         ground_system_msgs::msg::DroneObs drone_msg;
         drone_msg.id = id;
-        drone_msg.label = (id == 2) ? 48 : 0; // HARDCODED: example where drone 2 is given label 48, the talking dead
+        drone_msg.label = (id == target_id_) ? 48 : 0; // The target id is given label 48, 'o muorto che pparla
 
-        // Default: no noise.
-        drone_msg.latitude_deg = track.lat; // drone_msg.latitude_deg = add_noise(track.lat, POS_STD_DEV_DEG);
-        drone_msg.longitude_deg = track.lon; // drone_msg.longitude_deg = add_noise(track.lon, POS_STD_DEV_DEG);
-        drone_msg.altitude_m = track.alt; // drone_msg.altitude_m = add_noise(track.alt, ALT_STD_DEV_M);
-        drone_msg.velocity_n_m_s = track.vx; // drone_msg.velocity_n_m_s = add_noise(track.vx, VEL_STD_DEV_MS);
-        drone_msg.velocity_e_m_s = track.vy; // drone_msg.velocity_e_m_s = add_noise(track.vy, VEL_STD_DEV_MS);
-        drone_msg.velocity_d_m_s = track.vz; // drone_msg.velocity_d_m_s = add_noise(track.vz, VEL_STD_DEV_MS);
+        // Add noise
+        drone_msg.latitude_deg = add_noise(track.lat, POS_STD_DEV_DEG);
+        drone_msg.longitude_deg = add_noise(track.lon, POS_STD_DEV_DEG);
+        drone_msg.altitude_m = add_noise(track.alt, ALT_STD_DEV_M);
+        drone_msg.velocity_n_m_s = add_noise(track.vx, VEL_STD_DEV_MS);
+        drone_msg.velocity_e_m_s = add_noise(track.vy, VEL_STD_DEV_MS);
+        drone_msg.velocity_d_m_s = add_noise(track.vz, VEL_STD_DEV_MS);
 
         swarm_msg.tracks.push_back(drone_msg);
     }
@@ -161,6 +164,9 @@ void GroundSystem::publish_swarm_obs()
 
 double GroundSystem::add_noise(double value, double std_dev)
 {
+    if (std_dev <= 0.0) {
+        return value; // Do not change the state of the random number generator rng_ if no noise is requested
+    }
     std::normal_distribution<double> dist(0.0, std_dev);
     return value + dist(rng_);
 }

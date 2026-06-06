@@ -42,6 +42,7 @@ private:
     std::string ip_;
     int base_port_;
     double publish_rate_;
+    int target_id_;
 
     // Threading & Data
     std::mutex data_mutex_;
