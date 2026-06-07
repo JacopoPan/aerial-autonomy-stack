@@ -8,7 +8,8 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     x_(NAN), y_(NAN), z_(NAN), heading_(NAN), vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
     pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
-    traj_ref_east(NAN), traj_ref_north(NAN), traj_ref_up(NAN)
+    traj_ref_east_(NAN), traj_ref_north_(NAN), traj_ref_up_(NAN),
+    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
 {
     RCLCPP_INFO(this->get_logger(), "PX4 offboard referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -145,6 +146,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     ground_tracks_ = msg; // Save the smart pointer to the latest message
+    last_track_time_ = this->get_clock()->now();
 
     // Verify LLA position of own reference point (used in PX4 local position)
     double reference_lat = ref_lat_;
@@ -165,6 +167,11 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     }
     const auto& target_track = *target_it; // Bind a reference without copying
 
+    // Save label 48 velocities
+    target_vn_ = target_track.velocity_n_m_s;
+    target_ve_ = target_track.velocity_e_m_s;
+    target_vd_ = target_track.velocity_d_m_s;
+
     // Predict LLA position of label 48
     constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
     constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
@@ -181,7 +188,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
 
     // Compute GeographicLib ENU position of label48 w.r.t. PX4 vehicle (using NED)
     const GeographicLib::LocalCartesian proj(reference_lat, reference_lon, reference_alt);
-    proj.Forward(future_lat, future_lon, future_alt, traj_ref_east, traj_ref_north, traj_ref_up);
+    proj.Forward(future_lat, future_lon, future_alt, traj_ref_east_, traj_ref_north_, traj_ref_up_);
 }
 
 void PX4Offboard::yolo_detections_callback(const vision_msgs::msg::Detection2DArray::SharedPtr msg)
@@ -317,19 +324,41 @@ void PX4Offboard::offboard_loop_callback()
         rates_ref_pub_->publish(rates_ref);
     } else if (offboard_flag_ == 5) { // Quad trajectory (position) reference
         TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
+        trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.position = true;
         trajectory_ref.position = {0.0, 0.0, -50.0};
         trajectory_ref.yaw = -3.14; // [-PI:PI]
-        if (!std::isnan(traj_ref_east) && !std::isnan(traj_ref_north) && !std::isnan(traj_ref_up)) {
-            trajectory_ref.position = {traj_ref_north, traj_ref_east, -traj_ref_up};
-            trajectory_ref.yaw = std::atan2((traj_ref_east - y_), (traj_ref_north - x_)); // [-PI:PI]
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_)) {
+            double dt = (this->get_clock()->now() - last_track_time_).seconds();
+            dt = std::clamp(dt, 0.0, 2.0);
+            double current_north = traj_ref_north_ + (target_vn_ * dt);
+            double current_east  = traj_ref_east_  + (target_ve_ * dt);
+            double current_down  = -traj_ref_up_   + (target_vd_ * dt);
+            trajectory_ref.position = {current_north, current_east, current_down};
+            trajectory_ref.yaw = std::atan2((current_east - y_), (current_north - x_)); // [-PI:PI]
+            if (!std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
+                offboard_mode.velocity = true; // Enable velocity feedforward
+                trajectory_ref.velocity = {target_vn_, target_ve_, target_vd_};
+            } else {
+                trajectory_ref.velocity = {NAN, NAN, NAN};
+            }
         }
-        // offboard_mode.acceleration = true;
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        // offboard_mode.acceleration = true; // Enable acceleration feedforward
         // trajectory_ref.acceleration = {0.0, 0.0, -5.0};
         trajectory_ref_pub_->publish(trajectory_ref);
     } else if (offboard_flag_ == 6) { // VTOL trajectory (velocity) reference
         TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
+        trajectory_ref.position = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.velocity = true;
         trajectory_ref.velocity = {20.0, 0.0, 0.0};

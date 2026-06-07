@@ -7,7 +7,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     x_(NAN), y_(NAN), z_(NAN),  vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
     true_airspeed_m_s_(NAN), heading_(NAN),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
-    desired_bearing_rad(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN)
+    desired_bearing_rad_(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN),
+    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
 {
     RCLCPP_INFO(this->get_logger(), "ArduPilot guided referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -140,6 +141,7 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     ground_tracks_ = msg; // Save the smart pointer to the latest message
+    last_track_time_ = this->get_clock()->now();
 
     // Verify ArduPilot own position
     double own_lat = lat_;
@@ -160,6 +162,11 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
     }
     const auto& target_track = *target_it; // Bind a reference without copying
 
+    // Save label 48 velocities
+    target_vn_ = target_track.velocity_n_m_s;
+    target_ve_ = target_track.velocity_e_m_s;
+    target_vd_ = target_track.velocity_d_m_s;
+
     // Predict LLA position of label 48
     constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
     constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
@@ -178,7 +185,7 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
     double fw_azi = 0.0, bw_azi = 0.0; // forward and backward azimuth (in degrees, clockwise from North)
     geod.Inverse(own_lat, own_lon, future_lat, future_lon,
                 closing_distance_, fw_azi, bw_azi);
-    desired_bearing_rad = fw_azi * (M_PI / 180.0);
+    desired_bearing_rad_ = fw_azi * (M_PI / 180.0);
     desired_elevation_rad_ = std::atan2((future_alt - own_alt), closing_distance_);
 }
 
@@ -277,20 +284,26 @@ void ArdupilotGuided::offboard_loop_callback()
         vel_msg.twist.linear.x = 0.0; // m/s East
         vel_msg.twist.linear.y = 5.0; // m/s North
         vel_msg.twist.linear.z = 0.0; // m/s Up
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
         double distance_fraction = (closing_distance_ - 3.0) / 50.0; // Factor to add speed if further than 3m, up to ~50m
         distance_fraction = std::clamp(distance_fraction, 0.0, 1.0);
         double desired_speed = 3.0 + distance_fraction * (5.0); // m/s base speed of 3.0 m/s, increasing up to 8.0 m/s when far (~50m or more) from the target
-        if (!std::isnan(desired_bearing_rad) && !std::isnan(desired_elevation_rad_)) {
+        if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_)) {
             double horizontal_speed = desired_speed * std::cos(desired_elevation_rad_);
             double vertical_speed = desired_speed * std::sin(desired_elevation_rad_);
-            vel_msg.twist.linear.x = horizontal_speed * std::sin(desired_bearing_rad); // m/s East
-            vel_msg.twist.linear.y = horizontal_speed * std::cos(desired_bearing_rad); // m/s North
+            vel_msg.twist.linear.x = horizontal_speed * std::sin(desired_bearing_rad_); // m/s East
+            vel_msg.twist.linear.y = horizontal_speed * std::cos(desired_bearing_rad_); // m/s North
             vel_msg.twist.linear.z = vertical_speed; // m/s Up
         }
         // Computed yaw rate for alignment
         const double Kp_yaw = 1.5;
         double heading_error = normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
         vel_msg.twist.angular.z = Kp_yaw * heading_error; // rad/s Yaw rate
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
         setpoint_vel_pub_->publish(vel_msg);
         // Alternatively, use the unstamped topic: ros2 topic pub --rate 10 --times 50 /mavros/setpoint_velocity/cmd_vel_unstamped geometry_msgs/msg/Twist '{linear: {x: 2.0, y: 0.0, z: 0.0}}'
     } else if (offboard_flag_ == 8) { // Acceleration setpoint
@@ -300,6 +313,13 @@ void ArdupilotGuided::offboard_loop_callback()
         accel_msg.vector.x = 0.0; // m/s^2 East
         accel_msg.vector.y = 1.5; // m/s^2 North
         accel_msg.vector.z = 0.0; // m/s^2 Up
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        // TODO
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////
         setpoint_accel_pub_->publish(accel_msg);
     } else {
         RCLCPP_WARN(get_logger(), "Unexpected offboard_flag value: %d", offboard_flag_.load());

@@ -102,9 +102,9 @@ private:
     vision_msgs::msg::Detection2DArray::SharedPtr yolo_detections_;
 
     // Guidance variables
-    double desired_bearing_rad;
-    double desired_elevation_rad_;
-    double closing_distance_;
+    double desired_bearing_rad_, desired_elevation_rad_, closing_distance_;
+    double target_vn_, target_ve_, target_vd_;
+    rclcpp::Time last_track_time_;
 
     // MAVROS publishers
     rclcpp::Publisher<Vector3Stamped>::SharedPtr setpoint_accel_pub_;

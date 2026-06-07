@@ -100,7 +100,9 @@ private:
     vision_msgs::msg::Detection2DArray::SharedPtr yolo_detections_;
 
     // Guidance variables
-    double traj_ref_east, traj_ref_north, traj_ref_up;
+    double traj_ref_east_, traj_ref_north_, traj_ref_up_;
+    double target_vn_, target_ve_, target_vd_;
+    rclcpp::Time last_track_time_;
 
     // PX4 publishers
     rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_mode_pub_;
