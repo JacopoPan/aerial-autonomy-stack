@@ -328,25 +328,42 @@ void PX4Offboard::offboard_loop_callback()
         trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.position = true;
-        trajectory_ref.position = {0.0, 0.0, -50.0};
+        trajectory_ref.position = {0.0, 0.0, -50.0}; // Homeposition
         trajectory_ref.yaw = -3.14; // [-PI:PI]
         ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
         if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_)) {
-            double dt = (this->get_clock()->now() - last_track_time_).seconds();
-            dt = std::clamp(dt, 0.0, 2.0);
+            double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, 2.0);
             double current_north = traj_ref_north_ + (target_vn_ * dt);
             double current_east  = traj_ref_east_  + (target_ve_ * dt);
             double current_down  = -traj_ref_up_   + (target_vd_ * dt);
             trajectory_ref.position = {current_north, current_east, current_down};
-            trajectory_ref.yaw = std::atan2((current_east - y_), (current_north - x_)); // [-PI:PI]
+            double d_north = current_north - x_;
+            double d_east  = current_east - y_;
+            trajectory_ref.yaw = std::atan2(d_east, d_north); // [-PI:PI]
             if (!std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
                 offboard_mode.velocity = true; // Enable velocity feedforward
                 trajectory_ref.velocity = {target_vn_, target_ve_, target_vd_};
+                double dist_sq = (d_north * d_north) + (d_east * d_east);
+                if (dist_sq > 1.0) {
+                    double vrel_n = target_vn_ - vx_;
+                    double vrel_e = target_ve_ - vy_;
+                    trajectory_ref.yawspeed = (d_north * vrel_e - d_east * vrel_n) / dist_sq;
+                } else {
+                    trajectory_ref.yawspeed = 0.0;
+                }
             } else {
                 trajectory_ref.velocity = {NAN, NAN, NAN};
+                trajectory_ref.yawspeed = NAN;
             }
+        } else { // Missing track, stay still
+            offboard_mode.position = false;
+            trajectory_ref.position = {NAN, NAN, NAN}; ;
+            trajectory_ref.yaw = NAN;
+            offboard_mode.velocity = true;
+            trajectory_ref.velocity = {0.0, 0.0, 0.0};
+            trajectory_ref.yawspeed = 0.0;
         }
         ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
