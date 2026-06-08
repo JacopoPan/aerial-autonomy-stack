@@ -4,7 +4,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     offboard_flag_(0),
     offboard_loop_frequency(10), offboard_loop_count_(0), last_offboard_loop_count_(0),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
-    x_(NAN), y_(NAN), z_(NAN),  vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
+    x_(NAN), y_(NAN), z_(NAN),  vx_(NAN), vy_(NAN), vz_(NAN), ve_(NAN), vn_(NAN), vu_(NAN),
+    ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
     true_airspeed_m_s_(NAN), heading_(NAN),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     desired_bearing_rad_(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN),
@@ -66,6 +67,9 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     mavros_global_position_local_sub_ = this->create_subscription<Odometry>(
         "/mavros/global_position/local", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotGuided::global_position_local_callback, this, std::placeholders::_1), subscriber_options);
+    mavros_local_position_vel_local_sub_ = this->create_subscription<TwistStamped>(
+        "/mavros/local_position/velocity_local", qos_profile_sub, // 10Hz
+        std::bind(&ArdupilotGuided::local_position_vel_local_callback, this, std::placeholders::_1), subscriber_options);
     mavros_vfr_hud_sub_ = this->create_subscription<VfrHud>(
         "/mavros/vfr_hud", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotGuided::vfr_hud_callback, this, std::placeholders::_1), subscriber_options);
@@ -120,10 +124,18 @@ void ArdupilotGuided::global_position_local_callback(const Odometry::SharedPtr m
     x_ = msg->pose.pose.position.y;  // N <- E
     y_ = msg->pose.pose.position.x;  // E <- N
     z_ = -msg->pose.pose.position.z; // D <- -U
-    // Velocity (ENU -> NED)
+    // Velocity (ENU -> NED), NOTE: PX4's vx_, vy_, vz_ map to vn_, ve_, -vu_ instead
     vx_ = msg->twist.twist.linear.y;  // N <- E
     vy_ = msg->twist.twist.linear.x;  // E <- N
     vz_ = -msg->twist.twist.linear.z; // D <- -U
+}
+void ArdupilotGuided::local_position_vel_local_callback(const TwistStamped::SharedPtr msg)
+{
+    std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
+    // Velocity (World ENU)
+    ve_ = msg->twist.linear.x;
+    vn_ = msg->twist.linear.y;
+    vu_ = msg->twist.linear.z;
 }
 void ArdupilotGuided::vfr_hud_callback(const VfrHud::SharedPtr msg)
 {
@@ -285,17 +297,34 @@ void ArdupilotGuided::offboard_loop_callback()
         vel_msg.twist.linear.y = 5.0; // m/s North
         vel_msg.twist.linear.z = 0.0; // m/s Up
         ///////////////////////////////////////////////////////////////////////
+        // Lead pursuit ///////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////
-        double distance_fraction = (closing_distance_ - 3.0) / 50.0; // Factor to add speed if further than 3m, up to ~50m
-        distance_fraction = std::clamp(distance_fraction, 0.0, 1.0);
-        double desired_speed = 3.0 + distance_fraction * (5.0); // m/s base speed of 3.0 m/s, increasing up to 8.0 m/s when far (~50m or more) from the target
-        if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_)) {
-            double horizontal_speed = desired_speed * std::cos(desired_elevation_rad_);
-            double vertical_speed = desired_speed * std::sin(desired_elevation_rad_);
-            vel_msg.twist.linear.x = horizontal_speed * std::sin(desired_bearing_rad_); // m/s East
-            vel_msg.twist.linear.y = horizontal_speed * std::cos(desired_bearing_rad_); // m/s North
-            vel_msg.twist.linear.z = vertical_speed; // m/s Up
+        if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
+            !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
+            // Calculate unit line-of-sight (LOS) vector in ENU
+            double u_E = std::cos(desired_elevation_rad_) * std::sin(desired_bearing_rad_);
+            double u_N = std::cos(desired_elevation_rad_) * std::cos(desired_bearing_rad_);
+            double u_U = std::sin(desired_elevation_rad_);
+            // Project target ENU velocity along the LOS (parallel, escape speed) and across it (perp, lateral drift speed)
+            double vt_parallel_mag = (target_ve_ * u_E) + (target_vn_ * u_N) + (-target_vd_ * u_U);
+            double vt_perp_E = target_ve_ - (vt_parallel_mag * u_E);
+            double vt_perp_N = target_vn_ - (vt_parallel_mag * u_N);
+            double vt_perp_U = -target_vd_ - (vt_parallel_mag * u_U);
+            // Distance-based desired closing speed (3m/s if closer than 5m and up to 10m/s if further than 50m)
+            double base_closing_speed = 3.0 + std::clamp((closing_distance_ - 5.0) / 50.0, 0.0, 1.0) * 7.0;
+            // Total desired speed along the LOS: target's escape speed + closing speed
+            double vd_parallel_mag = vt_parallel_mag + base_closing_speed;
+            // Final velocity reference: escape speed + closing speed + match perpendicular drift (based on pursuit type)
+            const double K_pursuit = 1.0; //  1.0 = lead pursuit (match drift, intercept target)
+                                          //  0.0 = pure pursuit (point directly at target, tail-chase)
+                                          // -0.5 = lag pursuit (fall behind target's path)
+            vel_msg.twist.linear.x = (K_pursuit * vt_perp_E) + (vd_parallel_mag * u_E); // m/s East
+            vel_msg.twist.linear.y = (K_pursuit * vt_perp_N) + (vd_parallel_mag * u_N); // m/s North
+            vel_msg.twist.linear.z = (K_pursuit * vt_perp_U) + (vd_parallel_mag * u_U); // m/s Up
+        } else { // Missing track, stay still
+            vel_msg.twist.linear.x = 0.0;
+            vel_msg.twist.linear.y = 0.0;
+            vel_msg.twist.linear.z = 0.0;
         }
         // Computed yaw rate for alignment
         const double Kp_yaw = 1.5;
@@ -314,9 +343,85 @@ void ArdupilotGuided::offboard_loop_callback()
         accel_msg.vector.y = 1.5; // m/s^2 North
         accel_msg.vector.z = 0.0; // m/s^2 Up
         ///////////////////////////////////////////////////////////////////////
+        // Proportional navigation ////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////
-        // TODO
+        if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
+            !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
+
+            // Calculate ENU error vector
+            double r_E = closing_distance_ * std::sin(desired_bearing_rad_);
+            double r_N = closing_distance_ * std::cos(desired_bearing_rad_);
+            double r_U = closing_distance_ * std::tan(desired_elevation_rad_);
+            double distance_3d = std::max(0.1, std::hypot(closing_distance_, r_U)); // Prevent divide-by-zero
+
+            // Unit LOS Vector in ENU
+            double u_E = r_E / distance_3d;
+            double u_N = r_N / distance_3d;
+            double u_U = r_U / distance_3d;
+
+            // Relative ENU Velocity (target - own)
+            double vrel_E = target_ve_ - ve_;
+            double vrel_N = target_vn_ - vn_;
+            double vrel_U = -target_vd_ - vu_;
+
+            // Closing velocity (Vc = -(r dot vrel) / |r|)
+            double r_dot_vrel = (r_E * vrel_E) + (r_N * vrel_N) + (r_U * vrel_U);
+            double Vc = -r_dot_vrel / distance_3d;
+
+            if (Vc > 0) { // Target is closing
+                // LOS angular rate vector (omega = (r x vrel) / |r|^2)
+                double r_sq = distance_3d * distance_3d;
+                double omega_E = (r_N * vrel_U - r_U * vrel_N) / r_sq;
+                double omega_N = (r_U * vrel_E - r_E * vrel_U) / r_sq;
+                double omega_U = (r_E * vrel_N - r_N * vrel_E) / r_sq;
+
+                // PN steering acceleration (HORIZONTAL ONLY)
+                const double N_gain = 3.0;
+                double a_pn_E = N_gain * Vc * (omega_N * u_U - omega_U * u_N);
+                double a_pn_N = N_gain * Vc * (omega_U * u_E - omega_E * u_U);
+
+                // Distance-based desired closing speed (3m/s if closer than 5m and up to 10m/s if further than 50m)
+                double desired_Vc = 3.0 + std::clamp((closing_distance_ - 5.0) / 50.0, 0.0, 1.0) * 7.0;
+                // Catch-Up acceleration (HORIZONTAL ONLY)
+                double a_fwd_mag = std::clamp(0.5 * (desired_Vc - Vc), -2.0, 3.0);
+                accel_msg.vector.x = a_pn_E + (a_fwd_mag * u_E);
+                accel_msg.vector.y = a_pn_N + (a_fwd_mag * u_N);
+
+            } else { // Target is opening, just thrust in its direction (HORIZONTAL ONLY)
+                accel_msg.vector.x = u_E * 2.0;
+                accel_msg.vector.y = u_N * 2.0;
+            }
+
+            // Account for ArduPilot attitude control limits
+            constexpr double ANGLE_MAX_CDEG = 3000.0; // Note: matches param ANGLE_MAX, ensure WPNAV_ACCEL is set to 500
+            const double MAX_HORIZ_ACCEL = 9.81 * std::tan((ANGLE_MAX_CDEG / 100.0) * (M_PI / 180.0));
+            double a_horiz_mag = std::hypot(accel_msg.vector.x, accel_msg.vector.y);
+            if (a_horiz_mag > MAX_HORIZ_ACCEL) {
+                double scale = MAX_HORIZ_ACCEL / a_horiz_mag;
+                accel_msg.vector.x *= scale;
+                accel_msg.vector.y *= scale;
+            }
+
+            // Decoupled z-axis PD altitude controller (clamped to bounds)
+            const double Kp_Z = 1.0;
+            const double Kd_Z = 1.5;
+            accel_msg.vector.z = (Kp_Z * r_U) + (Kd_Z * vrel_U);
+            accel_msg.vector.z = std::clamp(accel_msg.vector.z, -1.5, 1.5);
+
+        } else { // Missing track, break
+            const double K_brake = 1.0; // Braking gain (1.0 means try to stop in ~1 second)
+            accel_msg.vector.x = -K_brake * ve_;
+            accel_msg.vector.y = -K_brake * vn_;
+            accel_msg.vector.z = -K_brake * vu_;
+            double brake_mag = std::hypot(accel_msg.vector.x, accel_msg.vector.y);
+            const double MAX_BRAKE_ACCEL = 3.0; // Clamp horizontal braking deceleration
+            if (brake_mag > MAX_BRAKE_ACCEL) {
+                double scale = MAX_BRAKE_ACCEL / brake_mag;
+                accel_msg.vector.x *= scale;
+                accel_msg.vector.y *= scale;
+            }
+            accel_msg.vector.z = std::clamp(accel_msg.vector.z, -1.0, 1.0); // Limit vertical deceleration
+        }
         ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////

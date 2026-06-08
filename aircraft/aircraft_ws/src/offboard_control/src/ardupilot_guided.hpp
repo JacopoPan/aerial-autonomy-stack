@@ -77,6 +77,7 @@ private:
     rclcpp::Subscription<NavSatFix>::SharedPtr mavros_global_position_global_sub_;
     rclcpp::Subscription<Odometry>::SharedPtr mavros_local_position_odom_sub_;
     rclcpp::Subscription<Odometry>::SharedPtr mavros_global_position_local_sub_;
+    rclcpp::Subscription<TwistStamped>::SharedPtr mavros_local_position_vel_local_sub_;
     rclcpp::Subscription<VfrHud>::SharedPtr mavros_vfr_hud_sub_;
 
     // Offboard flag subscriber
@@ -89,7 +90,7 @@ private:
 
     // Subscribers variables
     double lat_, lon_, alt_, alt_ellipsoid_;
-    double x_, y_, z_, vx_, vy_, vz_;
+    double x_, y_, z_, vx_, vy_, vz_, ve_, vn_, vu_;
     double ref_lat_, ref_lon_, ref_alt_;
     std::array<float, 3> position_;
     std::array<float, 4> q_;
@@ -118,6 +119,7 @@ private:
     void global_position_global_sub_callback(const NavSatFix::SharedPtr msg);
     void local_position_odom_callback(const Odometry::SharedPtr msg);
     void global_position_local_callback(const Odometry::SharedPtr msg);
+    void local_position_vel_local_callback(const TwistStamped::SharedPtr msg);
     void vfr_hud_callback(const VfrHud::SharedPtr msg);
 
     // Offboard flag call back

@@ -328,10 +328,10 @@ void PX4Offboard::offboard_loop_callback()
         trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
         trajectory_ref.timestamp = current_time_us;
         offboard_mode.position = true;
-        trajectory_ref.position = {0.0, 0.0, -50.0}; // Homeposition
+        trajectory_ref.position = {0.0, 0.0, -50.0}; // Home point
         trajectory_ref.yaw = -3.14; // [-PI:PI]
         ///////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////
+        // Predictive rendez-vous /////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////
         if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_)) {
             double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, 2.0);

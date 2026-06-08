@@ -6,7 +6,8 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     target_system_id_(-1), mav_state_(-1), mav_type_(-1),
     armed_flag_(false), ardupilot_mode_(""),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
-    x_(NAN), y_(NAN), z_(NAN),  vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
+    x_(NAN), y_(NAN), z_(NAN),  vx_(NAN), vy_(NAN), vz_(NAN), ve_(NAN), vn_(NAN), vu_(NAN),
+    ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
     true_airspeed_m_s_(NAN), heading_(NAN),
     home_lat_(NAN), home_lon_(NAN), home_alt_(NAN)
 {
@@ -68,6 +69,9 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     mavros_global_position_local_sub_ = this->create_subscription<Odometry>(
         "/mavros/global_position/local", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::global_position_local_callback, this, std::placeholders::_1), subscriber_options);
+    mavros_local_position_vel_local_sub_ = this->create_subscription<TwistStamped>(
+        "/mavros/local_position/velocity_local", qos_profile_sub, // 10Hz
+        std::bind(&ArdupilotInterface::local_position_vel_local_callback, this, std::placeholders::_1), subscriber_options);
     mavros_vfr_hud_sub_ = this->create_subscription<VfrHud>(
         "/mavros/vfr_hud", qos_profile_sub, // 10Hz
         std::bind(&ArdupilotInterface::vfr_hud_callback, this, std::placeholders::_1), subscriber_options);
@@ -153,10 +157,18 @@ void ArdupilotInterface::global_position_local_callback(const Odometry::SharedPt
     x_ = msg->pose.pose.position.y;  // N <- E
     y_ = msg->pose.pose.position.x;  // E <- N
     z_ = -msg->pose.pose.position.z; // D <- -U
-    // Velocity (ENU -> NED)
+    // Velocity (ENU -> NED), NOTE: PX4's vx_, vy_, vz_ map to vn_, ve_, -vu_ instead
     vx_ = msg->twist.twist.linear.y;  // N <- E
     vy_ = msg->twist.twist.linear.x;  // E <- N
     vz_ = -msg->twist.twist.linear.z; // D <- -U
+}
+void ArdupilotInterface::local_position_vel_local_callback(const TwistStamped::SharedPtr msg)
+{
+    std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
+    // Velocity (World ENU)
+    ve_ = msg->twist.linear.x;
+    vn_ = msg->twist.linear.y;
+    vu_ = msg->twist.linear.z;
 }
 void ArdupilotInterface::vfr_hud_callback(const VfrHud::SharedPtr msg)
 {
