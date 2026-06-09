@@ -343,6 +343,7 @@ RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash &
     colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 # Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
+# Note: to use 'valgrind_rovio.launch.py' also 'apt-get install valgrind' and add 'mno-avx512f' after '-march=native' in CMakeLists.txt
 RUN apt-get update && \
     apt-get install -y --no-install-recommends freeglut3-dev libglew-dev \
     && apt clean \
