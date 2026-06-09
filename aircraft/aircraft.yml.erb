@@ -83,7 +83,7 @@ windows:
         - ros2 launch super_odometry livox_mid360.launch.py
         <% when 'mimosa' %>
         - ros2 launch mimosa parrot_launch.py
-        - source /aas/temp_dev_ws/install/setup.bash && ros2 run rovio rovio_node
+        - source /aas/temp_dev_ws/install/setup.bash && ros2 launch rovio rovio_node.launch.py
         <% end %>
         - ros2 run imu_publisher imu_publisher --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
   <% end %>

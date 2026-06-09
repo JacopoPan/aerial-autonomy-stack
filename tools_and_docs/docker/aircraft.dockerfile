@@ -342,8 +342,7 @@ RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/
 RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
     colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
-# Install rovio (custom ROS 2 porting of https://github.com/ethz-asl/rovio hosted on on https://github.com/JacopoPan/rovio_ros2)
-WORKDIR /aas/github_apps/
+# Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
 RUN apt-get update && \
     apt-get install -y --no-install-recommends freeglut3-dev libglew-dev \
     && apt clean \
