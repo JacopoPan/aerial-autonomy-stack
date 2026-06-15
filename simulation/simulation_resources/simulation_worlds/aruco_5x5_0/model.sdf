@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.9">
+  <model name="aruco_5x5_0">
+    <static>false</static>
+    <link name="link">
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>6.7e-4</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>6.7e-4</iyy>
+          <iyz>0</iyz>
+          <izz>1.3e-3</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>1.0 1.0 0.02</size>
+          </box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>1.0 1.0 0.02</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>materials/textures/aruco_5x5_0.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
