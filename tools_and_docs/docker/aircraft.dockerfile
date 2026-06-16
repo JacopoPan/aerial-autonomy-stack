@@ -396,7 +396,7 @@ COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
 WORKDIR /aas/aircraft_ws
 RUN rosdep update
-RUN rosdep install --from-paths src/ --ignore-src --rosdistro humble -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>drone_traffic_controller</name>
+  <version>0.1.0</version>
+  <description>Orchestrates multi-drone movements</description>
+  <maintainer email="jacopo.pan@gmail.com">JacopoPan</maintainer>
+  <license>MIT License</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>python3-geographiclib</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

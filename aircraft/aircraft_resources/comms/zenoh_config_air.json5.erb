@@ -5,7 +5,7 @@
     ros2dds: {
       allow: {
         publishers: ["/state_sharing_drone_<%= drone_id %>"],
-        subscribers: ["/tracks", "/state_sharing_drone_.*"]
+        subscribers: ["/tracks", "/dtc_commands", "/state_sharing_drone_.*"]
       }
     }
   },
