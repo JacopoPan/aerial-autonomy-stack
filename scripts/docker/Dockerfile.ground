@@ -160,7 +160,7 @@ RUN ./install-sdk.bash cpp python && \
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir --resume-retries 5 --no-deps ultralytics \
     && pip3 install --no-cache-dir --resume-retries 5 --upgrade --ignore-installed sympy \
-    && pip3 install --no-cache-dir --resume-retries 5 torch==2.10.0+cu128 torchvision==0.25.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+    && pip3 install --no-cache-dir --resume-retries 5 torch==2.10.0+cu128 torchvision==0.25.0+cu128 --index-url https://download.pytorch.org/whl/cu128 \
     && pip3 install --no-cache-dir --resume-retries 5 matplotlib pillow pyyaml requests scipy tqdm psutil
 
 ## Infra de Software Install
