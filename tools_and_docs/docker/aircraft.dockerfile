@@ -330,8 +330,8 @@ WORKDIR /aas/mimosa_custom_gtsam_ws
 # Fix ROS 2 Humble compatibility:
 # 1. mimosa expects cv_bridge.hpp (Iron/Jazzy), but Humble uses cv_bridge.h
 # 2. mimosa uses recv_timestamp (Iron/Jazzy), but Humble uses time_stamp
-RUN find /aas/mimosa_custom_gtsam_ws/src/mimosa -type f \( -name "*.hpp" -o -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/cv_bridge\/cv_bridge\.hpp/cv_bridge\/cv_bridge\.h/g' {} + \
-    && find /aas/mimosa_custom_gtsam_ws/src/mimosa -type f -name "*.cpp" -exec sed -i 's/recv_timestamp/time_stamp/g' {} +
+RUN grep -rl "cv_bridge/cv_bridge.hpp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's|cv_bridge/cv_bridge\.hpp|cv_bridge/cv_bridge.h|g' \
+    && grep -rl "recv_timestamp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's/recv_timestamp/time_stamp/g'
 # Explicitly use bash, not sh, to source and build the workspace
 # Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTAM used by SuperOdom, KISS-Matcher
 RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && \
