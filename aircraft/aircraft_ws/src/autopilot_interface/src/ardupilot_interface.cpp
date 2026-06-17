@@ -2,7 +2,7 @@
 
 ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     active_srv_or_act_flag_(false), aircraft_fsm_state_(ArdupilotInterfaceState::STARTED),
-    offboard_flag_frequency(10), offboard_flag_count_(0), last_offboard_flag_count_(0),
+    active_offboard_controller_name_(""), offboard_flag_frequency(10), offboard_flag_count_(0), last_offboard_flag_count_(0),
     target_system_id_(-1), mav_state_(-1), mav_type_(-1),
     armed_flag_(false), ardupilot_mode_(""),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
@@ -274,12 +274,12 @@ void ArdupilotInterface::offboard_flag_callback()
 
     auto msg = autopilot_interface_msgs::msg::OffboardFlag();
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
-    if (aircraft_fsm_state_ == ArdupilotInterfaceState::OFFBOARD_VELOCITY) {
-        msg.offboard_flag = 7;
-    } else if (aircraft_fsm_state_ == ArdupilotInterfaceState::OFFBOARD_ACCELERATION) {
-        msg.offboard_flag = 8;
+    if (aircraft_fsm_state_ == ArdupilotInterfaceState::OFFBOARD) {
+        msg.is_active = true;
+        msg.controller_name = active_offboard_controller_name_;
     } else {
-        msg.offboard_flag = 0; // Inactive
+        msg.is_active = false;
+        msg.controller_name = "";
     }
     offboard_flag_pub_->publish(msg);
 }
@@ -609,7 +609,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
     auto result = std::make_shared<autopilot_interface_msgs::action::Offboard::Result>();
     auto feedback = std::make_shared<autopilot_interface_msgs::action::Offboard::Feedback>();
 
-    int offboard_setpoint_type = goal->offboard_setpoint_type;
+    std::string requested_controller = goal->controller_name;
     double max_duration_sec = goal->max_duration_sec;
 
     offboard_flag_count_ = 0;
@@ -643,20 +643,9 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
                     }
                 });
             std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Reading data written by subs but also writing the FSM state
-            if (offboard_setpoint_type == autopilot_interface_msgs::action::Offboard::Goal::VELOCITY) {
-                aircraft_fsm_state_ = ArdupilotInterfaceState::OFFBOARD_VELOCITY;
-                feedback->message = "Offboarding (GUIDED mode) with VELOCITY setpoints";
-            }
-            else if (offboard_setpoint_type == autopilot_interface_msgs::action::Offboard::Goal::ACCELERATION) {
-                aircraft_fsm_state_ = ArdupilotInterfaceState::OFFBOARD_ACCELERATION;
-                feedback->message = "Offboarding (GUIDED mode) with ACCELERATION setpoints";
-            }
-            else {
-                result->success = false;
-                goal_handle->canceled(result);
-                RCLCPP_ERROR(this->get_logger(), "Offboard (GUIDED mode) type is not supported by ArdupilotInterface (only VELOCITY and ACCELERATION)");
-                return;
-            }
+            aircraft_fsm_state_ = ArdupilotInterfaceState::OFFBOARD;
+            active_offboard_controller_name_ = requested_controller;
+            feedback->message = "Offboarding (GUIDED mode) with controller: " + requested_controller;
             goal_handle->publish_feedback(feedback);
             time_of_offboard_start_us_ = current_time_us;
             feedback->message = "Starting offboard control at t=" + std::to_string(time_of_offboard_start_us_) + " us";
@@ -1173,8 +1162,7 @@ std::string ArdupilotInterface::fsm_state_to_string(ArdupilotInterfaceState stat
         case ArdupilotInterfaceState::VTOL_QRTL_PARAM_SET: return "VTOL_QRTL_PARAM_SET";
         case ArdupilotInterfaceState::VTOL_QRTL: return "VTOL_QRTL";
         case ArdupilotInterfaceState::LANDED: return "LANDED";
-        case ArdupilotInterfaceState::OFFBOARD_VELOCITY: return "OFFBOARD_VELOCITY";
-        case ArdupilotInterfaceState::OFFBOARD_ACCELERATION: return "OFFBOARD_ACCELERATION";
+        case ArdupilotInterfaceState::OFFBOARD: return "OFFBOARD";
         default: return "UNKNOWN";
     }
 }

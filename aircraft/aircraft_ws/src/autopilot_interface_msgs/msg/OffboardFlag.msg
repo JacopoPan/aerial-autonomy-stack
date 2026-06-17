@@ -1,11 +1,2 @@
-uint8 INACTIVE = 0
-uint8 PX4_QUAD_ATTITUDE = 1
-uint8 PX4_VTOL_ATTITUDE = 2
-uint8 PX4_QUAD_RATES = 3
-uint8 PX4_VTOL_RATES = 4
-uint8 PX4_QUAD_TRAJECTORY = 5
-uint8 PX4_VTOL_TRAJECTORY = 6
-uint8 AP_QUAD_VELOCITY = 7
-uint8 AP_QUAD_ACCELERATION = 8
-
-uint8 offboard_flag
+bool is_active
+string controller_name

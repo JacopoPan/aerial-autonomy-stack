@@ -2,7 +2,7 @@
 
 PX4Interface::PX4Interface() : Node("px4_interface"),
     active_srv_or_act_flag_(false), aircraft_fsm_state_(PX4InterfaceState::STARTED),
-    offboard_flag_frequency(10), offboard_flag_count_(0), last_offboard_flag_count_(0),
+    active_offboard_controller_name_(""), offboard_flag_frequency(10), offboard_flag_count_(0), last_offboard_flag_count_(0),
     target_system_id_(-1), arming_state_(-1), vehicle_type_(-1),
     is_vtol_(false), is_vtol_tailsitter_(false), in_transition_mode_(false), in_transition_to_fw_(false), pre_flight_checks_pass_(false),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
@@ -263,14 +263,12 @@ void PX4Interface::offboard_flag_callback()
 
     auto msg = autopilot_interface_msgs::msg::OffboardFlag();
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
-    if (aircraft_fsm_state_ == PX4InterfaceState::OFFBOARD_ATTITUDE) {
-        msg.offboard_flag = is_vtol_ ? 2 : 1;
-    } else if (aircraft_fsm_state_ == PX4InterfaceState::OFFBOARD_RATES) {
-        msg.offboard_flag = is_vtol_ ? 4 : 3;
-    } else if (aircraft_fsm_state_ == PX4InterfaceState::OFFBOARD_TRAJECTORY) {
-        msg.offboard_flag = is_vtol_ ? 6 : 5;
+    if (aircraft_fsm_state_ == PX4InterfaceState::OFFBOARD) {
+        msg.is_active = true;
+        msg.controller_name = active_offboard_controller_name_;
     } else {
-        msg.offboard_flag = 0; // Inactive
+        msg.is_active = false;
+        msg.controller_name = "";
     }
     offboard_flag_pub_->publish(msg);
 }
@@ -496,7 +494,7 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
     auto result = std::make_shared<autopilot_interface_msgs::action::Offboard::Result>();
     auto feedback = std::make_shared<autopilot_interface_msgs::action::Offboard::Feedback>();
 
-    int offboard_setpoint_type = goal->offboard_setpoint_type;
+    std::string requested_controller = goal->controller_name;
     double max_duration_sec = goal->max_duration_sec;
 
     offboard_flag_count_ = 0;
@@ -519,24 +517,9 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
 
         uint64_t current_time_us = this->get_clock()->now().nanoseconds() / 1000;  // Convert to microseconds
         if (time_of_offboard_start_us_ == -1) {
-            if (offboard_setpoint_type == autopilot_interface_msgs::action::Offboard::Goal::ATTITUDE) {
-                aircraft_fsm_state_ = PX4InterfaceState::OFFBOARD_ATTITUDE;
-                feedback->message = "Offboarding with ATTITUDE setpoints";
-            }
-            else if (offboard_setpoint_type == autopilot_interface_msgs::action::Offboard::Goal::RATES) {
-                aircraft_fsm_state_ = PX4InterfaceState::OFFBOARD_RATES;
-                feedback->message = "Offboarding with RATES setpoints";
-            }
-            else if (offboard_setpoint_type == autopilot_interface_msgs::action::Offboard::Goal::TRAJECTORY) {
-                aircraft_fsm_state_ = PX4InterfaceState::OFFBOARD_TRAJECTORY;
-                feedback->message = "Offboarding with TRAJECTORY setpoints";
-            }
-            else {
-                result->success = false;
-                goal_handle->canceled(result);
-                RCLCPP_ERROR(this->get_logger(), "Offboard type is not supported by PX4Interface (only ATTITUDE, RATES and TRAJECTORY)");
-                return;
-            }
+            aircraft_fsm_state_ = PX4InterfaceState::OFFBOARD;
+            active_offboard_controller_name_ = requested_controller;
+            feedback->message = "Offboarding with controller: " + requested_controller;
             goal_handle->publish_feedback(feedback);
             time_of_offboard_start_us_ = current_time_us;
             feedback->message = "Starting offboard control at t=" + std::to_string(time_of_offboard_start_us_) + " us";
@@ -927,9 +910,7 @@ std::string PX4Interface::fsm_state_to_string(PX4InterfaceState state)
         case PX4InterfaceState::VTOL_LANDING_TRANSITION: return "VTOL_LANDING_TRANSITION";
         case PX4InterfaceState::RTL: return "RTL";
         case PX4InterfaceState::MC_LANDING: return "MC_LANDING";
-        case PX4InterfaceState::OFFBOARD_ATTITUDE: return "OFFBOARD_ATTITUDE";
-        case PX4InterfaceState::OFFBOARD_RATES: return "OFFBOARD_RATES";
-        case PX4InterfaceState::OFFBOARD_TRAJECTORY: return "OFFBOARD_TRAJECTORY";
+        case PX4InterfaceState::OFFBOARD: return "OFFBOARD";
         default: return "UNKNOWN";
     }
 }

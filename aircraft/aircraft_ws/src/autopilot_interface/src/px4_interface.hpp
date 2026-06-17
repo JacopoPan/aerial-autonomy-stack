@@ -58,9 +58,7 @@ enum class PX4InterfaceState {
     VTOL_LANDING_TRANSITION,
     RTL,
     MC_LANDING,
-    OFFBOARD_ATTITUDE,
-    OFFBOARD_RATES,
-    OFFBOARD_TRAJECTORY
+    OFFBOARD
 };
 
 class PX4Interface : public rclcpp::Node
@@ -102,6 +100,7 @@ private:
     std::atomic<int> offboard_flag_count_;
     std::atomic<int> last_offboard_flag_count_;
     rclcpp::Time last_offboard_flag_rate_check_time_;
+    std::string active_offboard_controller_name_;
 
     // Callback groups
     rclcpp::CallbackGroup::SharedPtr callback_group_timer_;
