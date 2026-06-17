@@ -15,6 +15,7 @@ def gps_to_enu(lat, lon, lat_ref, lon_ref):
 class DTCController(Node):
     def __init__(self):
         super().__init__('dtc_controller')
+
         # Mission Parameters
         self.quad_to_alt = 40.0
         self.vtol_to_alt = 40.0
@@ -113,7 +114,7 @@ class DTCController(Node):
         ref_lat, ref_lon, _ = self.drones[self.expected_ids[0]]['home']
         num_vertices = max(3, self.nq) # Guarantee at least a triangle
         for i, did in enumerate(self.quad_ids):
-            # Calculate CCW vertex (using minimum 3 vertices)
+            # Calculate CCW vertex
             angle = 2 * math.pi * (i + self.quad_step) / num_vertices
             # Add the offset center to the target
             target_e = self.poly_center_e + self.poly_radius * math.cos(angle)
