@@ -235,6 +235,11 @@ cleanup() {
           CNT_NAME=$(docker inspect --format="{{.Name}}" "$CID" | sed 's/^\///')
           echo "Removing $CNT_NAME..."
           docker stop -t 1 $CID >/dev/null 2>&1 || true
+          if [[ "$CNT_NAME" == "$SIM_CONT_NAME" ]]; then
+            docker stop -t 2 $CID >/dev/null 2>&1 || true # Longer timeout for the container with Gazebo to avoid NVIDIA driver panic
+          else
+            docker stop -t 1 $CID >/dev/null 2>&1 || true
+          fi
           docker rm $CID >/dev/null 2>&1 || true
         fi
       done
@@ -251,7 +256,7 @@ cleanup() {
   docker network rm $SIM_NET_NAME 2>/dev/null && echo "Removed $SIM_NET_NAME" || echo "Network $SIM_NET_NAME not found or already removed"
   docker network rm $AIR_NET_NAME 2>/dev/null && echo "Removed $AIR_NET_NAME" || echo "Network $AIR_NET_NAME not found or already removed"
   if command -v xhost >/dev/null 2>&1; then
-    xhost -local:docker >/dev/null
+    sleep 1 && xhost -local:docker >/dev/null
   fi
   echo "All-clear"
 }
