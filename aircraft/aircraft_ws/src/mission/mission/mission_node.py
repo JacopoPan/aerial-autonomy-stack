@@ -46,7 +46,7 @@ class MissionNode(Node):
         self.active_mission_goal_handle = None # Hold the goal handle of the active action
         self.wait_start_time = None # For "wait" mission steps
 
-        # Variables to monitor the result or a reposition srv request
+        # Variables to monitor the result of a reposition service request
         self.reposition_active = False
         self.has_moved = False
         self.stable_ticks = 0
@@ -326,7 +326,7 @@ class MissionNode(Node):
                 self.mission_step = -1
                 return
             self.get_logger().info(f'Service call successful: {response.success}')
-            if monitor_reposition: # Start tracking reposition completion instead of advancing
+            if monitor_reposition: # Start tracking reposition completion instead of advancing to the next mission item
                 self.reposition_active = True
                 self.has_moved = False
                 self.stable_ticks = 0

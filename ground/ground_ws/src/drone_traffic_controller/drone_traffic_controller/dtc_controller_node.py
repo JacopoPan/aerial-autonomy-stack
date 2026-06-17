@@ -25,6 +25,7 @@ class DTCController(Node):
         self.poly_center_n = 150.0
         self.quad_step = 0
         self.loops_completed = 0
+        self.enforcement_timer = 0
 
         self.pub = self.create_publisher(String, '/dtc_commands', 10)
         self.sub = self.create_subscription(SwarmObs, '/tracks', self.track_cb, 10)
@@ -85,10 +86,13 @@ class DTCController(Node):
                 c_lat, c_lon = self.drones[did]['curr']
                 curr_e, curr_n = gps_to_enu(c_lat, c_lon, ref_lat, ref_lon)
                 tgt_e, tgt_n = self.drones[did]['target_enu']
-                if math.hypot(curr_e - tgt_e, curr_n - tgt_n) > 3.0: # HARDCODED: 3 meters tolerance
+                dist_2d = math.hypot(curr_e - tgt_e, curr_n - tgt_n)
+                alt_diff = abs(self.drones[did]['alt'] - (self.drones[did]['home'][2] + self.poly_alt))
+                if dist_2d > 3.0 or alt_diff > 3.0: # HARDCODED: 3 meters tolerances
                     all_quads_arrived = False
             if all_quads_arrived:
                 self.quad_step += 1
+                self.enforcement_timer = 0 # Reset timer on success
                 # A full loop is completed based on the number of vertices (minimum 3 for a triangle)
                 if self.quad_step > 0 and self.quad_step % max(3, self.nq) == 0:
                     self.loops_completed += 1
@@ -101,6 +105,12 @@ class DTCController(Node):
                 else:
                     self.get_logger().info("Waypoints reached. Shifting CCW.")
                     self.command_quad_polygon()
+            else:
+                self.enforcement_timer += 1
+                if self.enforcement_timer >= 10: # Re-broadcast targets every 10 seconds if drones haven't arrived
+                    self.get_logger().info("Still waiting for arrival. Re-broadcasting polygon targets.")
+                    self.command_quad_polygon()
+                    self.enforcement_timer = 0
 
     def command_vtol_orbits(self):
         ref_lat, ref_lon, _ = self.drones[self.expected_ids[0]]['home']

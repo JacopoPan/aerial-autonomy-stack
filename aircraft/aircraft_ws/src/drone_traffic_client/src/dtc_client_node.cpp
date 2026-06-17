@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 class DTCClient : public rclcpp::Node
 {
 public:
-    DTCClient() : Node("dtc_client"), action_accepted_(true), target_action_("")
+    DTCClient() : Node("dtc_client"), action_accepted_(true), request_being_sent_(false), target_action_("")
     {
         const char* env_drone_id = std::getenv("DRONE_ID");
         drone_id_ = env_drone_id ? std::string(env_drone_id) : "1";
@@ -72,6 +72,7 @@ private:
             target_speed_  = cmd.value("speed", 5.0f);
 
             action_accepted_ = false;
+            request_being_sent_ = false;
             RCLCPP_INFO(this->get_logger(), "New Command Queued: %s", target_action_.c_str());
 
         } catch (const json::exception& e) {
@@ -81,11 +82,13 @@ private:
 
     void enforcement_loop()
     {
-        if (action_accepted_ || target_action_.empty()) return;
+        if (action_accepted_ || target_action_.empty() || request_being_sent_) return;
 
         RCLCPP_INFO(this->get_logger(), "Attempting to enforce %s...", target_action_.c_str());
+        request_being_sent_ = true;
 
         auto action_cb = [this](auto gh) {
+            request_being_sent_ = false;
             if (!gh) RCLCPP_WARN(this->get_logger(), "Autopilot REJECTED %s. Retrying...", target_action_.c_str());
             else { RCLCPP_INFO(this->get_logger(), "Autopilot ACCEPTED %s!", target_action_.c_str()); action_accepted_ = true; }
         };
@@ -134,6 +137,7 @@ private:
             auto req = std::make_shared<autopilot_interface_msgs::srv::SetReposition::Request>();
             req->east = target_east_; req->north = target_north_; req->altitude = target_alt_;
             repo_cli_->async_send_request(req, [this](rclcpp::Client<autopilot_interface_msgs::srv::SetReposition>::SharedFuture f) {
+                request_being_sent_ = false;
                 auto res = f.get();
                 if (res->success) { RCLCPP_INFO(this->get_logger(), "Autopilot ACCEPTED Reposition!"); action_accepted_ = true; }
                 else RCLCPP_WARN(this->get_logger(), "Autopilot REJECTED Reposition: %s. Retrying...", res->message.c_str());
@@ -144,6 +148,7 @@ private:
             auto req = std::make_shared<autopilot_interface_msgs::srv::SetSpeed::Request>();
             req->speed = target_speed_;
             speed_cli_->async_send_request(req, [this](rclcpp::Client<autopilot_interface_msgs::srv::SetSpeed>::SharedFuture f) {
+                request_being_sent_ = false;
                 auto res = f.get();
                 if (res->success) { RCLCPP_INFO(this->get_logger(), "Autopilot ACCEPTED SetSpeed!"); action_accepted_ = true; }
                 else RCLCPP_WARN(this->get_logger(), "Autopilot REJECTED SetSpeed: %s. Retrying...", res->message.c_str());
@@ -158,6 +163,7 @@ private:
     float target_vtol_heading_, target_vtol_loiter_n_, target_vtol_loiter_e_, target_vtol_loiter_alt_;
     int target_offboard_type_;
     bool action_accepted_;
+    bool request_being_sent_; // Prevent spamming the same command
 
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr cmd_sub_;
     rclcpp_action::Client<autopilot_interface_msgs::action::Takeoff>::SharedPtr tkf_cli_;
