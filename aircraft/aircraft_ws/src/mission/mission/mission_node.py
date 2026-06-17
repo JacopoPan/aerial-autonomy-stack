@@ -46,6 +46,14 @@ class MissionNode(Node):
         self.active_mission_goal_handle = None # Hold the goal handle of the active action
         self.wait_start_time = None # For "wait" mission steps
 
+        # Variables to monitor the result or a reposition srv request
+        self.reposition_active = False
+        self.has_moved = False
+        self.stable_ticks = 0
+        self.reposition_wait_ticks = 0
+        self.prev_lat = None
+        self.prev_lon = None
+
         self.own_drone_id = None
         drone_id_str = os.environ.get('DRONE_ID') # Get id from ENV VAR
         if drone_id_str is None:
@@ -303,14 +311,14 @@ class MissionNode(Node):
     def feedback_callback(self, feedback_msg):
         self.get_logger().info(f"Received action feedback: {feedback_msg.feedback.message}")
 
-    def call_service(self, server, request):
+    def call_service(self, server, request, monitor_reposition=False):
         if server is None or not server.wait_for_service(timeout_sec=1.0):
             self.get_logger().error('Service not available.')
             return
         future = server.call_async(request)
-        future.add_done_callback(self.service_response_callback)
+        future.add_done_callback(lambda f: self.service_response_callback(f, monitor_reposition))
 
-    def service_response_callback(self, future):
+    def service_response_callback(self, future, monitor_reposition):
         try:
             response = future.result()
             if not response.success:
@@ -318,7 +326,13 @@ class MissionNode(Node):
                 self.mission_step = -1
                 return
             self.get_logger().info(f'Service call successful: {response.success}')
-            self.mission_step += 1 # Advance the mission step
+            if monitor_reposition: # Start tracking reposition completion instead of advancing
+                self.reposition_active = True
+                self.has_moved = False
+                self.stable_ticks = 0
+                self.reposition_wait_ticks = 0
+            else: # Advance the mission step normally
+                self.mission_step += 1
         except Exception as e:
             self.get_logger().error(f'Service call failed: {e}')
             self.mission_step = -1
@@ -326,6 +340,26 @@ class MissionNode(Node):
     def conops_callback(self):
         # If an ROS Action is running, do nothing
         if self.active_mission_goal_handle is not None:
+            return
+
+        if getattr(self, 'reposition_active', False):
+            if self.prev_lat is not None and self.lat is not None:
+                d_lat = abs(self.lat - self.prev_lat)
+                d_lon = abs(self.lon - self.prev_lon)
+                if d_lat > 5e-6 or d_lon > 5e-6: # Started moving (change > approx 0.5 meters)
+                    self.has_moved = True
+                if self.has_moved and d_lat < 2e-6 and d_lon < 2e-6: # Stabilized/stopped (change < approx 0.2 meters)
+                    self.stable_ticks += 1
+                elif self.has_moved:
+                    self.stable_ticks = 0
+            self.prev_lat = self.lat
+            self.prev_lon = self.lon
+            self.reposition_wait_ticks += 1
+            # Advance if stable or stopped for 3 ticks/seconds
+            if self.stable_ticks >= 3 or (not self.has_moved and self.reposition_wait_ticks > 3):
+                self.get_logger().info("Reposition destination reached. Advancing mission.")
+                self.reposition_active = False
+                self.mission_step += 1
             return
 
         # If a "Wait" is active, check time: if still waiting, return. If done, clear wait and proceed
@@ -407,7 +441,7 @@ class MissionNode(Node):
             req.east = float(params.get('east', 0.0))
             req.north = float(params.get('north', 0.0))
             req.altitude = float(params.get('altitude', 50.0))
-            self.call_service(self._reposition_client, req)
+            self.call_service(self._reposition_client, req, monitor_reposition=True)
             
         elif action_type == 'speed':
             req = SetSpeed.Request()

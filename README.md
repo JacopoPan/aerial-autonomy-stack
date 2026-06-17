@@ -68,14 +68,16 @@ cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 ```
 
-On another terminal, fly all drones:
+In the `Ground`'s Xterm terminal, fly all drones in a formation:
 
 ```sh
-for ID in {1..2}; do
-  docker exec -d aircraft-container-inst0_$ID bash -c "source /opt/ros/humble/setup.bash &&
-    source /aas/github_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash &&
-    ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true"
-done
+ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true
+```
+
+Alternatively, in any of the `QUAD`/`VTOL` Xterm terminals, fly a pre-planned mission:
+
+```sh
+ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
 ```
 
 `./sim_run.sh` options:
@@ -134,7 +136,7 @@ done
 > /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
 > ```
 >
-> To create a new mission, re-implement [`test_mission.yaml`](/aircraft/aircraft_resources/missions/test_mission.yaml)
+> To create a new mission, re-implement [`test.yaml`](/aircraft/aircraft_resources/missions/test.yaml)
 > </details>
 > <details>
 > <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>

@@ -6,10 +6,6 @@ steps:
       vtol_loiter_nord: 100.0
       vtol_loiter_east: 100.0
       vtol_loiter_alt: 120.0
-
-  - action: wait
-    params:
-      duration: 5.0
       
   - action: orbit
     params:
@@ -17,7 +13,6 @@ steps:
       north: 50.0
       altitude: 50.0
       radius: 80.0
-      
   - action: wait
     params:
       duration: 30.0
@@ -28,27 +23,18 @@ steps:
      north: 0.0
      altitude: 60.0
 
-  - action: wait
-    params:
-      duration: 30.0
-
   - action: speed
     params:
      speed: 16.0
-
   - action: wait
     params:
-      duration: 5.0
+      duration: 2.0
 
   - action: reposition
     params:
      east: 200.0
      north: -200.0
      altitude: 80.0
-
-  - action: wait
-    params:
-      duration: 30.0
 
   - action: offboard
     params:
@@ -59,3 +45,6 @@ steps:
     params:
       landing_altitude: 60.0
       vtol_transition_heading: 60.0
+
+run_with:
+  ros2 run mission mission --conops test.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true

@@ -47,7 +47,7 @@ windows:
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% end %>
 
-  - offboard_and_state_sharing:
+  - offboard_stateshare_dtc:
       layout: even-horizontal
       panes:
         <% if autopilot == 'px4' %>

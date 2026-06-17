@@ -6,10 +6,6 @@ steps:
       vtol_loiter_nord: 100.0
       vtol_loiter_east: 100.0
       vtol_loiter_alt: 80.0
-
-  - action: wait
-    params:
-      duration: 5.0
       
   - action: orbit
     params:
@@ -17,7 +13,6 @@ steps:
       north: 150.0
       altitude: 90.0
       radius: 40.0
-      
   - action: wait
     params:
       duration: 60.0
@@ -26,3 +21,6 @@ steps:
     params:
       landing_altitude: 40.0
       vtol_transition_heading: 60.0
+
+run_with:
+  ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
