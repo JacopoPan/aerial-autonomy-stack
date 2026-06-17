@@ -7,11 +7,16 @@
   <maintainer email="jacopo.pan@gmail.com">JacopoPan</maintainer>
   <license>MIT License</license>
 
-  <depend>rclpy</depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
   <depend>std_msgs</depend>
   <depend>autopilot_interface_msgs</depend>
 
+  <depend>nlohmann-json-dev</depend>
+
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
