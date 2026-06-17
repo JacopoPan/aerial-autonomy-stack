@@ -328,37 +328,41 @@ flowchart TB
 
         subgraph gnd ["#nbsp;ground#nbsp;container#nbsp;(amd64)"]
             mlrouter{{mavlink-router}}:::bridge
-            ground_system[/ground_system\]:::algo
+            ground_system(ground_system):::algo
+            dtc_controller(dtc_controller):::algo
             qgc(QGroundControl):::resource
             zenoh_gnd{{zenoh-bridge}}:::bridge
 
             ground_system --> |"/tracks"| zenoh_gnd
+            dtc_controller --> |"/dtc_commands"| zenoh_gnd
             mlrouter <--> qgc
             mlrouter --> ground_system
         end
 
         subgraph air ["[N#nbsp;x]#nbsp;aircraft#nbsp;container(s)#nbsp;(amd64,#nbsp;arm64)"]
             subgraph perception [Perception]
-                yolo_py[/yolo_py/]:::algo
-                kiss_icp[/kiss_icp/]:::algo
-            end
-            subgraph control [Control]
-                offboard_control(offboard_control):::algo
-                autopilot_interface(autopilot_interface):::algo
-                mission(mission):::algo
-            end
-            ap_link{{"uxrce_dds <br/> || MAVROS"}}:::bridge
-            subgraph swarm [Swarm]
-                state_sharing[/state_sharing\]:::algo
+                yolo_py(yolo_py):::algo
+                kiss_icp(kiss_icp):::algo
+                livo_pkgs(livo_pgks):::algo
             end
             zenoh_air{{zenoh-bridge}}:::bridge
+            subgraph control [Control]
+                mission(mission):::algo
+                dtc_client(dtc_client):::algo
+                offboard_control(offboard_control):::algo
+                autopilot_interface(autopilot_interface):::algo
+                state_sharing(state_sharing):::algo
+            end
+            ap_link{{"uxrce_dds <br/> || MAVROS"}}:::bridge
 
+            zenoh_air --> |"/dtc_commands"| dtc_client
             kiss_icp -.-> |"/TBD"| ap_link
-            ap_link <--> autopilot_interface
             ap_link --> state_sharing
+            ap_link <--> autopilot_interface
             yolo_py --> |"/detections"| offboard_control
             offboard_control --> |"/reference"| autopilot_interface
             mission --> |"ros2 action/srv"| autopilot_interface
+            dtc_client --> |"ros2 action/srv"| autopilot_interface
             zenoh_air <--> |"/state_drone_n"| state_sharing
         end
 
@@ -366,8 +370,9 @@ flowchart TB
     end
 
     repo ~~~ gz
-    gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| yolo_py
+    autopilot_interface ~~~ state_sharing
     gz --> |"/lidar_points <br/> [SIM_SUBNET]"| kiss_icp
+    gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| yolo_py
     sitl <--> |"UDP <br/> [SIM_SUBNET]"| ap_link
     sitl <--> |"MAVLink <br/> [SIM_SUBNET]"| mlrouter 
     zenoh_gnd <-.-> |"TCP <br/> [AIR_SUBNET]"| zenoh_air
@@ -381,9 +386,9 @@ flowchart TB
 
     class aas,repo blueStyle;
     class air,gnd,sim whiteStyle;
-    class perception,control,models,swarm greyStyle;
-    linkStyle 14,15,16,17 stroke:teal,stroke-width:3px;
-    linkStyle 18 stroke:blue,stroke-width:4px;
+    class perception,control,models greyStyle;
+    linkStyle 18,19,20,21 stroke:teal,stroke-width:3px;
+    linkStyle 22 stroke:blue,stroke-width:4px;
 ```
 
 <details>
