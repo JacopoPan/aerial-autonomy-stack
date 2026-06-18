@@ -429,8 +429,8 @@ class MissionNode(Node):
                 self.mission_step += 1
                 return
             if autopilot == 'px4':
-                default_controller = 'traj-test-quad' if drone_type == 'quad' else 'traj-test-vtol'
-            else:
+                default_controller = 'traj-test'
+            elif autopilot == 'ardupilot':
                 default_controller = 'vel-test'
             goal = Offboard.Goal()
             goal.controller_name = str(params.get('controller_name', default_controller))

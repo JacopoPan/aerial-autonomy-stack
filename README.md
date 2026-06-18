@@ -80,10 +80,10 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
 ```
 
-3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS **ROS2 actions**:
+3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp) modes
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
-    autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
+    autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 30.0}'"
 # Press Enter to cancel the action or regain the terminal when it finishes
 
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
@@ -133,8 +133,8 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > # Reposition service (quads only)
 > ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
 >
-> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test-quad", "traj-test-vtol" for PX4 or "vel-test" for ArduPilot)
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test-quad, max_duration_sec: 5.0}'"
+> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot)
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test, max_duration_sec: 5.0}'"
 >
 > # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'

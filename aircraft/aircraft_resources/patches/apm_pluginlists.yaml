@@ -34,6 +34,7 @@
       - setpoint_position # For sending position commands
       - setpoint_velocity # For sending velocity commands
       - setpoint_accel    # For sending acceleration commands
+      - setpoint_raw      # For sending raw commands (e.g., attitude or rates, different from the setpoint_attitude plugin)
       - waypoint          # For mission manipulation
       - rc_io             # For RC override
       - vfr_hud           # For airspeed and altitude info

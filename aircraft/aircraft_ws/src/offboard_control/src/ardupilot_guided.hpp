@@ -33,6 +33,7 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 
 #include <mavros_msgs/msg/vfr_hud.hpp>
+#include <mavros_msgs/msg/attitude_target.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -114,6 +115,7 @@ private:
     // MAVROS publishers
     rclcpp::Publisher<Vector3Stamped>::SharedPtr setpoint_accel_pub_;
     rclcpp::Publisher<TwistStamped>::SharedPtr setpoint_vel_pub_;
+    rclcpp::Publisher<AttitudeTarget>::SharedPtr setpoint_raw_att_pub_;
 
     // Callbacks for timers
     void ardupilot_interface_printout_callback();
@@ -141,9 +143,10 @@ private:
     using ControllerFunction = std::function<void()>;
     std::unordered_map<std::string, ControllerFunction> controller_map_;
     ControllerFunction active_controller_func_;
+    void att_ref_test();
     void vel_ref_test();
-    void vel_ref_lead_pursuit();
     void acc_ref_test();
+    void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
 };
 

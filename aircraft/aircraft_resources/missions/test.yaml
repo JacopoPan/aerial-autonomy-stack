@@ -38,7 +38,7 @@ steps:
 
   - action: offboard
     params:
-     # controller_name: "traj-test-quad" # Use default based on autopilot if omitted
+     # controller_name: "" # Use a default in mission_node.py if omitted
      max_duration_sec: 10.0
       
   - action: land

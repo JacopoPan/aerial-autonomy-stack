@@ -43,6 +43,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     qos_profile_pub.durability(rclcpp::DurabilityPolicy::TransientLocal);  // Or rclcpp::DurabilityPolicy::Volatile
     setpoint_accel_pub_= this->create_publisher<Vector3Stamped>("/mavros/setpoint_accel/accel", qos_profile_pub);
     setpoint_vel_pub_= this->create_publisher<TwistStamped>("/mavros/setpoint_velocity/cmd_vel", qos_profile_pub);
+    setpoint_raw_att_pub_ = this->create_publisher<AttitudeTarget>("/mavros/setpoint_raw/attitude", qos_profile_pub);
 
     // Create callback groups (Reentrant or MutuallyExclusive)
     callback_group_timer_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); // Timed callbacks in parallel
@@ -101,8 +102,11 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
         std::bind(&ArdupilotGuided::kiss_odometry_callback, this, std::placeholders::_1), subscriber_options);
 
     // Controllers map
+    // Examples
+    controller_map_["att-test"] = std::bind(&ArdupilotGuided::att_ref_test, this);
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
+    // Custom controllers
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
 }
@@ -345,6 +349,23 @@ double ArdupilotGuided::normalize_heading(double angle_rad) {
 }
 
 // Controllers (reference generators)
+void ArdupilotGuided::att_ref_test()
+{
+    auto att_msg = mavros_msgs::msg::AttitudeTarget(); // https://docs.ros.org/en/noetic/api/mavros_msgs/html/msg/AttitudeTarget.html
+    att_msg.header.stamp = this->get_clock()->now();
+    att_msg.header.frame_id = "map"; // World frame
+    double pitch_rad = 5.0 * M_PI / 180.0; // Positive pitch to move forward (any duration)
+    att_msg.orientation.w = std::cos(pitch_rad / 2.0);
+    att_msg.orientation.x = 0.0;
+    att_msg.orientation.y = std::sin(pitch_rad / 2.0);
+    att_msg.orientation.z = 0.0;
+    att_msg.thrust = 0.5; // Normalized scalar between 0.0 (zero thrust) and 1.0 (max thrust)
+    // Ignore roll/pitch/yaw rates
+    att_msg.type_mask = mavros_msgs::msg::AttitudeTarget::IGNORE_ROLL_RATE |
+                        mavros_msgs::msg::AttitudeTarget::IGNORE_PITCH_RATE |
+                        mavros_msgs::msg::AttitudeTarget::IGNORE_YAW_RATE;
+    setpoint_raw_att_pub_->publish(att_msg);
+}
 void ArdupilotGuided::vel_ref_test()
 {
     auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html
@@ -353,8 +374,22 @@ void ArdupilotGuided::vel_ref_test()
     vel_msg.twist.linear.x = 0.0; // m/s East
     vel_msg.twist.linear.y = 5.0; // m/s North
     vel_msg.twist.linear.z = 0.0; // m/s Up
+    // Computed yaw rate for alignment
+    const double Kp_yaw = 1.5;
+    double heading_error = normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
+    vel_msg.twist.angular.z = Kp_yaw * heading_error; // rad/s Yaw rate
     setpoint_vel_pub_->publish(vel_msg);
     // Alternatively, use the unstamped topic: ros2 topic pub --rate 10 --times 50 /mavros/setpoint_velocity/cmd_vel_unstamped geometry_msgs/msg/Twist '{linear: {x: 2.0, y: 0.0, z: 0.0}}'
+}
+void ArdupilotGuided::acc_ref_test()
+{
+    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Vector3.html
+    accel_msg.header.stamp = this->get_clock()->now();
+    accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
+    accel_msg.vector.x = 0.0; // m/s^2 East
+    accel_msg.vector.y = 1.5; // m/s^2 North
+    accel_msg.vector.z = 0.0; // m/s^2 Up
+    setpoint_accel_pub_->publish(accel_msg);
 }
 void ArdupilotGuided::vel_ref_lead_pursuit()
 {
@@ -393,16 +428,6 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
     double heading_error = normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
     vel_msg.twist.angular.z = Kp_yaw * heading_error; // rad/s Yaw rate
     setpoint_vel_pub_->publish(vel_msg);
-}
-void ArdupilotGuided::acc_ref_test()
-{
-    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Vector3.html
-    accel_msg.header.stamp = this->get_clock()->now();
-    accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
-    accel_msg.vector.x = 0.0; // m/s^2 East
-    accel_msg.vector.y = 1.5; // m/s^2 North
-    accel_msg.vector.z = 0.0; // m/s^2 Up
-    setpoint_accel_pub_->publish(accel_msg);
 }
 void ArdupilotGuided::acc_ref_proportional_navigation()
 {

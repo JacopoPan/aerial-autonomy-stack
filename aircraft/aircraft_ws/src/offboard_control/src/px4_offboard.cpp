@@ -103,9 +103,11 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
         std::bind(&PX4Offboard::kiss_odometry_callback, this, std::placeholders::_1), subscriber_options);
 
     // Controllers map
+    // Examples
     controller_map_["att-test"] = std::bind(&PX4Offboard::att_ref_test, this, std::placeholders::_1);
     controller_map_["ctbr-test"] = std::bind(&PX4Offboard::ctbr_ref_test, this, std::placeholders::_1);
     controller_map_["traj-test"] = std::bind(&PX4Offboard::traj_ref_test, this, std::placeholders::_1);
+    // Custom controllers
     controller_map_["traj-prv"] = std::bind(&PX4Offboard::traj_ref_predictive_rendezvous, this, std::placeholders::_1);
 }
 
@@ -349,14 +351,14 @@ void PX4Offboard::att_ref_test(OffboardControlMode& mode)
     VehicleAttitudeSetpoint attitude_ref;
     attitude_ref.timestamp = mode.timestamp;
     if (vehicle_type_ == 1) { // ROTARY_WING
-        double pitch_rad = -5.0 * M_PI / 180.0; // Pitch to move forward (any duration, drops some altitude)
+        double pitch_rad = -5.0 * M_PI / 180.0; // Negative pitch to move forward (any duration, drops some altitude)
         attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
         attitude_ref.q_d[1] = 0;                    // x
         attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
         attitude_ref.q_d[3] = 0;                    // z
         attitude_ref.thrust_body = {0.0, 0.0, -0.72};
     } else if (vehicle_type_ == 2) { // FIXED_WING
-        double pitch_rad = -30.0 * M_PI / 180.0; // Pitch to dive
+        double pitch_rad = -30.0 * M_PI / 180.0; // Negative pitch to dive
         attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
         attitude_ref.q_d[1] = 0;                    // x
         attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
