@@ -68,19 +68,19 @@ cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 ```
 
-There are 3 ways (plus QGroundControl) to autonomously fly the drones:
+There are 3 ways to autonomously fly the drones (plus QGroundControl):
 
-1. From the `Ground`'s Xterm terminal, fly all drones in a coordinated formation:
+1. From the `Ground`'s Xterm terminal, fly all drones in a **synchronized formation**:
 ```sh
 ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true
 ```
 
-2. In any of the `QUAD`/`VTOL` Xterm terminals, fly a pre-planned (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)) mission:
+2. In any of the `QUAD`/`VTOL` Xterm terminals, fly a **pre-planned mission** (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)):
 ```sh
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
 ```
 
-3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS ROS2 actions:
+3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS **ROS2 actions**:
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
