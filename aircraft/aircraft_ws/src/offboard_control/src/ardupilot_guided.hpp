@@ -13,6 +13,8 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <unordered_map>
+#include <functional>
 
 #include <rclcpp/clock.hpp>
 #include <rclcpp/parameter.hpp>
@@ -59,7 +61,8 @@ private:
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
 
     // Node variables
-    std::atomic<int> offboard_flag_;
+    bool offboard_active_;
+    std::string active_controller_name_;
     int offboard_loop_frequency;
     std::atomic<int> offboard_loop_count_;
     std::atomic<int> last_offboard_loop_count_;
@@ -133,6 +136,15 @@ private:
 
     // Utility
     double normalize_heading(double angle_rad);
+
+    // Controller map and controllers
+    using ControllerFunction = std::function<void()>;
+    std::unordered_map<std::string, ControllerFunction> controller_map_;
+    ControllerFunction active_controller_func_;
+    void vel_ref_test();
+    void vel_ref_lead_pursuit();
+    void acc_ref_test();
+    void acc_ref_proportional_navigation();
 };
 
 #endif // OFFBOARD_CONTROL__ARDUPILOT_GUIDED_HPP_

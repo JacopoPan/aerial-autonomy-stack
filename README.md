@@ -68,7 +68,7 @@ cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 ```
 
-In the `Ground`'s Xterm terminal, fly all drones in a coordinated formation:
+From the `Ground`'s Xterm terminal, fly all drones in a coordinated formation:
 
 ```sh
 ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true

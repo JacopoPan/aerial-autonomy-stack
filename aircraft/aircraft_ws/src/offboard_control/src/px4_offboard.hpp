@@ -13,6 +13,8 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <unordered_map>
+#include <functional>
 
 #include <rclcpp/clock.hpp>
 #include <rclcpp/parameter.hpp>
@@ -55,7 +57,8 @@ private:
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
 
     // Node variables
-    std::atomic<int> offboard_flag_;
+    bool offboard_active_;
+    std::string active_controller_name_;
     int offboard_loop_frequency;
     std::atomic<int> offboard_loop_count_;
     std::atomic<int> last_offboard_loop_count_;
@@ -128,6 +131,18 @@ private:
     void ground_tracks_callback(const ground_system_msgs::msg::SwarmObs::SharedPtr msg);
     void yolo_detections_callback(const vision_msgs::msg::Detection2DArray::SharedPtr msg);
     void kiss_odometry_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+
+    // Controller map and controllers
+    using ControllerFunction = std::function<void(OffboardControlMode&)>;
+    std::unordered_map<std::string, ControllerFunction> controller_map_;
+    ControllerFunction active_controller_func_;
+    void att_ref_test_quad(OffboardControlMode& mode);
+    void att_ref_test_vtol(OffboardControlMode& mode);
+    void ctbr_ref_test_quad(OffboardControlMode& mode);
+    void ctbr_ref_test_vtol(OffboardControlMode& mode);
+    void traj_ref_test_quad(OffboardControlMode& mode);
+    void traj_ref_test_vtol(OffboardControlMode& mode);
+    void traj_ref_predictive_rendezvous(OffboardControlMode& mode);
 };
 
 #endif // OFFBOARD_CONTROL__PX4_OFFBOARD_HPP_
