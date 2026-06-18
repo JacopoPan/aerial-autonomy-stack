@@ -422,13 +422,18 @@ class MissionNode(Node):
             self.send_goal(self._orbit_client, goal)
             
         elif action_type == 'offboard':
-            if (os.getenv('AUTOPILOT', '') == 'ardupilot') and (os.getenv('DRONE_TYPE', '') != 'quad'):
+            autopilot = os.getenv('AUTOPILOT', '')
+            drone_type = os.getenv('DRONE_TYPE', '')
+            if (autopilot == 'ardupilot') and (drone_type != 'quad'):
                 self.get_logger().warn("Offboard action is not supported by Ardupilot VTOL. Skip.")
                 self.mission_step += 1
                 return
-            default_setpoint_type = 2 if os.getenv('AUTOPILOT', '') == 'px4' else 3 # 2: PX4 trajectory reference, 3: ArduPilot velocity
+            if autopilot == 'px4':
+                default_controller = 'traj-test-quad' if drone_type == 'quad' else 'traj-test-vtol'
+            else:
+                default_controller = 'vel-test'
             goal = Offboard.Goal()
-            goal.offboard_setpoint_type = int(params.get('offboard_setpoint_type', default_setpoint_type))
+            goal.controller_name = str(params.get('controller_name', default_controller))
             goal.max_duration_sec = float(params.get('max_duration_sec', 10.0))
             self.send_goal(self._offboard_client, goal)
 

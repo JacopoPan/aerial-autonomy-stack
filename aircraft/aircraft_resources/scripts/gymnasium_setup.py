@@ -54,7 +54,7 @@ class GymnasiumSetup(Node):
         self.wait_for_server(self.offboard_client, 'Offboard')
 
         goal_msg = Offboard.Goal()
-        goal_msg.offboard_setpoint_type = 1 # 1 is PX4 rates reference
+        goal_msg.controller_name = "ctbr-test-quad"
         goal_msg.max_duration_sec = 1200.0 # 20' of offboard mode
 
         self.get_logger().info('Sending Offboard Goal...')

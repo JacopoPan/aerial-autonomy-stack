@@ -38,7 +38,7 @@ steps:
 
   - action: offboard
     params:
-     # offboard_setpoint_type: -1 # Use default based on autopilot
+     # controller_name: "traj-test-quad" # Use default based on autopilot if omitted
      max_duration_sec: 10.0
       
   - action: land

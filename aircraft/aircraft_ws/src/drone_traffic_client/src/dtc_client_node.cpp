@@ -67,7 +67,7 @@ private:
             target_vtol_loiter_n_ = cmd.value("vtol_loiter_n", 150.0f);
             target_vtol_loiter_e_ = cmd.value("vtol_loiter_e", 0.0f);
             target_vtol_loiter_alt_ = cmd.value("vtol_loiter_alt", 100.0f);
-            target_offboard_type_ = cmd.value("offboard_type", 1);
+            target_controller_name_ = cmd.value("controller_name", "");
             target_duration_ = cmd.value("duration", 3.0f);
             target_speed_  = cmd.value("speed", 5.0f);
 
@@ -126,7 +126,7 @@ private:
         } else if (target_action_ == "offboard") {
             if (!offboard_cli_->action_server_is_ready()) return;
             auto goal = autopilot_interface_msgs::action::Offboard::Goal();
-            goal.offboard_setpoint_type = target_offboard_type_;
+            goal.controller_name = target_controller_name_;
             goal.max_duration_sec = target_duration_;
             auto opts = rclcpp_action::Client<autopilot_interface_msgs::action::Offboard>::SendGoalOptions();
             opts.goal_response_callback = action_cb;
@@ -161,7 +161,7 @@ private:
     float target_alt_, target_east_, target_north_;
     float target_radius_, target_speed_, target_duration_;
     float target_vtol_heading_, target_vtol_loiter_n_, target_vtol_loiter_e_, target_vtol_loiter_alt_;
-    int target_offboard_type_;
+    std::string target_controller_name_;
     bool action_accepted_;
     bool request_being_sent_; // Prevent spamming the same command
 
