@@ -88,7 +88,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
 
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
-    '{controller_name: traj-test-quad, max_duration_sec: 10.0}'"
+    '{controller_name: att-test, max_duration_sec: 10.0}'"
 # Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
 ```
 

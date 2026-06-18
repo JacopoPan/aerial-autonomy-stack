@@ -31,6 +31,7 @@
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/airspeed_validated.hpp>
 #include <px4_msgs/msg/vehicle_odometry.hpp>
+#include <px4_msgs/msg/vehicle_status.hpp>
 
 #include <px4_msgs/msg/offboard_control_mode.hpp>
 #include <px4_msgs/msg/vehicle_attitude_setpoint.hpp>
@@ -78,6 +79,7 @@ private:
     rclcpp::Subscription<VehicleLocalPosition>::SharedPtr vehicle_local_position_sub_;
     rclcpp::Subscription<VehicleOdometry>::SharedPtr vehicle_odometry_sub_;
     rclcpp::Subscription<AirspeedValidated>::SharedPtr airspeed_validated_sub_;
+    rclcpp::Subscription<VehicleStatus>::SharedPtr vehicle_status_sub_;
 
     // Offboard flag subscriber
     rclcpp::Subscription<autopilot_interface_msgs::msg::OffboardFlag>::SharedPtr offboard_flag_sub_;
@@ -98,6 +100,7 @@ private:
     std::array<float, 3> velocity_;
     std::array<float, 3> angular_velocity_;
     double true_airspeed_m_s_;
+    int vehicle_type_;
     std::array<float, 3> kiss_position_;
     std::array<float, 4> kiss_q_;
     ground_system_msgs::msg::SwarmObs::SharedPtr ground_tracks_;
@@ -123,6 +126,7 @@ private:
     void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
     void odometry_callback(const VehicleOdometry::SharedPtr msg);
     void airspeed_callback(const AirspeedValidated::SharedPtr msg);
+    void status_callback(const VehicleStatus::SharedPtr msg);
 
     // Offboard flag call back
     void offboard_flag_callaback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg);
@@ -136,12 +140,9 @@ private:
     using ControllerFunction = std::function<void(OffboardControlMode&)>;
     std::unordered_map<std::string, ControllerFunction> controller_map_;
     ControllerFunction active_controller_func_;
-    void att_ref_test_quad(OffboardControlMode& mode);
-    void att_ref_test_vtol(OffboardControlMode& mode);
-    void ctbr_ref_test_quad(OffboardControlMode& mode);
-    void ctbr_ref_test_vtol(OffboardControlMode& mode);
-    void traj_ref_test_quad(OffboardControlMode& mode);
-    void traj_ref_test_vtol(OffboardControlMode& mode);
+    void att_ref_test(OffboardControlMode& mode);
+    void ctbr_ref_test(OffboardControlMode& mode);
+    void traj_ref_test(OffboardControlMode& mode);
     void traj_ref_predictive_rendezvous(OffboardControlMode& mode);
 };
 

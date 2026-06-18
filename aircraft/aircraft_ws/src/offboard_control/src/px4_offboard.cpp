@@ -6,7 +6,7 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
     xy_valid_(false), z_valid_(false), v_xy_valid_(false), v_z_valid_(false), xy_global_(false), z_global_(false),
     x_(NAN), y_(NAN), z_(NAN), heading_(NAN), vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
-    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN),
+    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     traj_ref_east_(NAN), traj_ref_north_(NAN), traj_ref_up_(NAN),
     target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
@@ -82,6 +82,9 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     airspeed_validated_sub_ = this->create_subscription<AirspeedValidated>(
         "fmu/out/airspeed_validated_v1", qos_profile_sub, // 10Hz, MESSAGE_VERSION = 1 -> _v1 since 1.17
         std::bind(&PX4Offboard::airspeed_callback, this, std::placeholders::_1), subscriber_options);
+    vehicle_status_sub_ = this->create_subscription<VehicleStatus>(
+        "fmu/out/vehicle_status_v1", qos_profile_sub, // 2Hz, MESSAGE_VERSION = 1 -> _v1 since 1.16
+        std::bind(&PX4Offboard::status_callback, this, std::placeholders::_1), subscriber_options);
 
     // Offboard flag subscriber
     offboard_flag_sub_ = this->create_subscription<autopilot_interface_msgs::msg::OffboardFlag>(
@@ -100,13 +103,10 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
         std::bind(&PX4Offboard::kiss_odometry_callback, this, std::placeholders::_1), subscriber_options);
 
     // Controllers map
-    controller_map_["att-test-quad"] = std::bind(&PX4Offboard::att_ref_test_quad, this, std::placeholders::_1);
-    controller_map_["att-test-vtol"] = std::bind(&PX4Offboard::att_ref_test_vtol, this, std::placeholders::_1);
-    controller_map_["ctbr-test-quad"] = std::bind(&PX4Offboard::ctbr_ref_test_quad, this, std::placeholders::_1);
-    controller_map_["ctbr-test-vtol"] = std::bind(&PX4Offboard::ctbr_ref_test_vtol, this, std::placeholders::_1);
-    controller_map_["traj-test-quad"] = std::bind(&PX4Offboard::traj_ref_test_quad, this, std::placeholders::_1);
-    controller_map_["traj-test-vtol"] = std::bind(&PX4Offboard::traj_ref_test_vtol, this, std::placeholders::_1);
-    controller_map_["traj-pred-rv"] = std::bind(&PX4Offboard::traj_ref_predictive_rendezvous, this, std::placeholders::_1);
+    controller_map_["att-test"] = std::bind(&PX4Offboard::att_ref_test, this, std::placeholders::_1);
+    controller_map_["ctbr-test"] = std::bind(&PX4Offboard::ctbr_ref_test, this, std::placeholders::_1);
+    controller_map_["traj-test"] = std::bind(&PX4Offboard::traj_ref_test, this, std::placeholders::_1);
+    controller_map_["traj-prv"] = std::bind(&PX4Offboard::traj_ref_predictive_rendezvous, this, std::placeholders::_1);
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -155,6 +155,17 @@ void PX4Offboard::airspeed_callback(const AirspeedValidated::SharedPtr msg)
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     true_airspeed_m_s_ = msg->true_airspeed_m_s;
+}
+void PX4Offboard::status_callback(const VehicleStatus::SharedPtr msg)
+{
+    std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
+    // arming_state_ = msg->arming_state; // DISARMED = 1, ARMED = 2
+    vehicle_type_ = msg->vehicle_type; // ROTARY_WING = 1, FIXED_WING = 2 (ROVER = 3)
+    // is_vtol_ = msg->is_vtol; // bool
+    // is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
+    // in_transition_mode_ = msg->in_transition_mode; // bool
+    // in_transition_to_fw_ = msg->in_transition_to_fw; // bool
+    // pre_flight_checks_pass_ = msg->pre_flight_checks_pass; // bool
 }
 void PX4Offboard::offboard_flag_callaback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg)
 {
@@ -332,79 +343,81 @@ void PX4Offboard::offboard_loop_callback()
 }
 
 // Controllers (reference generators)
-void PX4Offboard::att_ref_test_quad(OffboardControlMode& mode)
+void PX4Offboard::att_ref_test(OffboardControlMode& mode)
 {
     mode.attitude = true;
-    VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleAttitudeSetpoint.msg
+    VehicleAttitudeSetpoint attitude_ref;
     attitude_ref.timestamp = mode.timestamp;
-    double pitch_rad = -5.0 * M_PI / 180.0; // Pitch to move forward (any duration, drops some altitude)
-    attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
-    attitude_ref.q_d[1] = 0;                    // x
-    attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
-    attitude_ref.q_d[3] = 0;                    // z
-    attitude_ref.thrust_body = {0.0, 0.0, -0.72};
+    if (vehicle_type_ == 1) { // ROTARY_WING
+        double pitch_rad = -5.0 * M_PI / 180.0; // Pitch to move forward (any duration, drops some altitude)
+        attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
+        attitude_ref.q_d[1] = 0;                    // x
+        attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
+        attitude_ref.q_d[3] = 0;                    // z
+        attitude_ref.thrust_body = {0.0, 0.0, -0.72};
+    } else if (vehicle_type_ == 2) { // FIXED_WING
+        double pitch_rad = -30.0 * M_PI / 180.0; // Pitch to dive
+        attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
+        attitude_ref.q_d[1] = 0;                    // x
+        attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
+        attitude_ref.q_d[3] = 0;                    // z
+        attitude_ref.thrust_body = {0.15, 0.0, 0.0};
+    } else {
+        RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
+        return;
+    }
     attitude_ref_pub_->publish(attitude_ref);
 }
-void PX4Offboard::att_ref_test_vtol(OffboardControlMode& mode)
-{
-    mode.attitude = true;
-    VehicleAttitudeSetpoint attitude_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleAttitudeSetpoint.msg
-    attitude_ref.timestamp = mode.timestamp;
-    double pitch_rad = -30.0 * M_PI / 180.0; // Pitch to dive
-    attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
-    attitude_ref.q_d[1] = 0;                    // x
-    attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
-    attitude_ref.q_d[3] = 0;                    // z
-    attitude_ref.thrust_body = {0.15, 0.0, 0.0};
-    attitude_ref_pub_->publish(attitude_ref);
-}
-void PX4Offboard::ctbr_ref_test_quad(OffboardControlMode& mode)
+void PX4Offboard::ctbr_ref_test(OffboardControlMode& mode)
 {
     mode.body_rate = true;
     VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleRatesSetpoint.msg
     rates_ref.timestamp = mode.timestamp;
-    rates_ref.roll= 0.0;
-    rates_ref.pitch = 0.0;
-    rates_ref.yaw = 1.0; // Spin on itself (any duration)
-    rates_ref.thrust_body = {0.0, 0.0, -0.72};
+    if (vehicle_type_ == 1) { // ROTARY_WING
+        rates_ref.roll= 0.0;
+        rates_ref.pitch = 0.0;
+        rates_ref.yaw = 1.0; // Spin on itself (any duration)
+        rates_ref.thrust_body = {0.0, 0.0, -0.72};
+    } else if (vehicle_type_ == 2) { // FIXED_WING
+        rates_ref.roll= 4.0; // Roll (2sec maneuver 1 roll, 3sec double roll)
+        rates_ref.pitch = 0.0;
+        rates_ref.thrust_body = {0.39, 0.0, 0.0};
+    } else {
+        RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
+        return;
+    }
     rates_ref_pub_->publish(rates_ref);
 }
-void PX4Offboard::ctbr_ref_test_vtol(OffboardControlMode& mode)
+void PX4Offboard::traj_ref_test(OffboardControlMode& mode)
 {
-    mode.body_rate = true;
-    VehicleRatesSetpoint rates_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/VehicleRatesSetpoint.msg
-    rates_ref.timestamp = mode.timestamp;
-    rates_ref.roll= 4.0; // Roll (2sec maneuver 1 roll, 3sec double roll)
-    rates_ref.pitch = 0.0;
-    rates_ref.thrust_body = {0.39, 0.0, 0.0};
-    rates_ref_pub_->publish(rates_ref);
-}
-void PX4Offboard::traj_ref_test_quad(OffboardControlMode& mode)
-{
-    mode.position = true;
-    // offboard_mode.acceleration = true; // Enable acceleration feedforward
     TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
     trajectory_ref.timestamp = mode.timestamp;
-    trajectory_ref.position = {0.0, 0.0, -50.0}; // 50m above the home point
-    trajectory_ref.velocity = {NAN, NAN, NAN}; // Unused
-    trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
-    trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
-    trajectory_ref.yaw = -3.14; // [-PI:PI]
-    trajectory_ref_pub_->publish(trajectory_ref);
-}
-void PX4Offboard::traj_ref_test_vtol(OffboardControlMode& mode)
-{
-    mode.velocity = true;
-    TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
-    trajectory_ref.timestamp = mode.timestamp;
-    trajectory_ref.position = {NAN, NAN, NAN}; // Unused
-    trajectory_ref.velocity = {20.0, 0.0, 0.0};
-    trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
-    trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
+    if (vehicle_type_ == 1) { // ROTARY_WING
+        mode.position = true;
+        // mode.acceleration = true; // Enable acceleration feedforward
+        trajectory_ref.position = {0.0, 0.0, -50.0}; // 50m above the home point
+        trajectory_ref.velocity = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.yaw = -3.14; // [-PI:PI]
+    } else if (vehicle_type_ == 2) { // FIXED_WING
+        mode.velocity = true;
+        trajectory_ref.position = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.velocity = {20.0, 0.0, 0.0};
+        trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
+        trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
+    } else {
+        RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
+        return;
+    }
     trajectory_ref_pub_->publish(trajectory_ref);
 }
 void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
 {
+    if (vehicle_type_ != 1) { // Publish nothing if the vehicle is not ROTARY_WING
+        RCLCPP_WARN(get_logger(), "This controller is only for multicopters");
+        return;
+    }
     mode.position = true;
     TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
     trajectory_ref.timestamp = mode.timestamp;

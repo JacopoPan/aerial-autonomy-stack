@@ -102,8 +102,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
 
     // Controllers map
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
-    controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
+    controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
 }
 
