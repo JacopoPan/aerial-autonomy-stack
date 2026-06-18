@@ -68,10 +68,23 @@ cd aerial-autonomy-stack/tools_and_docs/
 AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 ```
 
-From the `Ground`'s Xterm terminal, fly all drones in a coordinated formation:
+There are 3 ways (plus QGroundControl) to autonomously fly the drones:
 
+1. From the `Ground`'s Xterm terminal, fly all drones in a coordinated formation:
 ```sh
 ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true
+```
+
+2. In any of the `QUAD`/`VTOL` Xterm terminals, fly a pre-planned (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)) mission:
+```sh
+ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
+```
+
+3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS ROS2 actions and services:
+```sh
+cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
+# Press Enter to cancel the action or regain the terminal when it finishes
+cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test-quad, max_duration_sec: 5.0}'"
 ```
 
 `./sim_run.sh` options:
@@ -115,8 +128,8 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 > # Reposition service (quads only)
 > ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
 >
-> # Offboard action (Specify the flight behavior via 'controller_name', e.g., "traj-test-quad", "traj-test-vtol" for PX4 and "vel-test" for ArduPilot) 
-> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: \"traj-test-quad\", max_duration_sec: 5.0}'"
+> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test-quad", "traj-test-vtol" for PX4 or "vel-test" for ArduPilot)
+> cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test-quad, max_duration_sec: 5.0}'"
 >
 > # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
@@ -129,11 +142,6 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 > ```sh
 > /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
 > ```
-> To fly a pre-planned mission, in any of the `QUAD`/`VTOL` Xterm terminals:
-> ```sh
-> ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
-> ```
-> To create a new mission, re-implement [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)
 > </details>
 > <details>
 > <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s Xterm terminal <i>(click to expand)</i></summary>
@@ -347,16 +355,17 @@ flowchart TB
             end
             zenoh_air{{zenoh-bridge}}:::bridge
             subgraph control [Control]
-                mission(mission):::algo
                 dtc_client(dtc_client):::algo
+                mission(mission):::algo
                 offboard_control(offboard_control):::algo
                 autopilot_interface(autopilot_interface):::algo
                 state_sharing(state_sharing):::algo
             end
             ap_link{{"uxrce_dds <br/> || MAVROS"}}:::bridge
 
-            zenoh_air --> |"/dtc_commands"| dtc_client
             kiss_icp -.-> |"/TBD"| ap_link
+            zenoh_air --> |"/tracks"| offboard_control
+            zenoh_air --> |"/dtc_commands"| dtc_client
             ap_link --> state_sharing
             ap_link <--> autopilot_interface
             yolo_py --> |"/detections"| offboard_control
@@ -364,13 +373,11 @@ flowchart TB
             mission --> |"ros2 action/srv"| autopilot_interface
             dtc_client --> |"ros2 action/srv"| autopilot_interface
             zenoh_air <--> |"/state_drone_n"| state_sharing
+            autopilot_interface ~~~ state_sharing
         end
 
-        repo(((aerial#nbsp;autonomy#nbsp;stack)))
     end
 
-    repo ~~~ gz
-    autopilot_interface ~~~ state_sharing
     gz --> |"/lidar_points <br/> [SIM_SUBNET]"| kiss_icp
     gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| yolo_py
     sitl <--> |"UDP <br/> [SIM_SUBNET]"| ap_link
@@ -380,15 +387,10 @@ flowchart TB
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
     classDef algo fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef resource fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px;
-    classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5;
-    classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5;
-
-    class aas,repo blueStyle;
-    class air,gnd,sim whiteStyle;
-    class perception,control,models greyStyle;
-    linkStyle 18,19,20,21 stroke:teal,stroke-width:3px;
-    linkStyle 22 stroke:blue,stroke-width:4px;
+    classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
+    classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
+    classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
+    linkStyle 18,19,20,21 stroke:teal,stroke-width:3px; linkStyle 22 stroke:blue,stroke-width:4px;
 ```
 
 <details>

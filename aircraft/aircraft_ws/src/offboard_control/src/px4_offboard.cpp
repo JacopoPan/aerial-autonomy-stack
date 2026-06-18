@@ -385,7 +385,7 @@ void PX4Offboard::traj_ref_test_quad(OffboardControlMode& mode)
     // offboard_mode.acceleration = true; // Enable acceleration feedforward
     TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
     trajectory_ref.timestamp = mode.timestamp;
-    trajectory_ref.position = {0.0, 0.0, -50.0}; // Home point
+    trajectory_ref.position = {0.0, 0.0, -50.0}; // 50m above the home point
     trajectory_ref.velocity = {NAN, NAN, NAN}; // Unused
     trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
     trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
