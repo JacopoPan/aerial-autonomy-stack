@@ -82,9 +82,13 @@ ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p us
 
 3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS ROS2 actions and services:
 ```sh
-cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
+cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
+    autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
 # Press Enter to cancel the action or regain the terminal when it finishes
-cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test-quad, max_duration_sec: 5.0}'"
+
+cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
+    autopilot_interface_msgs/action/Offboard \
+    '{controller_name: traj-test-quad, max_duration_sec: 10.0}'"
 ```
 
 `./sim_run.sh` options:
