@@ -80,7 +80,7 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
 ```
 
-3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS ROS2 actions and services:
+3. In any of the `QUAD`/`VTOL` Xterm terminals, use AAS ROS2 actions:
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0}'"
@@ -89,6 +89,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: traj-test-quad, max_duration_sec: 10.0}'"
+# Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
 ```
 
 `./sim_run.sh` options:
