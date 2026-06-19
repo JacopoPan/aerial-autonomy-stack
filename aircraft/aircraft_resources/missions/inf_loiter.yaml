@@ -1,4 +1,6 @@
-steps:
+type: Sequence
+name: Inf_Loiter_Mission
+children:
   - action: takeoff
     params:
       takeoff_altitude: 30.0

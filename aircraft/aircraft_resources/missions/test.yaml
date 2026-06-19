@@ -1,4 +1,6 @@
-steps:
+type: Sequence
+name: Test_Mission
+children:
   - action: takeoff
     params:
       takeoff_altitude: 40.0
