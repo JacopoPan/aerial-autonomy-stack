@@ -2,6 +2,7 @@ type: Sequence
 name: Yalla_Mission
 children:
   - action: takeoff
+    name: "Takeoff to 40m"
     params:
       takeoff_altitude: 40.0
       vtol_transition_heading: 330.0
@@ -10,16 +11,20 @@ children:
       vtol_loiter_alt: 80.0
       
   - action: orbit
+    name: "Orbit North-North-East"
     params:
       east: 30.0
       north: 150.0
       altitude: 90.0
       radius: 40.0
+
   - action: wait
+    name: "Stay in orbit for 60s"
     params:
       duration: 60.0
       
   - action: land
+    name: "Return and land at 40m"
     params:
       landing_altitude: 40.0
       vtol_transition_heading: 60.0

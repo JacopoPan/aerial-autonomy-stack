@@ -2,6 +2,7 @@ type: Sequence
 name: Test_Mission
 children:
   - action: takeoff
+    name: "Takeoff to 40m"
     params:
       takeoff_altitude: 40.0
       vtol_transition_heading: 300.0
@@ -10,40 +11,50 @@ children:
       vtol_loiter_alt: 120.0
       
   - action: orbit
+    name: "Orbit West-North-West"
     params:
       east: -100.0
       north: 50.0
       altitude: 50.0
       radius: 80.0
+
   - action: wait
+    name: "Stay in orbit for 30s"
     params:
       duration: 30.0
 
   - action: reposition
+    name: "Reposition East"
     params:
      east: 50.0
      north: 0.0
      altitude: 60.0
 
   - action: speed
+    name: "Set cruise speed to 16m/s"
     params:
      speed: 16.0
+
   - action: wait
+    name: "Wait 2s for speed to be set"
     params:
       duration: 2.0
 
   - action: reposition
+    name: "Reposition South-East"
     params:
      east: 200.0
      north: -200.0
      altitude: 80.0
 
   - action: offboard
+    name: "Offboard control for 10s"
     params:
      # controller_name: "" # Use a default in mission_node.py if omitted
      max_duration_sec: 10.0
       
   - action: land
+    name: "Return and land at 60m"
     params:
       landing_altitude: 60.0
       vtol_transition_heading: 60.0
