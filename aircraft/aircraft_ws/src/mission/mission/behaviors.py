@@ -28,6 +28,8 @@ class WaitBehavior(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.RUNNING
 
     def terminate(self, new_status):
+        if new_status == py_trees.common.Status.INVALID:
+            self.ros_node.get_logger().warn(f"[{self.name}] Wait interrupted!")
         self.start_time = None
 
 # BASE ACTION CLIENT BEHAVIOR (NON-BLOCKING)
@@ -92,6 +94,19 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
                 self.ros_node.get_logger().error(f"[{self.name}] Action failed. Status: {result.status}")
                 return py_trees.common.Status.FAILURE
         return py_trees.common.Status.RUNNING
+
+    def terminate(self, new_status):
+        # If interrupted by a higher priority node, cancel the running goal
+        if new_status == py_trees.common.Status.INVALID and self.goal_future and not self.result_future:
+            self.ros_node.get_logger().warn(f"[{self.name}] Interrupted! Cancelling goal...")
+            if self.goal_future.done():
+                goal_handle = self.goal_future.result()
+                if goal_handle.accepted:
+                    goal_handle.cancel_goal_async()
+        # Reset states
+        self.goal_sent = False
+        self.goal_future = None
+        self.result_future = None
 
 # ACTION CLIENT BEHAVIORS
 class TakeoffBehavior(BaseActionBehavior):
@@ -183,6 +198,12 @@ class SpeedBehavior(py_trees.behaviour.Behaviour):
                 return py_trees.common.Status.FAILURE
         return py_trees.common.Status.RUNNING
 
+    def terminate(self, new_status):
+        if new_status == py_trees.common.Status.INVALID:
+            self.ros_node.get_logger().warn(f"[{self.name}] Speed request interrupted!")
+        self.req_sent = False
+        self.future = None
+
 # COMPLEX SERVICE BEHAVIOR WITH BLACKBOARD MONITORING
 class RepositionBehavior(py_trees.behaviour.Behaviour):
     def __init__(self, name, ros_node, params):
@@ -263,6 +284,14 @@ class RepositionBehavior(py_trees.behaviour.Behaviour):
         return py_trees.common.Status.RUNNING
 
     def terminate(self, new_status):
-        self.reposition_active = False
-        self.service_future = None
+        if new_status == py_trees.common.Status.INVALID:
+            self.ros_node.get_logger().warn(f"[{self.name}] Reposition interrupted!")
+        # Reset all state variables
         self.req_sent = False
+        self.service_future = None
+        self.reposition_active = False
+        self.has_moved = False
+        self.stable_ticks = 0
+        self.reposition_wait_ticks = 0
+        self.prev_lat = None
+        self.prev_lon = None
