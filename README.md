@@ -75,9 +75,9 @@ There are **3 ways** to autonomously fly the drones (plus QGroundControl)
 ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true
 ```
 
-2. From any `QUAD`/`VTOL` Xterm terminal, fly a **pre-planned mission** (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)):
+2. From any `QUAD`/`VTOL` Xterm terminal, fly a **behavior tree mission** (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)):
 ```sh
-ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$ID -p use_sim_time:=true
+ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
 ```
 
 3. From any `QUAD`/`VTOL` Xterm terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp):

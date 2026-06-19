@@ -11,6 +11,10 @@ import threading
 import random
 import time
 import yaml
+import py_trees
+import py_trees_ros
+
+from mission import tree_builder
 
 from action_msgs.msg import GoalStatus
 from sensor_msgs.msg import NavSatFix
@@ -34,25 +38,11 @@ class MissionNode(Node):
             mission_file = os.path.join('/aas/aircraft_resources/missions/', mission_file)
         try:
             with open(mission_file, 'r') as f:
-                data = yaml.safe_load(f)
-                self.mission_plan = data.get('steps', [])
-                self.get_logger().info(f"Loaded {len(self.mission_plan)} steps.")
+                self.mission_plan = yaml.safe_load(f)
+                self.get_logger().info("Loaded mission plan.")
         except Exception as e:
             self.get_logger().error(f"Failed to load mission file: {e}")
             self.mission_plan = []
-
-        self.mission_step = 0 # Track the advancement of the mission
-        self.last_executed_step = -1 # To avoid re-executing the same step
-        self.active_mission_goal_handle = None # Hold the goal handle of the active action
-        self.wait_start_time = None # For "wait" mission steps
-
-        # Variables to monitor the result of a reposition service request
-        self.reposition_active = False
-        self.has_moved = False
-        self.stable_ticks = 0
-        self.reposition_wait_ticks = 0
-        self.prev_lat = None
-        self.prev_lon = None
 
         self.own_drone_id = None
         drone_id_str = os.environ.get('DRONE_ID') # Get id from ENV VAR
@@ -64,16 +54,20 @@ class MissionNode(Node):
             except ValueError:
                 self.get_logger().info(f"Could not parse DRONE_ID='{drone_id_str}' as an integer.")
 
+        self.blackboard = py_trees.blackboard.Blackboard()
+        if self.own_drone_id is not None:
+            self.blackboard.set("own_drone_id", self.own_drone_id)
+
         self.data_lock = threading.Lock()
-        # MAVROS data
-        self.lat = None
-        self.lon = None
-        self.alt_msl = None
-        self.heading = None
-        self.airspeed = None
-        # Perception data
-        self.yolo_detections = None
-        # self.ground_tracks = None
+        # Initialize Blackboard variables
+        self.blackboard.set("lat", None)
+        self.blackboard.set("lon", None)
+        self.blackboard.set("alt_msl", None)
+        self.blackboard.set("heading", None)
+        self.blackboard.set("airspeed", None)
+        # Perception
+        self.blackboard.set("yolo_detections", None)
+        self.blackboard.set("ground_tracks", None)
         # State sharing
         self.active_state_sharing_subs = {}
         self.drone_states = {}
@@ -108,9 +102,9 @@ class MissionNode(Node):
         self.create_subscription( # 15Hz
             Detection2DArray, '/detections', self.yolo_detections_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
-        # self.create_subscription( # 1Hz
-        #     SwarmObs, '/tracks', self.ground_tracks_callback,
-        #     self.qos_profile, callback_group=self.subscriber_callback_group)
+        self.create_subscription( # 1Hz
+            SwarmObs, '/tracks', self.ground_tracks_callback,
+            self.qos_profile, callback_group=self.subscriber_callback_group)
 
         # Timed callbacks
         self.discover_drones_timer = self.create_timer(
@@ -128,57 +122,53 @@ class MissionNode(Node):
             self.printout_callback,
             callback_group=self.timer_callback_group
         )
-        self.conops_timer = self.create_timer(
-            1.0, # 1Hz
-            self.conops_callback,
-            callback_group=self.timer_callback_group
-        )
 
         # Actions
-        self._takeoff_client = ActionClient(self, Takeoff, 'takeoff_action', callback_group=self.action_callback_group)
-        self._land_client = ActionClient(self, Land, 'land_action', callback_group=self.action_callback_group)
-        self._orbit_client = ActionClient(self, Orbit, 'orbit_action', callback_group=self.action_callback_group)
-        self._offboard_client = ActionClient(self, Offboard, 'offboard_action', callback_group=self.action_callback_group)
+        self.blackboard.set("takeoff_client", ActionClient(self, Takeoff, 'takeoff_action', callback_group=self.action_callback_group))
+        self.blackboard.set("land_client", ActionClient(self, Land, 'land_action', callback_group=self.action_callback_group))
+        self.blackboard.set("orbit_client", ActionClient(self, Orbit, 'orbit_action', callback_group=self.action_callback_group))
+        self.blackboard.set("offboard_client", ActionClient(self, Offboard, 'offboard_action', callback_group=self.action_callback_group))
 
         # Services
         if self.own_drone_id is not None:
-            self._speed_client = self.create_client(
-                SetSpeed, f'/Drone{self.own_drone_id}/set_speed',
-                callback_group=self.service_callback_group
-            )
-            self._reposition_client = self.create_client(
-                SetReposition, f'/Drone{self.own_drone_id}/set_reposition',
-                callback_group=self.service_callback_group
-            )
+            self.blackboard.set("speed_client", self.create_client(SetSpeed, f'/Drone{self.own_drone_id}/set_speed', callback_group=self.service_callback_group))
+            self.blackboard.set("reposition_client", self.create_client(SetReposition, f'/Drone{self.own_drone_id}/set_reposition', callback_group=self.service_callback_group))
         else:
-            self._speed_client = None
-            self._reposition_client = None
             self.get_logger().info("DRONE_ID not set, service clients not created.")
+
+        # Mission as a 2Hz behavior tree
+        if self.mission_plan:
+            self.root_node = tree_builder.create_mission_tree(self.mission_plan, self)
+            self.behaviour_tree = py_trees_ros.trees.BehaviourTree(self.root_node)
+            self.behaviour_tree.setup(node=self)
+            self.tree_timer = self.create_timer(0.5, self.tick_tree, callback_group=self.timer_callback_group)
+        else:
+            self.get_logger().error("Mission plan is empty. Tree not built.")
 
     def px4_global_position_callback(self, msg): # Mutally exclusive with mavros_global_position_callback
         with self.data_lock:
-            self.lat = msg.lat
-            self.lon = msg.lon
-            self.alt_msl = msg.alt
+            self.blackboard.set("lat", msg.lat)
+            self.blackboard.set("lon", msg.lon)
+            self.blackboard.set("alt_msl", msg.alt)
 
     def airspeed_validated_callback(self, msg): # Mutally exclusive with vfr_hud_callback
         with self.data_lock:
-            self.airspeed = msg.true_airspeed_m_s
+            self.blackboard.set("airspeed", msg.true_airspeed_m_s)
 
     def mavros_global_position_callback(self, msg):  # Mutally exclusive with px4_global_position_callback
         with self.data_lock:
-            self.lat = msg.latitude
-            self.lon = msg.longitude
+            self.blackboard.set("lat", msg.latitude)
+            self.blackboard.set("lon", msg.longitude)
 
     def vfr_hud_callback(self, msg): # Mutally exclusive with airspeed_validated_callback
         with self.data_lock:
-            self.alt_msl = msg.altitude
-            self.heading = msg.heading
-            self.airspeed = msg.airspeed
+            self.blackboard.set("alt_msl", msg.altitude)
+            self.blackboard.set("heading", msg.heading)
+            self.blackboard.set("airspeed", msg.airspeed)
 
     def yolo_detections_callback(self, msg):
         with self.data_lock:
-            self.yolo_detections = msg
+            self.blackboard.set("yolo_detections", msg)
 
     def discover_drones_callback(self):
         topic_prefix = '/state_sharing_drone_'
@@ -219,29 +209,34 @@ class MissionNode(Node):
                     self.destroy_subscription(sub)
                 # Remove the data
                 self.drone_states.pop(drone_id, None)
+                self.blackboard.set("drone_states", self.drone_states)
 
     def state_sharing_callback(self, msg):
         # A single callback for all drone state topics
         with self.data_lock:
             now = self.get_clock().now()
             self.drone_states[msg.drone_id] = (msg, now)
+            self.blackboard.set("drone_states", self.drone_states)
 
-    # def ground_tracks_callback(self, msg):
-    #     with self.data_lock:
-    #         self.ground_tracks = msg
+    def ground_tracks_callback(self, msg):
+        with self.data_lock:
+            self.blackboard.set("ground_tracks", msg)
 
     def printout_callback(self):
         with self.data_lock: # Copy with lock
-            mission_step = self.mission_step
-            lat = self.lat
-            lon = self.lon
-            alt_msl = self.alt_msl
-            yolo_detections = self.yolo_detections
+            lat = self.blackboard.get("lat")
+            lon = self.blackboard.get("lon")
+            alt_msl = self.blackboard.get("alt_msl")
+            yolo_detections = self.blackboard.get("yolo_detections")
+            ground_tracks = self.blackboard.get("ground_tracks")
             states_copy = self.drone_states.copy()
-            # ground_tracks = self.ground_tracks
+            try:
+                active_node = self.behaviour_tree.root.tip().name if self.behaviour_tree.root else "None"
+            except:
+                active_node = "Initializing"
         now_seconds = self.get_clock().now().nanoseconds / 1e9
         output = f"\nCurrent node time: {now_seconds:.2f} seconds\n"
-        output += f"Mission step: {mission_step}\n"
+        output += f"Active step: {active_node}\n"
         lat_str = f"{lat:.5f}" if lat is not None else "N/A"
         lon_str = f"{lon:.5f}" if lon is not None else "N/A"
         alt_str = f"{alt_msl:.2f}" if alt_msl is not None else "N/A"
@@ -266,196 +261,28 @@ class MissionNode(Node):
                         f"alt: {state_msg.altitude_m:.2f} (px4: msl, ap: ell.), hdg: {state_msg.heading_deg:.1f}deg, "
                         f"vel: [{state_msg.vx:.1f}, {state_msg.vy:.1f}, {state_msg.vz:.1f}]"
                         f"(seen {seconds_ago:.1f}s ago)\n")
-        #
-        # if ground_tracks and ground_tracks.tracks:
-        #     output += "Ground Tracks:\n"
-        #     for track in ground_tracks.tracks:
-        #         output += f"  Id {track.id}, lat: {track.latitude_deg:.5f} lon: {track.longitude_deg:.5f} alt (msl): {track.altitude_m:.2f}\n"
-        # else:
-        #     output += "Ground Tracks: [No data]\n"
-        #
+
+        if ground_tracks and ground_tracks.tracks:
+            output += "Ground Tracks:\n"
+            for track in ground_tracks.tracks:
+                output += f"  Id {track.id}, lat: {track.latitude_deg:.5f} lon: {track.longitude_deg:.5f} alt (msl): {track.altitude_m:.2f}\n"
+        else:
+            output += "Ground Tracks: [No data]\n"
+        
         self.get_logger().info(output)
 
-    def send_goal(self, client, goal_msg):
-        if self.active_mission_goal_handle is not None:
-            self.get_logger().info("An action is already in progress. Cannot send new goal.")
-            return
-        self.get_logger().info('Waiting for action server...')
-        client.wait_for_server()
-        self.get_logger().info('Sending goal request...')
-        send_goal_future = client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
-        send_goal_future.add_done_callback(self.goal_response_callback)
-
-    def goal_response_callback(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
-            self.get_logger().info('Goal rejected :(')
-            self.mission_step = -1
-            return
-        self.active_mission_goal_handle = goal_handle
-        self.get_logger().info('Goal accepted! Waiting for result...')
-        result_future = goal_handle.get_result_async()
-        result_future.add_done_callback(self.get_result_callback)
-
-    def get_result_callback(self, future):
-        result = future.result().result
-        status = future.result().status
-        self.active_mission_goal_handle = None # Clear the handle
-        if status == GoalStatus.STATUS_SUCCEEDED:
-            self.get_logger().info(f"Action succeeded! Result: {result.success}")
-            self.mission_step += 1 # Advance the mission step
-        else:
-            self.get_logger().info(f"Action failed with status: {status}")
-            self.mission_step = -1
-
-    def feedback_callback(self, feedback_msg):
-        self.get_logger().info(f"Received action feedback: {feedback_msg.feedback.message}")
-
-    def call_service(self, server, request, monitor_reposition=False):
-        if server is None or not server.wait_for_service(timeout_sec=1.0):
-            self.get_logger().error('Service not available.')
-            return
-        future = server.call_async(request)
-        future.add_done_callback(lambda f: self.service_response_callback(f, monitor_reposition))
-
-    def service_response_callback(self, future, monitor_reposition):
-        try:
-            response = future.result()
-            if not response.success:
-                self.get_logger().error(f"Service call failed: {response.message}")
-                self.mission_step = -1
-                return
-            self.get_logger().info(f'Service call successful: {response.success}')
-            if monitor_reposition: # Start tracking reposition completion instead of advancing to the next mission item
-                self.reposition_active = True
-                self.has_moved = False
-                self.stable_ticks = 0
-                self.reposition_wait_ticks = 0
-            else: # Advance the mission step normally
-                self.mission_step += 1
-        except Exception as e:
-            self.get_logger().error(f'Service call failed: {e}')
-            self.mission_step = -1
-
-    def conops_callback(self):
-        # If an ROS Action is running, do nothing
-        if self.active_mission_goal_handle is not None:
-            return
-
-        if getattr(self, 'reposition_active', False):
-            if self.prev_lat is not None and self.lat is not None:
-                d_lat = abs(self.lat - self.prev_lat)
-                d_lon = abs(self.lon - self.prev_lon)
-                if d_lat > 5e-6 or d_lon > 5e-6: # Started moving (change > approx 0.5 meters)
-                    self.has_moved = True
-                if self.has_moved and d_lat < 2e-6 and d_lon < 2e-6: # Stabilized/stopped (change < approx 0.2 meters)
-                    self.stable_ticks += 1
-                elif self.has_moved:
-                    self.stable_ticks = 0
-            self.prev_lat = self.lat
-            self.prev_lon = self.lon
-            self.reposition_wait_ticks += 1
-            # Advance if stable or stopped for 3 ticks/seconds
-            if self.stable_ticks >= 3 or (not self.has_moved and self.reposition_wait_ticks > 3):
-                self.get_logger().info("Reposition destination reached. Advancing mission.")
-                self.reposition_active = False
-                self.mission_step += 1
-            return
-
-        # If a "Wait" is active, check time: if still waiting, return. If done, clear wait and proceed
-        if self.wait_start_time is not None:
-            elapsed = (self.get_clock().now() - self.wait_start_time).nanoseconds / 1e9
-            if elapsed < self.current_wait_duration:
-                return # Still waiting
-            else:
-                self.get_logger().info(f"Wait complete")
-                self.wait_start_time = None # Clear the wait flag
-                self.mission_step += 1 # Advance to next step
-
-        # End the mission
-        if (self.mission_step >= len(self.mission_plan)) or (self.mission_step == -1):
-            if self.mission_step == -1:
-                self.get_logger().info("Mission Failed")
-            else:
-                self.get_logger().info("Mission Complete")
-            self.conops_timer.cancel()
+    def tick_tree(self):
+        # Ticks the behavior tree and monitors its overall status
+        self.behaviour_tree.tick()
+        status = self.behaviour_tree.root.status
+        if status == py_trees.common.Status.SUCCESS:
+            self.get_logger().info("Mission Complete!")
+            self.tree_timer.cancel()
             rclpy.shutdown()
-            return
-
-        # Avoid executing the same step more than once
-        if self.mission_step == self.last_executed_step:
-            return
-
-        # Continue the mission
-        step = self.mission_plan[self.mission_step]
-        action_type = step['action']
-        params = step.get('params', {})
-        self.get_logger().info(f"Executing step {self.mission_step}: {action_type}")
-        self.last_executed_step = self.mission_step
-
-        if action_type == 'wait':
-            self.wait_start_time = self.get_clock().now()
-            self.current_wait_duration = float(params.get('duration', 0.0))
-            return
-
-        elif action_type == 'takeoff':
-            goal = Takeoff.Goal()
-            goal.takeoff_altitude = float(params.get('takeoff_altitude', 20.0))
-            goal.vtol_transition_heading = float(params.get('vtol_transition_heading', 0.0))
-            goal.vtol_loiter_nord = float(params.get('vtol_loiter_nord', 100.0))
-            goal.vtol_loiter_east = float(params.get('vtol_loiter_east', 100.0))
-            goal.vtol_loiter_alt = float(params.get('vtol_loiter_alt', 120.0))
-            self.send_goal(self._takeoff_client, goal)
-        
-        elif action_type == 'land':
-            goal = Land.Goal()
-            goal.landing_altitude = float(params.get('landing_altitude', 20.0))
-            goal.vtol_transition_heading = float(params.get('vtol_transition_heading', 0.0))
-            self.send_goal(self._land_client, goal)
-
-        elif action_type == 'orbit':
-            goal = Orbit.Goal()
-            goal.east = float(params.get('east', 0.0))
-            goal.north = float(params.get('north', 0.0))
-            goal.altitude = float(params.get('altitude', 20.0))
-            goal.radius = float(params.get('radius', 10.0))
-            self.send_goal(self._orbit_client, goal)
-            
-        elif action_type == 'offboard':
-            autopilot = os.getenv('AUTOPILOT', '')
-            drone_type = os.getenv('DRONE_TYPE', '')
-            if (autopilot == 'ardupilot') and (drone_type != 'quad'):
-                self.get_logger().warn("Offboard action is not supported by Ardupilot VTOL. Skip.")
-                self.mission_step += 1
-                return
-            if autopilot == 'px4':
-                default_controller = 'traj-test'
-            elif autopilot == 'ardupilot':
-                default_controller = 'vel-test'
-            goal = Offboard.Goal()
-            goal.controller_name = str(params.get('controller_name', default_controller))
-            goal.max_duration_sec = float(params.get('max_duration_sec', 10.0))
-            self.send_goal(self._offboard_client, goal)
-
-        elif action_type == 'reposition':
-            if os.getenv('DRONE_TYPE', '') != 'quad':
-                self.get_logger().warn("Reposition action is only supported for 'quad' drone type. Skip.")
-                self.mission_step += 1
-                return
-            req = SetReposition.Request()
-            req.east = float(params.get('east', 0.0))
-            req.north = float(params.get('north', 0.0))
-            req.altitude = float(params.get('altitude', 50.0))
-            self.call_service(self._reposition_client, req, monitor_reposition=True)
-            
-        elif action_type == 'speed':
-            req = SetSpeed.Request()
-            req.speed = float(params.get('speed', 15.0))
-            self.call_service(self._speed_client, req)
-
-        else:
-            self.get_logger().error(f"Unknown action: {action_type}")
-            self.mission_step = -1
+        elif status == py_trees.common.Status.FAILURE:
+            self.get_logger().info("Mission Failed!")
+            self.tree_timer.cancel()
+            rclpy.shutdown()
 
 def main(args=None):
     parser = argparse.ArgumentParser(description="Mission Node.")
