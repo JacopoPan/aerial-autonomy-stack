@@ -10,7 +10,6 @@ def create_mission_tree(node_cfg, ros_node):
         action = node_cfg['action']
         params = node_cfg.get('params', {})
         name = node_cfg.get('name', f"{action.capitalize()}Action_{uuid.uuid4().hex[:4]}") # Unique fallback in case key 'name' is missing
-
         if action == 'takeoff':
             return behaviors.TakeoffBehavior(name, ros_node, params)
         elif action == 'land':
