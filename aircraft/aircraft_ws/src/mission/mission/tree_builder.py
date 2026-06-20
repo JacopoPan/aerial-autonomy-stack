@@ -24,6 +24,8 @@ def create_mission_tree(node_cfg, ros_node):
             return behaviors.RepositionBehavior(name, ros_node, params)
         elif action == 'speed':
             return behaviors.SpeedBehavior(name, ros_node, params)
+        elif action == 'check_blackboard':
+            return behaviors.CheckBlackboardBehavior(name, ros_node, params)
         else:
             ros_node.get_logger().error(f"Unknown action: {action}")
             return py_trees.behaviours.Failure(name=f"Unknown_{action}")

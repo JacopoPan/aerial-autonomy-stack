@@ -34,6 +34,42 @@ class WaitBehavior(py_trees.behaviour.Behaviour):
         # Reset variable
         self.start_time = None
 
+# CONDITION BEHAVIOR
+class CheckBlackboardBehavior(py_trees.behaviour.Behaviour):
+    def __init__(self, name, ros_node, params):
+        super().__init__(name)
+        self.ros_node = ros_node
+        self.key = params.get('key')
+        self.expression = params.get('expression', None)
+        self.blackboard = py_trees.blackboard.Blackboard()
+
+    def update(self):
+        data = self.blackboard.get(self.key)
+        if data is None:
+            self.ros_node.get_logger().info(f"[{self.name}] Condition failed: No data for {self.key}")
+            return py_trees.common.Status.FAILURE
+        condition_met = False
+        if self.expression:
+            try:
+                condition_met = bool(eval(self.expression, {}, {"data": data}))
+            except Exception as e:
+                self.ros_node.get_logger().error(f"[{self.name}] Expression eval error: {e}")
+                return py_trees.common.Status.FAILURE
+        else: # Fallback if no expression is provided: only check whether data for the key exist
+            if self.key == "yolo_detections":
+                condition_met = len(data.detections) > 0
+            elif self.key == "ground_tracks":
+                condition_met = len(data.tracks) > 0
+            elif self.key == "drone_states":
+                condition_met = len(data) > 0
+            else:
+                condition_met = bool(data)
+        if condition_met:
+            self.ros_node.get_logger().info(f"[{self.name}] Condition met for key: {self.key}")
+            return py_trees.common.Status.SUCCESS
+        self.ros_node.get_logger().info(f"[{self.name}] Condition for {self.key}")
+        return py_trees.common.Status.FAILURE
+
 # BASE ACTION CLIENT BEHAVIOR (NON-BLOCKING)
 class BaseActionBehavior(py_trees.behaviour.Behaviour):
     def __init__(self, name, ros_node, params, client_name):
@@ -281,7 +317,8 @@ class RepositionBehavior(py_trees.behaviour.Behaviour):
         self.prev_lat = lat
         self.prev_lon = lon
         self.reposition_wait_ticks += 1
-        if self.stable_ticks >= 6 or (not self.has_moved and self.reposition_wait_ticks > 6): # 6 ticks @2Hz = 3sec
+        if (self.stable_ticks >= 6 # 6 ticks @2Hz = 3sec
+                or (not self.has_moved and self.reposition_wait_ticks > 20)): # 20 ticks @2Hz = 10sec
             self.ros_node.get_logger().info(f"[{self.name}] Destination reached.")
             return py_trees.common.Status.SUCCESS
         return py_trees.common.Status.RUNNING

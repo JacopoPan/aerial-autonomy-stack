@@ -1,0 +1,63 @@
+type: Sequence
+name: "Dynamic Track-Based Routing Mission"
+children:
+  - action: takeoff
+    name: "Takeoff to 20m"
+    params:
+      takeoff_altitude: 20.0
+
+  - action: wait
+    name: "Wait 3s before a reposition service request"
+    params:
+      duration: 3.0
+
+  - type: Selector
+    name: "Choose direction based on the number of drones"
+    children:
+
+      # PLAN A: Even number of drones -> go North West
+      - type: Sequence
+        name: "Even tracks Logic"
+        children:
+          - action: check_blackboard
+            name: "Check if tracks are even"
+            params:
+              key: "ground_tracks"
+              expression: "len(data.tracks) % 2 == 0"
+
+          - action: reposition
+            name: "Go North West"
+            params:
+              east: -100.0
+              north: 100.0
+              altitude: 40.0
+
+          - action: wait
+            name: "Hover at destination for 10s"
+            params:
+              duration: 10.0
+
+      # PLAN B: Odd number of drones -> go North East
+      - type: Sequence
+        name: "Odd Tracks Logic"
+        children:
+          - action: check_blackboard
+            name: "Check if tracks are odd"
+            params:
+              key: "ground_tracks"
+              expression: "len(data.tracks) % 2 != 0"
+
+          - action: reposition
+            name: "Go North East"
+            params:
+              east: 100.0
+              north: 100.0
+              altitude: 40.0
+
+  - action: wait
+    name: "Hover at destination for 10s"
+    params:
+      duration: 10.0
+
+run_with:
+  ros2 run mission mission --conops condition.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
