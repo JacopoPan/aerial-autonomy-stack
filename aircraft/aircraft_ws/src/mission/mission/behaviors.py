@@ -13,8 +13,9 @@ class WaitBehavior(py_trees.behaviour.Behaviour):
         super().__init__(name)
         self.ros_node = ros_node
         self.duration = float(params.get('duration', 0.0))
-        self.start_time = None
         self.blackboard = py_trees.blackboard.Blackboard()
+        # Wait tracking variable
+        self.start_time = None
 
     def initialise(self):
         self.ros_node.get_logger().info(f"[{self.name}] Starting wait for {self.duration}s...")
@@ -30,6 +31,7 @@ class WaitBehavior(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if new_status == py_trees.common.Status.INVALID:
             self.ros_node.get_logger().warn(f"[{self.name}] Wait interrupted!")
+        # Reset variable
         self.start_time = None
 
 # BASE ACTION CLIENT BEHAVIOR (NON-BLOCKING)
@@ -41,7 +43,7 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
         self.client_name = client_name
         self.blackboard = py_trees.blackboard.Blackboard()
         self.action_client = None
-        # State tracking variables
+        # Action tracking variables
         self.goal_sent = False
         self.goal_future = None
         self.result_future = None
@@ -103,7 +105,7 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
                 goal_handle = self.goal_future.result()
                 if goal_handle.accepted:
                     goal_handle.cancel_goal_async()
-        # Reset states
+        # Reset variables
         self.goal_sent = False
         self.goal_future = None
         self.result_future = None
@@ -154,7 +156,7 @@ class OffboardBehavior(BaseActionBehavior):
             self.ros_node.get_logger().warn(f"[{self.name}] Offboard unsupported by ArduPilot VTOL. Skipping.")
             return "SKIPPED"
         goal = Offboard.Goal()
-        default_controller = 'traj-test' if autopilot == 'px4' else 'vel-test'
+        default_controller = 'traj-test' if autopilot == 'px4' else 'vel-test' # Pick a default controller is not specified in the YAML
         goal.controller_name = str(self.params.get('controller_name', default_controller))
         goal.max_duration_sec = float(self.params.get('max_duration_sec', 10.0))
         return goal
@@ -167,7 +169,7 @@ class SpeedBehavior(py_trees.behaviour.Behaviour):
         self.params = params
         self.blackboard = py_trees.blackboard.Blackboard()
         self.service_client = None
-        # State tracking variables
+        # Service tracking variables
         self.req_sent = False
         self.future = None
 
@@ -201,6 +203,7 @@ class SpeedBehavior(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if new_status == py_trees.common.Status.INVALID:
             self.ros_node.get_logger().warn(f"[{self.name}] Speed request interrupted!")
+        # Reset variables
         self.req_sent = False
         self.future = None
 
@@ -212,7 +215,7 @@ class RepositionBehavior(py_trees.behaviour.Behaviour):
         self.params = params
         self.blackboard = py_trees.blackboard.Blackboard()
         self.service_client = None
-        # State tracking variables
+        # Service and reposition tracking variables
         self.req_sent = False
         self.service_future = None
         self.reposition_active = False
@@ -286,7 +289,7 @@ class RepositionBehavior(py_trees.behaviour.Behaviour):
     def terminate(self, new_status):
         if new_status == py_trees.common.Status.INVALID:
             self.ros_node.get_logger().warn(f"[{self.name}] Reposition interrupted!")
-        # Reset all state variables
+        # Reset variables
         self.req_sent = False
         self.service_future = None
         self.reposition_active = False

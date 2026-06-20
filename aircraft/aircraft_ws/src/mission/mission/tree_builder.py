@@ -5,7 +5,7 @@ from mission import behaviors
 def create_mission_tree(node_cfg, ros_node):
     # Recursively parse a YAML dictionary node into a py_trees object
 
-    # Is it a Leaf Node (an action)?
+    # Is it a leaf node (an action)?
     if 'action' in node_cfg:
         action = node_cfg['action']
         params = node_cfg.get('params', {})
@@ -28,7 +28,7 @@ def create_mission_tree(node_cfg, ros_node):
             ros_node.get_logger().error(f"Unknown action: {action}")
             return py_trees.behaviours.Failure(name=f"Unknown_{action}")
 
-    # Is it a Composite Node (a Sequence or Fallback branch)?
+    # Is it a composite node (a sequence or fallback/selector branch)?
     node_type = node_cfg.get('type', 'Sequence')
     name = node_cfg.get('name', f"Unnamed_{node_type}")
     children_cfg = node_cfg.get('children', [])
