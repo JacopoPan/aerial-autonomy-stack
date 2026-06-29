@@ -83,10 +83,24 @@ simulation/simulation_resources/simulation_worlds/subaru/meshes/Rear_Window.bmp
 simulation/simulation_resources/simulation_worlds/subaru/meshes/Wheel.bmp
 simulation/simulation_resources/simulation_worlds/subaru/meshes/subaru.mtl
 simulation/simulation_resources/simulation_worlds/subaru/meshes/subaru.obj
-
-# Examples
-/aircraft/aircraft_resources/missions/cat.yaml
-/aircraft/aircraft_resources/missions/mouse.yaml
+# v4
+simulation/simulation_resources/aircraft_models/quadtailsitter/meshes/body.dae
+simulation/simulation_resources/aircraft_models/quadtailsitter/meshes/iris_prop_ccw.dae
+simulation/simulation_resources/aircraft_models/quadtailsitter/meshes/iris_prop_cw.dae
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/blue_metal/blue_metal_basecolor.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/blue_metal/blue_metal_metallic.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/blue_metal/blue_metal_normal.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/blue_metal/blue_metal_roughness.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/foxmap.tga
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_basecolor.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_metallic.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_normal.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_roughness.jpg
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/meshes/iris_prop_ccw.dae
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/meshes/iris_prop_cw.dae
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/meshes/swan_k1_hwing_engine.dae
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/meshes/swan_k1_hwing_fuselage.dae
+simulation/simulation_resources/aircraft_models/swan_k1_hwing/meshes/swan_k1_hwing_motor.dae
 
 ### C++ .gitignore
 

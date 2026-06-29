@@ -73,14 +73,14 @@ for repo_info in "${REPOS[@]}"; do
 done
 
 # Get simulation_assets from GitHub release
-ASSETS_URL="https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v1.3.0/simulation_assets_v3.zip"
-EXPECTED_HASH="c6ce5842af2ecefe9f123f8cb53c16c1cdb85964b66d8916aec4821178a012b5" # sha256sum simulation_assets_v3.zip
-ZIP_FILE="$CLONE_DIR/simulation_assets_v3.zip"
+ASSETS_URL="https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v1.4.0/simulation_assets_v4.zip"
+EXPECTED_HASH="0a5c842a68a71a882a2e8d8748f7435e86bd40be7f94232467c53f6297cc9d3f" # sha256sum simulation_assets_v4.zip
+ZIP_FILE="$CLONE_DIR/simulation_assets_v4.zip" # Created by zipping the simulation/ folder with `zip -r simulation_assets_v4.zip simulation`
 DOWNLOAD_NEEDED=true
 if [ -f "$ZIP_FILE" ]; then
   CURRENT_HASH=$(sha256sum "$ZIP_FILE" | awk '{print $1}')
   if [ "$CURRENT_HASH" = "$EXPECTED_HASH" ]; then
-    echo "simulation_assets_v3.zip already downloaded"
+    echo "simulation_assets_v4.zip already downloaded"
     DOWNLOAD_NEEDED=false
   fi
 fi
