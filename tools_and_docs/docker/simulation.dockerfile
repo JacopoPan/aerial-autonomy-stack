@@ -182,7 +182,7 @@ RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
-RUN chmod +x /aas/simulation_resources/scripts/create_ardupilot_drones_and_world.sh
+RUN chmod +x /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh
 
 # Copy QGC configuration (only for GND_CONTAINER=false)
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini

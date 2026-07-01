@@ -67,7 +67,7 @@ windows:
           <% end %>
           sed -i 's|<real_time_factor>1.0</real_time_factor>|<%= rtf_string %>|' /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           <% if autopilot == 'ardupilot' %>
-          /aas/simulation_resources/scripts/create_ardupilot_drones_and_world.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %> /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
+          /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %> /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
           GZ_SIM_SYSTEM_PLUGIN_PATH=$GZ_SIM_SYSTEM_PLUGIN_PATH:/aas/github_ws/install/lib GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH:/aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control/build
