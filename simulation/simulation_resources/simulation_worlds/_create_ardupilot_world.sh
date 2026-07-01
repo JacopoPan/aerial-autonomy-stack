@@ -3,15 +3,16 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 <num_quads> <num_vtols> <full_path_to_empty_world>"
-  echo "Example: ./_create_ardupilot_world.sh 2 1 /aas/simulation_resources/simulation_worlds/impalpable_greyness.sdf"
+if [ "$#" -ne 4 ]; then
+  echo "Usage: $0 <num_quads> <num_vtols> <num_tails> <full_path_to_empty_world>"
+  echo "Example: ./_create_ardupilot_world.sh 3 2 1 /aas/simulation_resources/simulation_worlds/impalpable_greyness.sdf"
   exit 1
 fi
 
 NUM_QUADS=$1
 NUM_VTOLS=$2
-BASE_WORLD_WITH_PATH=$3
+NUM_TAILS=$3
+BASE_WORLD_WITH_PATH=$4
 
 # Resolve the path relative to the script's directory if it's not absolute
 if [[ "$BASE_WORLD_WITH_PATH" != /* ]]; then
@@ -58,6 +59,13 @@ for i in $(seq 1 $NUM_VTOLS); do
   DRONE_ID=$((DRONE_ID + 1))
   MODEL_XML="    <include>\n      <uri>model://alti_transition_quad_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 2 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
   ALL_MODELS_XML+=$MODEL_XML
+done
+
+# Loop for tails
+for i in $(seq 1 $NUM_TAILS); do
+  DRONE_ID=$((DRONE_ID + 1))
+  MODEL_XML="    <include>\n      <uri>model://swan_k1_hwing_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 5 + (i-1) * 2 )) 0.75 0 -90 0</pose>\n    </include>"
+  ALL_MODELS_XML="${ALL_MODELS_XML}\n${MODEL_XML}"
 done
 
 # Read the file, replace the tag, and write the content back out

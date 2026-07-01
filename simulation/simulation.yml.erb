@@ -9,6 +9,7 @@
 
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
+  num_tails = ENV.fetch('NUM_TAILS', 0).to_i
   world = ENV.fetch('WORLD', 'impalpable_greyness')
 
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
@@ -24,6 +25,7 @@
   drones = []
   num_quads.times { |i| drones << { type: 'quad', index: i } }
   num_vtols.times { |i| drones << { type: 'vtol', index: i } }
+  num_tails.times { |i| drones << { type: 'tail', index: i } }
 
   if rtf <= 0.0
     speedup = 15 # 0.0 or negative RTF: cap to 15x speedup for safety/sitl stability
@@ -65,8 +67,8 @@ windows:
           <% end %>
           sed -i 's|<real_time_factor>1.0</real_time_factor>|<%= rtf_string %>|' /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           <% if autopilot == 'ardupilot' %>
-          /aas/simulation_resources/aircraft_models/_create_ardupilot_models.sh <%= num_quads %> <%= num_vtols %>  &&
-          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= world %>.sdf &&
+          /aas/simulation_resources/aircraft_models/_create_ardupilot_models.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %>  &&
+          /aas/simulation_resources/simulation_worlds/_create_ardupilot_world.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %> <%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
           GZ_SIM_SYSTEM_PLUGIN_PATH=$GZ_SIM_SYSTEM_PLUGIN_PATH:/aas/github_ws/install/lib GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH:/aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control/build
@@ -77,17 +79,37 @@ windows:
   <% drones.each_with_index do |drone, sitl_instance| %>
   <% 
     drone_id = sitl_instance + 1
-    is_quad = drone[:type] == 'quad'
+    drone_type = drone[:type]
+    x_offset = drone[:index] * 2
     if autopilot == 'px4'
-      autostart = is_quad ? 5140 : 5141
-      model_name = is_quad ? "x500_#{sitl_instance}" : "standard_vtol_#{sitl_instance}"
-      x_offset = drone[:index] * 2
-      y_offset = is_quad ? x_offset : x_offset + 2
+      case drone_type
+      when 'quad'
+        autostart = 5140
+        model_name = "x500_#{sitl_instance}"
+        y_offset = x_offset
+      when 'vtol'
+        autostart = 5141
+        model_name = "standard_vtol_#{sitl_instance}"
+        y_offset = x_offset + 2
+      when 'tail'
+        autostart = 5142
+        model_name = "quadtailsitter_#{sitl_instance}"
+        y_offset = x_offset + 4
+      end
       # Env var parameter injection (using prefix PX4_PARAM_*) of https://docs.px4.io/v1.17/en/advanced_config/parameter_reference#UXRCE_DDS_AG_IP
       signed_32bit_ip = "#{sim_subnet}.90.#{drone_id}".split('.').map(&:to_i).pack('C*').unpack1('l>')
     elsif autopilot == 'ardupilot'
-      vehicle_config = is_quad ? '-v ArduCopter -f gazebo-iris' : '-v ArduPlane'
-      model_name = is_quad ? "iris_with_ardupilot_#{drone_id}" : "alti_transition_quad_#{drone_id}"
+      case drone_type
+      when 'quad'
+        vehicle_config = '-v ArduCopter -f gazebo-iris'
+        model_name = "iris_with_ardupilot_#{drone_id}"
+      when 'vtol'
+        vehicle_config = '-v ArduPlane'
+        model_name = "alti_transition_quad_#{drone_id}"
+      when 'tail'
+        vehicle_config = '-v ArduPlane'
+        model_name = "swan_k1_hwing_#{drone_id}"
+      end
     end
   %>
   <% if autopilot == 'px4' %>
@@ -154,7 +176,7 @@ windows:
         - echo "Headless mode, not launching QGroundControl."
         <% else %>
         - >
-          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= (num_quads + num_vtols) == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
+          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= (num_quads + num_vtols + + num_tails) == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           sed -i 's/^virtualJoystickAutoCenterThrottle=.*/virtualJoystickAutoCenterThrottle=<%= num_quads == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           gosu qgcuser /squashfs-root/AppRun &
           (

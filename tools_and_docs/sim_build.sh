@@ -74,7 +74,7 @@ done
 
 # Get simulation_assets from GitHub release
 ASSETS_URL="https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v1.4.0/simulation_assets_v4.zip"
-EXPECTED_HASH="0a5c842a68a71a882a2e8d8748f7435e86bd40be7f94232467c53f6297cc9d3f" # sha256sum simulation_assets_v4.zip
+EXPECTED_HASH="36eebde1a467f6ddb3fa7cca9ac94aa13551e672a72616ec1e8466a74614e71e" # sha256sum simulation_assets_v4.zip
 ZIP_FILE="$CLONE_DIR/simulation_assets_v4.zip" # Created by zipping the simulation/ folder with `zip -r simulation_assets_v4.zip simulation`
 DOWNLOAD_NEEDED=true
 if [ -f "$ZIP_FILE" ]; then

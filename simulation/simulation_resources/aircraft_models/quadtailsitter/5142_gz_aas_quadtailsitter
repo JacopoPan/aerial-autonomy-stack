@@ -149,6 +149,7 @@ param set-default EKF2_FUSE_BETA 0
 param set-default SENS_EN_GPSSIM 1
 param set-default SENS_EN_BAROSIM 0
 param set-default SENS_EN_MAGSIM 1
+param set-default SENS_EN_ARSPDSIM 1
 
 param set-default COM_RCL_EXCEPT 7 # Disable RC loss action
 param set-default UXRCE_DDS_SYNCT 0 # This lets PX4 SITL keep using Gazebo simulation time

@@ -1,0 +1,1069 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+  <model name="swan_k1_hwing">
+    <pose>0 0 0 0 0 0</pose>
+    <static>0</static>
+
+    <link name="base_link">
+      <!-- \todo provide proper inertial : actual mass 1.75 kg -->
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>1.5</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01625</iyy>
+          <iyz>0</iyz>
+          <izz>0.01625</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_fuselage.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name="fuselage_visual">
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_fuselage.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1</ambient>
+          <diffuse>1 1 1</diffuse>
+          <specular>0.5 0.5 0.5</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/meshes/foxmap.tga</albedo_map>
+              <roughness>0.5</roughness>
+              <metalness>0.5</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+
+      <!-- debug visuals for leg collisions -->
+      <!-- <visual name="leg1_visual">
+        <pose>-0.26 -0.25 -0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0 0 1 1</ambient>
+          <diffuse>0 0 1 1</diffuse>
+          <emissive>0 0 1 1</emissive>
+          <specular>0 0 1 1</specular>
+        </material>
+      </visual>
+      <visual name="leg2_visual">
+        <pose>-0.26 0.25 0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+          <emissive>1 0 0 1</emissive>
+          <specular>1 0 0 1</specular>
+        </material>
+      </visual>
+      <visual name="leg3_visual">
+        <pose>-0.26 0.25 -0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1 1 0 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+          <emissive>1 1 0 1</emissive>
+          <specular>1 1 0 1</specular>
+        </material>
+      </visual>
+      <visual name="leg4_visual">
+        <pose>-0.26 -0.25 0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+          <emissive>0 1 0 1</emissive>
+          <specular>0 1 0 1</specular>
+        </material>
+      </visual> -->
+
+      <collision name="leg1_collision">
+        <pose>-0.26 -0.25 -0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <collision name="leg2_collision">
+        <pose>-0.26 0.25 0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <collision name="leg3_collision">
+        <pose>-0.26 0.25 -0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <collision name="leg4_collision">
+        <pose>-0.26 -0.25 0.16 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+      </collision>
+
+      <!-- box visual and collision for horizontal calibration -->
+      <!-- <visual name="box_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.6 0.6 0.6</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0 1 0 0.9</ambient>
+          <diffuse>0 1 0 0.9</diffuse>
+          <specular>0 1 0 0.9</specular>
+        </material>
+      </visual> -->
+      <!-- <collision name="box_collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.6 0.6 0.6</size>
+          </box>
+        </geometry>
+      </collision> -->
+
+      <!-- debug visuals for lift-drag -->
+      <!-- <visual name="cp_wing_visual">
+        <pose>-0.025 0 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.045</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0 0 1</ambient>
+          <diffuse>0 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <visual name="cp_left_winglet_visual">
+        <pose>-0.14 0.59 0.035 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <visual name="cp_right_winglet_visual">
+        <pose>-0.14 -0.59 0.035 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.01</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <visual name="cp_left_vstab_visual">
+        <pose>-0.07 0.25 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1 0 0</ambient>
+          <diffuse>1 0 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual>
+      <visual name="cp_right_vstab_visual">
+        <pose>-0.07 -0.25 0 0 0 0</pose>
+        <geometry>
+          <sphere>
+            <radius>0.02</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>0 1 0</ambient>
+          <diffuse>0 1 0</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+        </material>
+      </visual> -->
+
+    </link>
+
+    <!-- https://ardupilot.org/plane/docs/guide-tailsitter.html#nyt-quad-x-motor-tailsitter -->
+    <!-- CCW -->
+    <link name="motor1_link">
+      <pose relative_to="motor1_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.025</mass>
+        <inertia>
+          <ixx>0.000130417</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000130417</iyy>
+          <iyz>0</iyz>
+          <izz>0.000260417</izz>
+        </inertia>
+      </inertial>
+      <collision name="motor_collision">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <collision name="prop_collision">
+        <pose>0 0 0.022 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.005</length>
+            <radius>0.13</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <!-- debug visuals for motor identification -->
+      <!-- <visual name="motor_visual">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0 0 1 1</ambient>
+          <diffuse>0 0 1 1</diffuse>
+          <specular>0 0 1 1</specular>
+        </material>
+      </visual> -->
+      <visual name="motor_visual">
+        <pose degrees="true">0 0 -0.008 0 -90 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_motor.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1</ambient>
+          <diffuse>1 1 1</diffuse>
+          <specular>1 1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <visual name='prop_visual'>
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://swan_k1_hwing/meshes/iris_prop_ccw.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <specular>1.0 1.0 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+    <joint name='motor1_joint' type='revolute'>
+      <pose relative_to="base_link" degrees="true">-0.015 -0.25 -0.16 10 80 0</pose>
+      <child>motor1_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <!-- CCW -->
+    <link name="motor2_link">
+      <pose relative_to="motor2_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.025</mass>
+        <inertia>
+          <ixx>0.000130417</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000130417</iyy>
+          <iyz>0</iyz>
+          <izz>0.000260417</izz>
+        </inertia>
+      </inertial>
+      <collision name="motor_collision">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <collision name="prop_collision">
+        <pose>0 0 0.022 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.005</length>
+            <radius>0.13</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <!-- debug visuals for motor identification -->
+      <!-- <visual name="motor_visual">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>1 0 0 1</ambient>
+          <diffuse>1 0 0 1</diffuse>
+          <specular>1 0 0 1</specular>
+        </material>
+      </visual> -->
+      <visual name="motor_visual">
+        <pose degrees="true">0 0 -0.008 0 -90 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_motor.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1</ambient>
+          <diffuse>1 1 1</diffuse>
+          <specular>1 1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <visual name='prop_visual'>
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://swan_k1_hwing/meshes/iris_prop_ccw.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <specular>1.0 1.0 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+    <joint name='motor2_joint' type='revolute'>
+      <pose relative_to="base_link" degrees="true">-0.015 0.25 0.16 -10 100 0</pose>
+      <child>motor2_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <!-- CW -->
+    <link name="motor3_link">
+      <pose relative_to="motor3_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.025</mass>
+        <inertia>
+          <ixx>0.000130417</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000130417</iyy>
+          <iyz>0</iyz>
+          <izz>0.000260417</izz>
+        </inertia>
+      </inertial>
+      <collision name="motor_collision">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <collision name="prop_collision">
+        <pose>0 0 0.022 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.005</length>
+            <radius>0.13</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <!-- debug visuals for motor identification -->
+      <!-- <visual name="motor_visual">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>1 1 0 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+          <specular>1 1 0 1</specular>
+        </material>
+      </visual> -->
+      <visual name="motor_visual">
+        <pose degrees="true">0 0 -0.008 0 -90 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_motor.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1</ambient>
+          <diffuse>1 1 1</diffuse>
+          <specular>1 1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <visual name='prop_visual'>
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://swan_k1_hwing/meshes/iris_prop_cw.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <specular>1.0 1.0 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+    <joint name='motor3_joint' type='revolute'>
+      <pose relative_to="base_link" degrees="true">-0.015 0.25 -0.16 -10 80 0</pose>
+      <child>motor3_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <!-- CW -->
+    <link name="motor4_link">
+      <pose relative_to="motor4_joint">0 0 0 0 0 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.025</mass>
+        <inertia>
+          <ixx>0.000130417</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000130417</iyy>
+          <iyz>0</iyz>
+          <izz>0.000260417</izz>
+        </inertia>
+      </inertial>
+      <collision name="motor_collision">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <collision name="prop_collision">
+        <pose>0 0 0.022 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <length>0.005</length>
+            <radius>0.13</radius>
+          </cylinder>
+        </geometry>
+      </collision>
+      <!-- debug visuals for motor identification -->
+      <!-- <visual name="motor_visual">
+        <geometry>
+          <cylinder>
+            <length>0.0178</length>
+            <radius>0.0112</radius>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0 1 0 1</ambient>
+          <diffuse>0 1 0 1</diffuse>
+          <specular>0 1 0 1</specular>
+        </material>
+      </visual> -->
+      <visual name="motor_visual">
+        <pose degrees="true">0 0 -0.008 0 -90 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://swan_k1_hwing/meshes/swan_k1_hwing_motor.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>1 1 1</ambient>
+          <diffuse>1 1 1</diffuse>
+          <specular>1 1 1</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/blue_metal/blue_metal_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+      <visual name='prop_visual'>
+        <pose>0 0 0.015 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://swan_k1_hwing/meshes/iris_prop_cw.dae</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <diffuse>1.0 1.0 1.0</diffuse>
+          <specular>1.0 1.0 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_basecolor.jpg</albedo_map>
+              <metalness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_metallic.jpg</metalness_map>
+              <normal_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_normal.jpg</normal_map>
+              <roughness_map>model://swan_k1_hwing/materials/textures/metal_graphite/metal_graphite_roughness.jpg</roughness_map>
+              <roughness>1.0</roughness>
+              <metalness>1.0</metalness>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+    <joint name='motor4_joint' type='revolute'>
+      <pose relative_to="base_link" degrees="true">-0.015 -0.25 0.16 10 100 0</pose>
+      <child>motor4_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <damping>0.004</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <!-- sensors -->
+    <link name='imu_link'>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.15</mass>
+        <inertia>
+          <ixx>0.00002</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.00002</iyy>
+          <iyz>0</iyz>
+          <izz>0.00002</izz>
+        </inertia>
+      </inertial>
+      <sensor name="imu_sensor" type="imu">
+        <pose degrees="true">0 0 0 180 0 0</pose>
+        <always_on>1</always_on>
+        <update_rate>1000.0</update_rate>
+      </sensor>
+    </link>
+    <joint name='imu_joint' type='revolute'>
+      <child>imu_link</child>
+      <parent>base_link</parent>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+          <effort>0</effort>
+          <velocity>0</velocity>
+        </limit>
+        <dynamics>
+          <damping>1.0</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <!-- plugins -->
+    <plugin filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>motor1_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>motor2_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>motor3_joint</joint_name>
+    </plugin>
+    <plugin filename="gz-sim-apply-joint-force-system"
+      name="gz::sim::systems::ApplyJointForce">
+      <joint_name>motor4_joint</joint_name>
+    </plugin>
+
+    <!-- prop1 (ccw) lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor1_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor1_link</link_name>
+    </plugin>
+
+    <!-- prop2 (ccw) lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor2_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor2_link</link_name>
+    </plugin>
+
+    <!-- prop3 (cw) lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor3_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor3_link</link_name>
+    </plugin>
+
+    <!-- prop4 (cw) lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>0.084 0 0</cp>
+      <forward>0 -1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor4_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.3</a0>
+      <alpha_stall>1.4</alpha_stall>
+      <cla>4.2500</cla>
+      <cda>0.10</cda>
+      <cma>0.0</cma>
+      <cla_stall>-0.025</cla_stall>
+      <cda_stall>0.0</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <area>0.002</area>
+      <air_density>1.2041</air_density>
+      <cp>-0.084 0 0</cp>
+      <forward>0 1 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>motor4_link</link_name>
+    </plugin>
+
+    <!-- wing lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.13</a0>
+      <cla>3.7</cla>
+      <cda>0.06417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.025 0 0</cp>
+      <area>0.18</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <!-- left_winglet lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.14 0.59 0.035</cp>
+      <area>0.0068</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <!-- right_winglet lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.14 -0.59 0.035</cp>
+      <area>0.0068</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 -1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <!-- left_vstab lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.07 0.25 0</cp>
+      <area>0.01</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <!-- right_vstab lift-drag -->
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.07 -0.25 0</cp>
+      <area>0.01</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 -1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+
+    <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
+      <fdm_addr>127.0.0.1</fdm_addr>
+      <fdm_port_in>9002</fdm_port_in>
+      <connectionTimeoutMaxCount>5</connectionTimeoutMaxCount>
+      <lock_step>1</lock_step>
+      <modelXYZToAirplaneXForwardZDown degrees="true">0 0 0 180 0 0</modelXYZToAirplaneXForwardZDown>
+      <gazeboXYZToNED degrees="true">0 0 0 180 0 90</gazeboXYZToNED>
+      <imuName>imu_sensor</imuName>
+
+      <!--
+          SERVO1_FUNCTION   33 (Motor1 Front Right CCW)
+          SERVO1_MAX        2000
+          SERVO1_MIN        1000
+          SERVO1_REVERSED   0
+          SERVO1_TRIM       1500
+       -->
+      <control channel="0">
+        <jointName>motor1_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>1000</multiplier>
+        <offset>0</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>5.0</cmd_max>
+        <cmd_min>-5.0</cmd_min>
+      </control>
+
+      <!--
+          SERVO2_FUNCTION   34 (Motor2 Back Left CCW)
+          SERVO2_MAX        2000
+          SERVO2_MIN        1000
+          SERVO2_REVERSED   0
+          SERVO2_TRIM       1500
+       -->
+      <control channel="1">
+        <jointName>motor2_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>1000</multiplier>
+        <offset>0</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>5.0</cmd_max>
+        <cmd_min>-5.0</cmd_min>
+      </control>
+
+      <!--
+          SERVO3_FUNCTION   35 (Motor3 Front Left CW)
+          SERVO3_MAX        2000
+          SERVO3_MIN        1000
+          SERVO3_REVERSED   0
+          SERVO3_TRIM       1500
+       -->
+      <control channel="2">
+        <jointName>motor3_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>-1000</multiplier>
+        <offset>0</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>5.0</cmd_max>
+        <cmd_min>-5.0</cmd_min>
+      </control>
+
+      <!--
+          SERVO4_FUNCTION   36 (Motor4 Back Right CW)
+          SERVO4_MAX        2000
+          SERVO4_MIN        1000
+          SERVO4_REVERSED   0
+          SERVO4_TRIM       1500
+       -->
+      <control channel="3">
+        <jointName>motor4_joint</jointName>
+        <useForce>1</useForce>
+        <multiplier>-1000</multiplier>
+        <offset>0</offset>
+        <servo_min>1000</servo_min>
+        <servo_max>2000</servo_max>
+        <type>VELOCITY</type>
+        <p_gain>0.20</p_gain>
+        <i_gain>0</i_gain>
+        <d_gain>0</d_gain>
+        <i_max>0</i_max>
+        <i_min>0</i_min>
+        <cmd_max>5.0</cmd_max>
+        <cmd_min>-5.0</cmd_min>
+      </control>
+
+    </plugin>
+
+  </model>
+</sdf>
