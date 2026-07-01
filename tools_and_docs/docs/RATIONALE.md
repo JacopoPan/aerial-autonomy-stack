@@ -39,9 +39,10 @@ A summary of existing multi-drone flight stacks can be found in [Table II of thi
 
 - *Universidad Politécnica de Madrid (UPM)*'s [`aerostack2`](https://github.com/aerostack2/aerostack2) (multicopter-only)
 - *Czech Technical University in Prague (CTU)*'s [`mrs_uav_system`](https://github.com/ctu-mrs/mrs_uav_system) (multicopter-only)
-- *Norwegian University of Science and Technology (NTNU)*'s [`unified_autonomy_stack`](https://github.com/ntnu-arl/unified_autonomy_stack) (GNSS-denied, multi-frame)
+- *Norwegian University of Science and Technology (NTNU)*'s [`unified_autonomy_stack`](https://github.com/ntnu-arl/unified_autonomy_stack) (multi-frame, high-level control-only)
 - *Technische Universität (TU) Berlin*'s [`crazyswarm2`](https://github.com/IMRCLab/crazyswarm2) (indoor, crazyflie-only)
 - *Peking University*'s [`XTDrone`](https://github.com/robin-shaun/XTDrone) (PX4-only)
+- *Carnegie Mellon University (CMU)*'s [`AirStack`](https://github.com/castacks/AirStack) (marked "only for internal usage")
 
 A summary of aerial robotics simulators can be found in [Table IV of this paper](https://arxiv.org/pdf/2311.02296), these include:
 

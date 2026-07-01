@@ -1,8 +1,8 @@
 # aerial-autonomy-stack
 
-*Aerial autonomy stack* (AAS) is a **batteries included** software stack to:
+*Aerial autonomy stack* (AAS) is a "batteries included" open software and the simplest/fastest way to:
 
-1. **Develop** multi-drone autonomy—with ROS2, PX4, and ArduPilot
+1. **Develop** multi-drone autonomy—with PX4, ArduPilot, and ROS2
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
 3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
@@ -38,7 +38,10 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 
 ```sh
 sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-autonomy-stack/tools_and_docs/
+
+git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
+cd aerial-autonomy-stack/tools_and_docs/
+
 ./tests/check_requirements.sh                         # AAS requires nvidia-driver-580, docker, and nvidia-container-toolkit
 ./sim_build.sh                                        # The 1st build takes ~45' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
 ```
@@ -65,22 +68,31 @@ Start AAS:
 
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
-AUTOPILOT=px4 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town HEADLESS=false RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
+
+NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3.0 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
+
+# Simulation options:
+#  AUTOPILOT=px4, ardupilot
+#  HEADLESS/CAMERA/LIDAR=true, false
+#  NUM_QUADS/NUM_VTOLS=0, 1, ...
+#  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
+#  RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
+#  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 ```
 
-There are **3 main ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
+There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
 
 1. From the `Ground`'s Xterm terminal, fly all drones in a **synchronized formation** with [`dtc_controller_node`](/ground/ground_ws/src/drone_traffic_controller/drone_traffic_controller/dtc_controller_node.py):
 ```sh
 ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=true
 ```
 
-2. From any `QUAD`/`VTOL` Xterm terminal, fly a **behavior tree mission** (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)):
+2. From any `QUAD`/`VTOL` Xterm terminal, fly its own **behavior tree mission** (e.g., [`yalla.yaml`](/aircraft/aircraft_resources/missions/yalla.yaml)):
 ```sh
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
 ```
 
-3. From any `QUAD`/`VTOL` Xterm terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp):
+3. From any `QUAD`/`VTOL` Xterm terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp) controllers:
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 30.0}'"
@@ -90,17 +102,6 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: att-test, max_duration_sec: 10.0}'"
 # Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
-```
-
-`./sim_run.sh` options:
-
-```
-- AUTOPILOT=px4, ardupilot
-- HEADLESS/CAMERA/LIDAR=true, false
-- NUM_QUADS/NUM_VTOLS=0, 1, ...
-- WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
-- RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
-- INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 ```
 
 ![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
@@ -206,7 +207,10 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 
 ```sh
 sudo apt update && sudo apt install -y git
-git clone https://github.com/JacopoPan/aerial-autonomy-stack.git && cd aerial-autonomy-stack/tools_and_docs/
+
+git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
+cd aerial-autonomy-stack/tools_and_docs/
+
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
 ```
 
@@ -216,23 +220,21 @@ On a Jetson Orin, start the `aircraft-image`:
 
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
-AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh
-# The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
-```
 
-`./deploy_run.sh` options:
+DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
 
-```
-- DRONE_TYPE=quad, vtol, tail
-- AUTOPILOT=px4, ardupilot
-- DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-- HEADLESS/CAMERA/LIDAR=true, false
+# Deployment options:
+#  DRONE_TYPE=quad, vtol
+#  AUTOPILOT=px4, ardupilot
+#  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
+#  HEADLESS/CAMERA/LIDAR=true, false
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
 
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
+
 ./sim_build.sh                                        # Build all images for amd64, including ground-image
 GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
@@ -308,7 +310,8 @@ pip3 install -e .
 Examples:
 ```sh
 conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/tools_and_docs
+cd aerial-autonomy-stack/tools_and_docs/
+
 python3 gym_run.py --mode step                        # Manually step AAS @1Hz
 python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
 python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test @50Hz
