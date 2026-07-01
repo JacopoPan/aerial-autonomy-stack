@@ -74,7 +74,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3.0 ./sim_run.sh    # Start a simul
 # Simulation options:
 #  AUTOPILOT=px4, ardupilot
 #  HEADLESS/CAMERA/LIDAR=true, false
-#  NUM_QUADS/NUM_VTOLS=0, 1, ...
+#  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
 #  RTF=1.0, 2.0, ... (real-time-factor, use 0.0 for "as fast as possible)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
@@ -224,7 +224,7 @@ cd aerial-autonomy-stack/tools_and_docs/
 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
 
 # Deployment options:
-#  DRONE_TYPE=quad, vtol
+#  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
 #  HEADLESS/CAMERA/LIDAR=true, false
