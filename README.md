@@ -223,7 +223,7 @@ AUTOPILOT=px4 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true
 `./deploy_run.sh` options:
 
 ```
-- DRONE_TYPE=quad, vtol
+- DRONE_TYPE=quad, vtol, tail
 - AUTOPILOT=px4, ardupilot
 - DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
 - HEADLESS/CAMERA/LIDAR=true, false
