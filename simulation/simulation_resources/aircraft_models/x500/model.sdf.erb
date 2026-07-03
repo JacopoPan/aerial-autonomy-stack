@@ -665,8 +665,8 @@
     <%
       # Compute the gimbal pose based on the desired camera pose
       cam_pose = camera_ext.split(' ').map(&:to_f)
-      gimbal_x = cam_pose[0] - 0.05 # Pull the gimbal base back by 5cm, see gimbal dimensions in sensor_gimbal/model.sdf
-      gimbal_z = cam_pose[2] + 0.02 # Pull the gimbal base up by 2cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_x = cam_pose[0] - 0.04 # Pull the gimbal base back by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_z = cam_pose[2] + 0.04 # Pull the gimbal base up by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
       gimbal_ext = "#{gimbal_x} #{cam_pose[1]} #{gimbal_z} #{cam_pose[3]} #{cam_pose[4]} #{cam_pose[5]}"
     %>
     <include merge="true">
@@ -680,7 +680,7 @@
     <include>
       <uri>model://sensor_camera</uri>
       <name>simple_camera</name>
-      <pose degrees="true"><%= camera_ext %></pose>
+      <pose relative_to="pitch_link">0 0 0 0 0 0</pose>
     </include>
     <joint name="CameraJoint" type="fixed">
       <parent>pitch_link</parent>
