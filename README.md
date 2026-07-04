@@ -620,7 +620,6 @@ Ctrl + b, then d                      # Detach Tmux
     - https://github.com/PegasusSimulator/PegasusSimulator
 - Integrate more realistic flight dynamics (e.g., JSBSim)
     - https://github.com/JSBSim-Team/jsbsim
-- Integrate a VLA model bridging the `yolo_py` and `mission` packages
 - Re-instate Gazebo Sim support for Pixhawk HITL simulation using MAVLink HIL_ interface
     - https://mavlink.io/en/messages/common.html
     - https://github.com/tiiuae/px4-gzsim-plugins/
