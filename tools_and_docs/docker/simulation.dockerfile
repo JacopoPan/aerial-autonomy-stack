@@ -195,7 +195,7 @@ RUN mkdir build && cd build \
 
 # Create sensor and aircraft SDFs based on sensor_config.yaml parameters
 WORKDIR /aas/simulation_resources/aircraft_models/
-RUN ruby _create_sdfs_using_sensor_config.rb
+RUN ruby create_sdfs_using_sensor_config.rb
 
 # Source the workspaces
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \

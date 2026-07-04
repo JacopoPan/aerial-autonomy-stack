@@ -10,6 +10,7 @@
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
   num_tails = ENV.fetch('NUM_TAILS', 0).to_i
+  num_drones = num_quads + num_vtols + num_tails
   world = ENV.fetch('WORLD', 'impalpable_greyness')
 
   gnd_container = ENV.fetch('GND_CONTAINER', 'true') == 'true'
@@ -175,7 +176,7 @@ windows:
         - echo "Headless mode, not launching QGroundControl."
         <% else %>
         - >
-          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= (num_quads + num_vtols + num_tails) == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
+          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= num_drones == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           sed -i 's/^virtualJoystickAutoCenterThrottle=.*/virtualJoystickAutoCenterThrottle=<%= num_quads == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           gosu qgcuser /squashfs-root/AppRun &
           (

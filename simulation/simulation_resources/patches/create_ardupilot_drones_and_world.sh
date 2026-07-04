@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script dynamically generates the SDF files for multiple ArduPilot vehicles and a world SDF file containing them
+
 # Exit immediately if a command exits with a non-zero status
 set -e
 
