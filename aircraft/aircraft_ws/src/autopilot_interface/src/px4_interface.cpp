@@ -444,7 +444,7 @@ void PX4Interface::land_handle_accepted(const std::shared_ptr<rclcpp_action::Ser
             } else if (aircraft_fsm_state_ == PX4InterfaceState::FW_LANDING_APPROACH) {
                 double distance_from_home_in_meters;
                 geod.Inverse(lat_, lon_, home_lat_, home_lon_, distance_from_home_in_meters);
-                double landing_transition_distance = VTOL_LAND_TRANSITION_START_DISTANCE;
+                double landing_transition_distance = is_vtol_tailsitter_ ? TAIL_LAND_TRANSITION_START_DISTANCE : VTOL_LAND_TRANSITION_START_DISTANCE;
                 if (distance_from_home_in_meters < landing_transition_distance) {
                     do_vtol_transition(3.0); // 3 is MAV_VTOL_STATE_MC
                     aircraft_fsm_state_ = PX4InterfaceState::VTOL_LANDING_TRANSITION;

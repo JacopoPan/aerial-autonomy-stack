@@ -101,6 +101,7 @@ private:
     std::array<float, 3> angular_velocity_;
     double true_airspeed_m_s_;
     int vehicle_type_;
+    bool is_vtol_, is_vtol_tailsitter_;
     std::array<float, 3> kiss_position_;
     std::array<float, 4> kiss_q_;
     ground_system_msgs::msg::SwarmObs::SharedPtr ground_tracks_;

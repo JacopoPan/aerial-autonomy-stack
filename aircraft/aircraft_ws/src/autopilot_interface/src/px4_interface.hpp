@@ -80,6 +80,7 @@ private:
     static constexpr double VTOL_LAND_LOITER_EXIT_ALT_THRESH = 10.0; // Threshold (m) in Z to exit the pre-landing loiter descent
     static constexpr double VTOL_LAND_FAKE_REPOSITION_DISTANCE = 600.0; // Reposition point (m) behind home, must be greater than NAV_LOITER_RAD (e.g. 500m). NOTE: it will not be reached because the VTOL will transition and land at home
     static constexpr double VTOL_LAND_TRANSITION_START_DISTANCE = 120.0; // Distance (m) from home to start the transition, affected by the platforms's cruise speed, mass, wind
+    static constexpr double TAIL_LAND_TRANSITION_START_DISTANCE = 60.0; // Distance (m) from home to start the transition, affected by the platforms's cruise speed, mass, wind
     // Constants - Orbit
     static constexpr double MC_ORBIT_SPEED_MS = 5.0; // Tangential speed (m/s) of the orbit for quads
     // Constants - Takeoff

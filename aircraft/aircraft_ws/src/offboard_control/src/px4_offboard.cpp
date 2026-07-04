@@ -6,7 +6,7 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
     xy_valid_(false), z_valid_(false), v_xy_valid_(false), v_z_valid_(false), xy_global_(false), z_global_(false),
     x_(NAN), y_(NAN), z_(NAN), heading_(NAN), vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
-    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1),
+    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1), is_vtol_(false), is_vtol_tailsitter_(false),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     traj_ref_east_(NAN), traj_ref_north_(NAN), traj_ref_up_(NAN),
     target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
@@ -163,8 +163,8 @@ void PX4Offboard::status_callback(const VehicleStatus::SharedPtr msg)
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     // arming_state_ = msg->arming_state; // DISARMED = 1, ARMED = 2
     vehicle_type_ = msg->vehicle_type; // ROTARY_WING = 1, FIXED_WING = 2 (ROVER = 3)
-    // is_vtol_ = msg->is_vtol; // bool
-    // is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
+    is_vtol_ = msg->is_vtol; // bool
+    is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
     // in_transition_mode_ = msg->in_transition_mode; // bool
     // in_transition_to_fw_ = msg->in_transition_to_fw; // bool
     // pre_flight_checks_pass_ = msg->pre_flight_checks_pass; // bool
