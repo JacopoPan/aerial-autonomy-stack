@@ -913,95 +913,53 @@
       <link_name>motor4_link</link_name>
     </plugin>
 
-    <!-- wing lift-drag -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-      <a0>0.13</a0>
-      <cla>3.7</cla>
-      <cda>0.06417112299</cda>
-      <cma>0.0</cma>
+    <!--
+    Use AdvancedLiftDrag once instead of the 5 instances of LiftDrag (wing, left/right winglet and stabilizers) in:
+    https://github.com/ArduPilot/SITL_Models/blob/master/Gazebo/models/swan_k1_hwing/model.sdf
+    -->
+    <plugin filename="gz-sim-advanced-lift-drag-system" name="gz::sim::systems::AdvancedLiftDrag">
+      <a0>0.0</a0>
+      <CL0>0.15188</CL0>
+      <AR>8.5</AR>
+      <eff>0.97</eff>
+      <CLa>5.015</CLa>
+      <cda>1.5</cda>
+      <CD0>0.15</CD0>
+      <Cem0>0.075</Cem0>
+      <Cema>-0.463966</Cema>
+      <CYb>-0.258244</CYb>
+      <Cellb>-0.039250</Cellb>
+      <Cenb>0.100826</Cenb>
+      <CDp>0.0</CDp>
+      <CYp>0.065861</CYp>
+      <CLp>0.0</CLp>
+      <Cellp>-0.487407</Cellp>
+      <Cemp>0.0</Cemp>
+      <Cenp>-0.040416</Cenp>
+      <CDq>0.055166</CDq>
+      <CYq>0.0</CYq>
+      <CLq>7.971792</CLq>
+      <Cellq>0.0</Cellq>
+      <Cemq>-12.140140</Cemq>
+      <Cenq>0.0</Cenq>
+      <CDr>0.0</CDr>
+      <CYr>0.230299</CYr>
+      <CLr>0.0</CLr>
+      <Cellr>0.078165</Cellr>
+      <Cemr>0.0</Cemr>
+      <Cenr>-0.089947</Cenr>
       <alpha_stall>0.3391428111</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <cp>-0.025 0 0</cp>
-      <area>0.18</area>
+      <CLa_stall>-3.85</CLa_stall>
+      <CDa_stall>-0.9233984055</CDa_stall>
+      <Cema_stall>0</Cema_stall>
+      <ref_pt>-0.025 0 0</ref_pt>
+      <area>0.4</area>
+      <mac>0.22</mac>
       <air_density>1.2041</air_density>
       <forward>1 0 0</forward>
       <upward>0 0 1</upward>
       <link_name>base_link</link_name>
-    </plugin>
-    <!-- left_winglet lift-drag -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-      <a0>0.0</a0>
-      <cla>4.752798721</cla>
-      <cda>0.6417112299</cda>
-      <cma>0.0</cma>
-      <alpha_stall>0.3391428111</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <cp>-0.14 0.59 0.035</cp>
-      <area>0.0068</area>
-      <air_density>1.2041</air_density>
-      <forward>1 0 0</forward>
-      <upward>0 1 0</upward>
-      <link_name>base_link</link_name>
-    </plugin>
-    <!-- right_winglet lift-drag -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-      <a0>0.0</a0>
-      <cla>4.752798721</cla>
-      <cda>0.6417112299</cda>
-      <cma>0.0</cma>
-      <alpha_stall>0.3391428111</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <cp>-0.14 -0.59 0.035</cp>
-      <area>0.0068</area>
-      <air_density>1.2041</air_density>
-      <forward>1 0 0</forward>
-      <upward>0 -1 0</upward>
-      <link_name>base_link</link_name>
-    </plugin>
-    <!-- left_vstab lift-drag -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-      <a0>0.0</a0>
-      <cla>4.752798721</cla>
-      <cda>0.6417112299</cda>
-      <cma>0.0</cma>
-      <alpha_stall>0.3391428111</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <cp>-0.07 0.25 0</cp>
-      <area>0.01</area>
-      <air_density>1.2041</air_density>
-      <forward>1 0 0</forward>
-      <upward>0 1 0</upward>
-      <link_name>base_link</link_name>
-    </plugin>
-    <!-- right_vstab lift-drag -->
-    <plugin filename="gz-sim-lift-drag-system"
-        name="gz::sim::systems::LiftDrag">
-      <a0>0.0</a0>
-      <cla>4.752798721</cla>
-      <cda>0.6417112299</cda>
-      <cma>0.0</cma>
-      <alpha_stall>0.3391428111</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0.0</cma_stall>
-      <cp>-0.07 -0.25 0</cp>
-      <area>0.01</area>
-      <air_density>1.2041</air_density>
-      <forward>1 0 0</forward>
-      <upward>0 -1 0</upward>
-      <link_name>base_link</link_name>
+      <num_ctrl_surfaces>0</num_ctrl_surfaces>
     </plugin>
 
     <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
