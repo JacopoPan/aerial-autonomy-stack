@@ -6,9 +6,9 @@ import itertools
 import subprocess
 import shutil
 
-from gymnasium.utils.env_checker import check_env
-from stable_baselines3 import PPO
-from stable_baselines3.common.env_checker import check_env as sb3_check_env
+# from gymnasium.utils.env_checker import check_env
+# from stable_baselines3 import PPO
+# from stable_baselines3.common.env_checker import check_env as sb3_check_env
 
 from aas_gym.aas_env import AASEnv
 
@@ -76,10 +76,10 @@ def main():
         STEPS = TIME_TO_SIMULATE_SEC * CTRL_FREQ_HZ
         print(f"Starting speed test: {REPETITIONS} runs of {STEPS} steps each.")
         run_times = []
-        for i in range(REPETITIONS):
+        for _rep in range(REPETITIONS):
             obs, info = env.reset()
             start_time = time.time()
-            for _ in range(STEPS):
+            for _step in range(STEPS):
                 action = env.action_space.sample()
                 obs, reward, terminated, truncated, info = env.step(action)
                 if terminated or truncated:
@@ -123,12 +123,12 @@ def main():
             return _init
         env_fns = [make_env(i, CTRL_FREQ_HZ) for i in range(NUM_ENVS)]
         envs = gym.vector.AsyncVectorEnv(env_fns)
-        print(f"Running the test with render_mode=None")
+        print("Running the test with render_mode=None")
         run_times = []
-        for i in range(REPETITIONS):
+        for _rep in range(REPETITIONS):
             obs, info = envs.reset()
             start_time = time.time()
-            for _ in range(STEPS_PER_ENV):
+            for _step in range(STEPS_PER_ENV):
                 actions = envs.action_space.sample() # Returns array of shape (NUM_ENVS, action_dim)
                 obs, rewards, terminateds, truncateds, infos = envs.step(actions) # AsyncVectorEnv automatically resets individual envs when they terminate/truncate
             duration = time.time() - start_time
@@ -147,7 +147,7 @@ def main():
         envs.close()
 
     elif args.mode == "learn":
-        print(f"TODO")
+        print("TODO")
         # env = gym.make("AASEnv-v0")
         # try:
         #     # check_env(env) # Throws warning

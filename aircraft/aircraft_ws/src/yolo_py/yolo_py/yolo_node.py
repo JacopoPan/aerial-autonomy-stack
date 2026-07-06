@@ -58,7 +58,7 @@ class YoloInferenceNode(Node):
         
         # Create publishers
         if self.run_inference:
-            self.detection_publisher = self.create_publisher(Detection2DArray, f'detections', 10)
+            self.detection_publisher = self.create_publisher(Detection2DArray, 'detections', 10)
         if self.ros2_frame_publisher:
             self.image_publisher = self.create_publisher(Image, f'camera_frames_{self.camera_id}', 10)
         self.bridge = CvBridge()

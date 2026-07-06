@@ -9,7 +9,7 @@ import subprocess
 import shutil
 import concurrent.futures
 
-from docker.types import NetworkingConfig, EndpointConfig, DeviceRequest
+from docker.types import DeviceRequest
 
 
 class AASEnv(gym.Env):
@@ -339,11 +339,11 @@ class AASEnv(gym.Env):
                 except zmq.error.Again:
                     print(f"ZMQ Error: Reply from container timed out. Attempt {attempt + 1} of 3.")
                     if attempt == 2:
-                        raise RuntimeError("Simulation reset failed: ZMQ timeout.")
+                        raise RuntimeError("Simulation reset failed: ZMQ timeout.") from None
                 except ValueError:
                     print(f"ZMQ Error: Reply format error. Received garbage state. Attempt {attempt + 1} of 3.")
                     if attempt == 2:
-                        raise RuntimeError("Simulation reset failed: Invalid data format.")
+                        raise RuntimeError("Simulation reset failed: Invalid data format.") from None
         finally:
             self.socket.setsockopt(zmq.RCVTIMEO, 60 * 1000) # Restore standard timeout (60s) for stepping
         ###########################################################################################
@@ -374,11 +374,11 @@ class AASEnv(gym.Env):
             except zmq.error.Again:
                 print(f"ZMQ Error: Reply from container timed out. Attempt {attempt + 1} of 3.")
                 if attempt == 2:
-                    raise RuntimeError("Simulation step failed: ZMQ timeout.")
+                    raise RuntimeError("Simulation step failed: ZMQ timeout.") from None
             except ValueError:
                 print(f"ZMQ Error: Reply format error. Received garbage state. Attempt {attempt + 1} of 3.")
                 if attempt == 2:
-                    raise RuntimeError("Simulation step failed: Invalid data format.")
+                    raise RuntimeError("Simulation step failed: Invalid data format.") from None
         ###########################################################################################
         ###########################################################################################
         ###########################################################################################

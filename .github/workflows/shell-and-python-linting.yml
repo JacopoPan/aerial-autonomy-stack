@@ -1,4 +1,4 @@
-name: shell-and-python-linting
+name: shell and python linting
 
 on:
   schedule:

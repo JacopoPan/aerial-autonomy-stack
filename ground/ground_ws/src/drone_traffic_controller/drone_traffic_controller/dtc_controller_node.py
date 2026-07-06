@@ -62,7 +62,7 @@ class DTCController(Node):
             if all(d['curr'] is not None for d in self.drones.values()):
                 self.get_logger().info("All drones online. Locking homes and commanding takeoffs.")
                 # Lock in the home position for all drones just before takeoff
-                for did, d in self.drones.items():
+                for _did, d in self.drones.items():
                     d['home'] = (d['curr'][0], d['curr'][1], d['alt'])
                 for did in self.quad_ids:
                     self.send_cmd(did, 'takeoff', alt=self.quad_to_alt)

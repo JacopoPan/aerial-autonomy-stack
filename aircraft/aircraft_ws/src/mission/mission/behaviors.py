@@ -1,7 +1,6 @@
 import os
 import py_trees
 
-import rclpy
 from action_msgs.msg import GoalStatus
 from geographiclib.geodesic import Geodesic
 from simpleeval import simple_eval

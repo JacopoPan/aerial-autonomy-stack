@@ -8,15 +8,12 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 import os
 import argparse
 import threading
-import random
-import time
 import yaml
 import py_trees
 import py_trees_ros
 
 from mission import tree_builder
 
-from action_msgs.msg import GoalStatus
 from sensor_msgs.msg import NavSatFix
 from mavros_msgs.msg import VfrHud
 from vision_msgs.msg import Detection2DArray
@@ -197,7 +194,7 @@ class MissionNode(Node):
         now = self.get_clock().now()
         stale_ids = []
         with self.data_lock:
-            for drone_id, (last_msg, last_seen_time) in self.drone_states.items():
+            for drone_id, (_last_msg, last_seen_time) in self.drone_states.items():
                 duration = now - last_seen_time
                 if duration.nanoseconds / 1e9 > self.STALE_DRONE_TIMEOUT_SEC:
                     stale_ids.append(drone_id)
