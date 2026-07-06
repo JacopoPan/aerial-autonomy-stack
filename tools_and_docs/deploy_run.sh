@@ -48,7 +48,7 @@ if [[ "$GROUND" == "true" ]]; then
     --env SIMULATED_TIME=$HITL \
     --env ROS_DOMAIN_ID=$GROUND_ID \
     --env AIR_SUBNET=$AIR_SUBNET \
-    --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
+    --env HOST_INPUT_GID="$(getent group input | cut -d: -f3)" \
     --env REMOTE_VIDEO_STREAMS=true \
     --env SSH_CONNECTIONS=true \
     --net=host \

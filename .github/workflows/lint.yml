@@ -1,4 +1,4 @@
-name: lint
+name: shell-and-python-linting
 
 on:
   schedule:
@@ -16,12 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - name: Run shellcheck (warnings + errors)
+      - name: Run shellcheck (warnings and errors)
         run: |
           find tools_and_docs simulation aircraft ground -name '*.sh' -print0 \
             | xargs -0 -r shellcheck -x -S warning
 
-  python:
+  ruff:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,5 +29,5 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install ruff
-      - name: Run ruff (syntax + undefined names)
-        run: ruff check --select E9,F63,F7,F82 .
+      - name: Run ruff (syntax and undefined names)
+        run: ruff check --select E9,F,B .
