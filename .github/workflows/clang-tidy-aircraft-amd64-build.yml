@@ -83,5 +83,5 @@ jobs:
             colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || { echo "db build failed"; exit 1; }
             for pkg in autopilot_interface offboard_control state_sharing imu_publisher; do
               echo "=== clang-tidy: $pkg ==="
-              run-clang-tidy -quiet -p "build/$pkg" || true
+              run-clang-tidy -quiet -p "build/$pkg" -extra-arg=-std=c++17 || true
             done' || true

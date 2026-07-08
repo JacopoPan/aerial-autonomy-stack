@@ -85,4 +85,4 @@ jobs:
             cd /aas/ground_ws
             colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || { echo "db build failed"; exit 1; }
             echo "=== clang-tidy: ground_system ==="
-            run-clang-tidy -quiet -p "build/ground_system" || true' || true
+            run-clang-tidy -quiet -p "build/ground_system" -extra-arg=-std=c++17 || true' || true
