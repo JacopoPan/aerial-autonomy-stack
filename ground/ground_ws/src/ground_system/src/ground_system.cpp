@@ -17,9 +17,9 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     this->declare_parameter("simulated_link_rate", 10.0); // Hz: max per-drone position rate over a real radio (see SRx_POSITION)
 
     // Get Parameters
-    num_drones_ = this->get_parameter("num_drones").as_int();
+    num_drones_ = static_cast<int>(this->get_parameter("num_drones").as_int());
     ip_ = this->get_parameter("ip").as_string();
-    base_port_ = this->get_parameter("base_port").as_int();
+    base_port_ = static_cast<int>(this->get_parameter("base_port").as_int());
     publish_rate_ = this->get_parameter("rate").as_double();
     track_timeout_s_ = this->get_parameter("track_timeout").as_double();
     auto assignment_strings = this->get_parameter("assignments").as_string_array();
@@ -239,10 +239,10 @@ void GroundSystem::publish_swarm_obs()
         // Add noise
         drone_msg.latitude_deg = add_noise(track.lat, POS_STD_DEV_DEG);
         drone_msg.longitude_deg = add_noise(track.lon, POS_STD_DEV_DEG);
-        drone_msg.altitude_m = add_noise(track.alt, ALT_STD_DEV_M);
-        drone_msg.velocity_n_m_s = add_noise(track.vx, VEL_STD_DEV_MS);
-        drone_msg.velocity_e_m_s = add_noise(track.vy, VEL_STD_DEV_MS);
-        drone_msg.velocity_d_m_s = add_noise(track.vz, VEL_STD_DEV_MS);
+        drone_msg.altitude_m = static_cast<float>(add_noise(track.alt, ALT_STD_DEV_M));
+        drone_msg.velocity_n_m_s = static_cast<float>(add_noise(track.vx, VEL_STD_DEV_MS));
+        drone_msg.velocity_e_m_s = static_cast<float>(add_noise(track.vy, VEL_STD_DEV_MS));
+        drone_msg.velocity_d_m_s = static_cast<float>(add_noise(track.vz, VEL_STD_DEV_MS));
 
         swarm_msg.tracks.push_back(drone_msg);
     }
