@@ -85,7 +85,7 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
     std::uniform_real_distribution<double> simulated_link_unif(0.0, 1.0);
 
     // Setup UDP Socket
-    int sockfd;
+    int sockfd = -1;
     struct sockaddr_in servaddr;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -174,7 +174,9 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 continue; // Just a timeout, continue loop to check keep_running_
             } else {
-                RCLCPP_WARN(this->get_logger(), "Recv failed for drone %d: %s", drone_id, strerror(errno));
+                char errbuf[256];
+                const char *msg = strerror_r(errno, errbuf, sizeof(errbuf));
+                RCLCPP_WARN(this->get_logger(), "Recv failed for drone %d: %s", drone_id, msg);
             }
         }
     }
