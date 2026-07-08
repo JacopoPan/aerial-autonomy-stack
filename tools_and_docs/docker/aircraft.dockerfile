@@ -395,6 +395,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-dev
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
+COPY tools_and_docs/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
 WORKDIR /aas/aircraft_ws
 RUN rosdep update
 RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*

@@ -1,0 +1,9 @@
+Checks: >
+  -*,
+  bugprone-*,
+  concurrency-*,
+  clang-analyzer-*,
+  cppcoreguidelines-init-variables,
+  -bugprone-easily-swappable-parameters
+HeaderFilterRegex: '.*/(autopilot_interface|offboard_control|state_sharing|imu_publisher|ground_system)/.*'
+WarningsAsErrors: ''

@@ -75,6 +75,7 @@ FROM ros2-qgc-gst-mavlink-image AS ground-dev-image
 
 # Build the ROS 2 workspace
 COPY ground/ground_ws/src /aas/ground_ws/src
+COPY tools_and_docs/tests/.clang-tidy /aas/ground_ws/src/.clang-tidy
 WORKDIR /aas/ground_ws
 RUN rosdep update
 RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y && apt clean && rm -rf /var/lib/apt/lists/*

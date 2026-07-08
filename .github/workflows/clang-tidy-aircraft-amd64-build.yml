@@ -1,1 +1,88 @@
-todo
+name: clang-tidy aircraft-image amd64
+
+on:
+  schedule:
+    - cron: '0 4 * * 6'
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ "main" ]
+    types: [ready_for_review]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet &
+          sudo rm -rf /usr/local/lib/android &
+          sudo rm -rf /opt/ghc &
+          sudo rm -rf /opt/hostedtoolcache/CodeQL &
+          sudo rm -rf /usr/local/share/boost &
+          sudo rm -rf /usr/share/swift &
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" &
+          wait
+          sudo docker image prune --all --force
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Add swap space
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /swapfile
+          sudo fallocate -l 10G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+      - name: Check swap
+        run: |
+          free -h
+          sudo swapon --show
+
+      - name: Check disk space
+        run: df -h
+
+      - name: Move Docker to /mnt
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker
+          echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep "Docker Root Dir"
+
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Clone external repos
+        run: CLONE_ONLY=true ./tools_and_docs/sim_build.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the aircraft image locally for linting
+        run: |
+          docker buildx build --load \
+            --build-arg BUILD_ADVANCED_ODOM=false \
+            -t aircraft-image:lint \
+            -f ./tools_and_docs/docker/aircraft.dockerfile .
+
+      - name: Check disk space after build
+        run: df -h
+
+      - name: Run clang-tidy
+        run: |
+          docker run --rm aircraft-image:lint bash -lc '
+            set -e
+            apt-get update && apt-get install -y clang-tidy >/dev/null
+            . /opt/ros/humble/setup.sh
+            cd /aas/aircraft_ws
+            colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null 2>&1
+            for pkg in autopilot_interface offboard_control state_sharing imu_publisher; do
+              echo "=== clang-tidy: $pkg ==="
+              run-clang-tidy -quiet -p "build/$pkg" || true
+            done'
