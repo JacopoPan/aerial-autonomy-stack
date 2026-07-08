@@ -76,7 +76,7 @@ jobs:
 
       - name: Run clang-tidy
         run: |
-          docker run --rm -t aircraft-image:lint bash -lc '
+          docker run --rm --entrypoint bash aircraft-image:lint -lc '
             apt-get update && apt-get install -y clang-tidy || { echo "clang-tidy install failed"; exit 1; }
             . /opt/ros/humble/setup.sh
             cd /aas/aircraft_ws
