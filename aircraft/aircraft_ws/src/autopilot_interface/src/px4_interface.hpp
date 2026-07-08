@@ -122,6 +122,7 @@ private:
     double x_, y_, z_, heading_, vx_, vy_, vz_;
     double ref_lat_, ref_lon_, ref_alt_;
     int pose_frame_, velocity_frame_;
+    // float to match PX4 float32 VehicleOdometry
     std::array<float, 3> position_;
     std::array<float, 4> q_;
     std::array<float, 3> velocity_;

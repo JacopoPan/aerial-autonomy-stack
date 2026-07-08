@@ -98,13 +98,14 @@ private:
     double lat_, lon_, alt_, alt_ellipsoid_;
     double x_, y_, z_, vx_, vy_, vz_, ve_, vn_, vu_;
     double ref_lat_, ref_lon_, ref_alt_;
-    std::array<float, 3> position_;
-    std::array<float, 4> q_;
-    std::array<float, 3> velocity_;
-    std::array<float, 3> angular_velocity_;
+    // double to match MAVROS geometry_msgs Odometry
+    std::array<double, 3> position_;
+    std::array<double, 4> q_;
+    std::array<double, 3> velocity_;
+    std::array<double, 3> angular_velocity_;
     double true_airspeed_m_s_, heading_;
-    std::array<float, 3> kiss_position_;
-    std::array<float, 4> kiss_q_;
+    std::array<double, 3> kiss_position_;
+    std::array<double, 4> kiss_q_;
     ground_system_msgs::msg::SwarmObs::SharedPtr ground_tracks_;
     vision_msgs::msg::Detection2DArray::SharedPtr yolo_detections_;
 

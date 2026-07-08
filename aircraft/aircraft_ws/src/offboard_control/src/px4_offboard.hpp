@@ -96,6 +96,7 @@ private:
     double x_, y_, z_, heading_, vx_, vy_, vz_;
     double ref_lat_, ref_lon_, ref_alt_;
     int pose_frame_, velocity_frame_;
+    // float to match PX4 float32 VehicleOdometry
     std::array<float, 3> position_;
     std::array<float, 4> q_;
     std::array<float, 3> velocity_;
@@ -103,8 +104,8 @@ private:
     double true_airspeed_m_s_;
     int vehicle_type_;
     bool is_vtol_, is_vtol_tailsitter_;
-    std::array<float, 3> kiss_position_;
-    std::array<float, 4> kiss_q_;
+    std::array<double, 3> kiss_position_;
+    std::array<double, 4> kiss_q_;
     ground_system_msgs::msg::SwarmObs::SharedPtr ground_tracks_;
     vision_msgs::msg::Detection2DArray::SharedPtr yolo_detections_;
 

@@ -23,6 +23,7 @@ class DTCClient : public rclcpp::Node
 public:
     DTCClient() : Node("dtc_client"), action_accepted_(true), request_being_sent_(false), target_action_("")
     {
+        // NOLINTNEXTLINE(concurrency-mt-unsafe) - "DRONE_ID" read from getenv once at construction, before threads start
         const char* env_drone_id = std::getenv("DRONE_ID");
         drone_id_ = env_drone_id ? std::string(env_drone_id) : "1";
         RCLCPP_INFO(this->get_logger(), "Starting DTC Client for Drone %s", drone_id_.c_str());

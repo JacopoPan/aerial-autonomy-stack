@@ -361,17 +361,17 @@ void PX4Offboard::att_ref_test(OffboardControlMode& mode)
         double cp = cos(pitch_rad / 2.0);
         double sp = sin(pitch_rad / 2.0);
         // Quaternion reference: Q_yaw * Q_pitch (the reference is in PX4 NED world frame)
-        attitude_ref.q_d[0] = cy * cp;          // w
-        attitude_ref.q_d[1] = -sy * sp;         // x
-        attitude_ref.q_d[2] = cy * sp;          // y
-        attitude_ref.q_d[3] = sy * cp;          // z
+        attitude_ref.q_d[0] = static_cast<float>(cy * cp);          // w
+        attitude_ref.q_d[1] = static_cast<float>(-sy * sp);         // x
+        attitude_ref.q_d[2] = static_cast<float>(cy * sp);          // y
+        attitude_ref.q_d[3] = static_cast<float>(sy * cp);          // z
         attitude_ref.thrust_body = {0.0, 0.0, -0.72};
     } else if (vehicle_type_ == 2) { // FIXED_WING
         double pitch_rad = -30.0 * M_PI / 180.0; // Negative pitch to dive
-        attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
-        attitude_ref.q_d[1] = 0;                    // x
-        attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
-        attitude_ref.q_d[3] = 0;                    // z
+        attitude_ref.q_d[0] = static_cast<float>(cos(pitch_rad / 2.0)); // w
+        attitude_ref.q_d[1] = 0;                                        // x
+        attitude_ref.q_d[2] = static_cast<float>(sin(pitch_rad / 2.0)); // y
+        attitude_ref.q_d[3] = 0;                                        // z
         attitude_ref.thrust_body = {0.15, 0.0, 0.0};
     } else {
         RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
@@ -439,18 +439,18 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         double current_north = traj_ref_north_ + (target_vn_ * dt);
         double current_east  = traj_ref_east_  + (target_ve_ * dt);
         double current_down  = -traj_ref_up_   + (target_vd_ * dt);
-        trajectory_ref.position = {current_north, current_east, current_down};
+        trajectory_ref.position = {static_cast<float>(current_north), static_cast<float>(current_east), static_cast<float>(current_down)};
         double d_north = current_north - x_;
         double d_east  = current_east - y_;
-        trajectory_ref.yaw = std::atan2(d_east, d_north); // [-PI:PI]
+        trajectory_ref.yaw = static_cast<float>(std::atan2(d_east, d_north)); // [-PI:PI]
         if (!std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
             mode.velocity = true; // Enable velocity feedforward
-            trajectory_ref.velocity = {target_vn_, target_ve_, target_vd_};
+            trajectory_ref.velocity = {static_cast<float>(target_vn_), static_cast<float>(target_ve_), static_cast<float>(target_vd_)};
             double dist_sq = (d_north * d_north) + (d_east * d_east);
             if (dist_sq > 1.0) {
                 double vrel_n = target_vn_ - vx_;
                 double vrel_e = target_ve_ - vy_;
-                trajectory_ref.yawspeed = (d_north * vrel_e - d_east * vrel_n) / dist_sq;
+                trajectory_ref.yawspeed = static_cast<float>((d_north * vrel_e - d_east * vrel_n) / dist_sq);
             } else {
                 trajectory_ref.yawspeed = 0.0;
             }
