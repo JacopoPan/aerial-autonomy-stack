@@ -81,7 +81,10 @@ jobs:
             . /opt/ros/humble/setup.sh
             cd /aas/aircraft_ws
             colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || { echo "db build failed"; exit 1; }
-            for pkg in autopilot_interface offboard_control state_sharing imu_publisher; do
+            returncode=0
+            for db in build/*/compile_commands.json; do
+              pkg=$(basename "$(dirname "$db")")
               echo "=== clang-tidy: $pkg ==="
-              run-clang-tidy -quiet -p "build/$pkg" -extra-arg=-std=c++17 || true
-            done' || true
+              run-clang-tidy -quiet -p "build/$pkg" -extra-arg=-std=c++17 ".*/src/.*" || returncode=1
+            done
+            exit $returncode'

@@ -7,5 +7,5 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -bugprone-exception-escape,
   -bugprone-reserved-identifier
-HeaderFilterRegex: '.*/src/(autopilot_interface|offboard_control|state_sharing|imu_publisher|ground_system)/.*'
-WarningsAsErrors: ''
+HeaderFilterRegex: '.*/src/.*'
+WarningsAsErrors: '*'
