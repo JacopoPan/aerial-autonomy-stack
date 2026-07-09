@@ -237,6 +237,7 @@ private:
 
     // Utility
     std::string fsm_state_to_string(ArdupilotInterfaceState state);
+    static uint64_t sec_to_us(double sec) { return static_cast<uint64_t>(sec * 1000000); }
 
     // Template for service calls and FSM updates
     template<typename ServiceT, typename ActionT>
