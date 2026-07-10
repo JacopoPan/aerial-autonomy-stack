@@ -69,7 +69,7 @@ Start AAS:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
+NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 POSTMORTEM=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
 # Simulation options:
 #  AUTOPILOT=px4, ardupilot
@@ -78,6 +78,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 ./sim_run.sh    # Start a simulat
 #  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
+#  POSTMORTEM=true, false (for log analysis, use in the same environment where 'aas-gym' was 'pip3 install'ed )
 ```
 
 There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)

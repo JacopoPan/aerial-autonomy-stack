@@ -6,6 +6,9 @@
 # GitHub clones of 3rd party repositories
 /_github_clones/
 
+# Logs
+/tools_and_docs/logs/
+
 # Meshes unpacked from simulation_resources.zip
 simulation/simulation_resources/aircraft_models/alti_transition_quad/materials/textures/AltiTransitionMap.png
 simulation/simulation_resources/aircraft_models/alti_transition_quad/meshes/alti_transition_aileron_left.dae
