@@ -284,7 +284,7 @@ cleanup() {
   fi
   echo "All-clear"
   if [[ "$PLOT" == "true" ]]; then
-    python3 "${SCRIPT_DIR}/plot_logs.py" "$PLOT_DIR" || echo "Plotting failed: missing logs or dependencies (matplotlib, ymavlink, pyulog, pymap3d), use 'conda activate aas'"
+    python3 "${SCRIPT_DIR}/plot_logs.py" "$PLOT_DIR" || echo "Plotting failed: missing logs or dependencies (matplotlib, pymavlink, pyulog, pymap3d), use 'conda activate aas'"
   fi
 }
 # Set trap to cleanup on script interruption (Ctrl+C, etc.)
