@@ -69,7 +69,7 @@ Start AAS:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 POSTMORTEM=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
+NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
 # Simulation options:
 #  AUTOPILOT=px4, ardupilot
@@ -78,7 +78,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 POSTMORTEM=true ./sim_run.sh    #
 #  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
-#  POSTMORTEM=true, false (for log analysis, use in the same environment where 'aas-gym' was 'pip3 install'ed )
+#  PLOT=true, false (requires pymavlink, pyulog, pymap3d)
 ```
 
 There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
@@ -147,7 +147,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > ```
 > To analyze the flight logs, in the `Simulation`'s terminal:
 > ```sh
-> /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
+> /aas/simulation_resources/scripts/analyze_logs.sh                                           # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
 > ```
 > </details>
 > <details>

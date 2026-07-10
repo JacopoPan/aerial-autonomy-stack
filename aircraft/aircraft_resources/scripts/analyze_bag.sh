@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Analyze an aircraft's rosbag using PlotJuggler
 # To use this scrip, enable RECORD_ROSBAG in 'aircraft.yml.erb'
 
 TMUX_PANE="logging.0" # The tmux <window_name>.<pane_index> where the recording is happening

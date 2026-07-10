@@ -26,8 +26,8 @@ GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
 RTF="${RTF:-1.0}" # Real-time factor (default = 1.0), set to <=0.0 for as fast as possible execution
 START_AS_PAUSED="${START_AS_PAUSED:-false}" # Options: true, false (default)
 INSTANCE="${INSTANCE:-0}" # Integer ID to make docker network/container names unique as well as offsetting the second byte of the subnets (default = 0)
-# Note: the postmortem analysis/plotting variable is used by this script and NOT passed to any container
-POSTMORTEM="${POSTMORTEM:-false}" # Options: true, false (default)
+# Note: the analysis/plotting env variable is used by this script on cleanup and NOT passed to any container
+PLOT="${PLOT:-false}" # Options: true, false (default)
 # Set unique subnets and container/network names based on INSTANCE
 SIM_BYTE_1=$(echo "$SIM_SUBNET" | cut -d'.' -f1)
 SIM_BYTE_2=$(echo "$SIM_SUBNET" | cut -d'.' -f2)
@@ -233,11 +233,11 @@ read -n 1 -s # Wait for user input
 # Cleanup function
 cleanup() {
   # Copy autopilot SITL logs to the host
-  if [[ "$POSTMORTEM" == "true" ]]; then
-    POSTMORTEM_DIR="${SCRIPT_DIR}/logs/postmortem_$(date +%Y-%m-%d_%H-%M-%S)"
+  if [[ "$PLOT" == "true" ]]; then
+    PLOT_DIR="${SCRIPT_DIR}/logs/postmortem_$(date +%Y-%m-%d_%H-%M-%S)"
     NUM_DRONES=$((NUM_QUADS + NUM_VTOLS + NUM_TAILS))
-    echo "Copying the latest log of $NUM_DRONES drone(s) to $POSTMORTEM_DIR..."
-    mkdir -p "$POSTMORTEM_DIR" 2>/dev/null || echo "Could not create $POSTMORTEM_DIR"
+    echo "Copying the latest log of $NUM_DRONES drone(s) to $PLOT_DIR..."
+    mkdir -p "$PLOT_DIR" 2>/dev/null || echo "Could not create $PLOT_DIR"
     for i in $(seq 1 $NUM_DRONES); do
       if [ "$AUTOPILOT" == "ardupilot" ]; then
         LOG_GLOB="/aas/ardu_sitl_${i}/logs/*.BIN" # sim_vehicle.py runs in /aas/ardu_sitl_${i}, see simulation.yml.erb
@@ -246,7 +246,7 @@ cleanup() {
       fi
       LATEST_LOG=$(docker exec "$SIM_CONT_NAME" bash -c "ls -t $LOG_GLOB 2>/dev/null | head -n 1" || true)
       if [ -n "$LATEST_LOG" ]; then
-        docker cp "${SIM_CONT_NAME}:${LATEST_LOG}" "${POSTMORTEM_DIR}/drone_${i}.${LATEST_LOG##*.}" >/dev/null 2>&1 \
+        docker cp "${SIM_CONT_NAME}:${LATEST_LOG}" "${PLOT_DIR}/drone_${i}.${LATEST_LOG##*.}" >/dev/null 2>&1 \
           && echo "Copied drone $i log: $(basename "$LATEST_LOG")" || echo "Could not copy the log of drone $i"
       else
         echo "No log found for drone $i"
@@ -283,8 +283,8 @@ cleanup() {
     sleep 1 && xhost -local:docker >/dev/null
   fi
   echo "All-clear"
-  if [[ "$POSTMORTEM" == "true" ]]; then
-    python3 "${SCRIPT_DIR}/plot_logs_postmortem.py" "$POSTMORTEM_DIR" || echo "Plotting failed: missing logs or dependencies, use 'conda activate aas'"
+  if [[ "$PLOT" == "true" ]]; then
+    python3 "${SCRIPT_DIR}/plot_logs.py" "$PLOT_DIR" || echo "Plotting failed: missing logs or dependencies (matplotlib, ymavlink, pyulog, pymap3d), use 'conda activate aas'"
   fi
 }
 # Set trap to cleanup on script interruption (Ctrl+C, etc.)
