@@ -94,8 +94,13 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
     && apt clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
+    && rm -rf /var/lib/apt/lists/*
+# Re-try install_geographiclib_datasets.sh if egm96-5.pgm was not downloaded
+RUN for i in 1 2 3; do \
+        /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh; \
+        test -r /usr/share/GeographicLib/geoids/egm96-5.pgm && break; \
+        sleep 5; \
+    done && test -r /usr/share/GeographicLib/geoids/egm96-5.pgm
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################

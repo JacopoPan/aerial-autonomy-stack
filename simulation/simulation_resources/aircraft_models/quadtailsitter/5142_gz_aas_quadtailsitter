@@ -146,8 +146,8 @@ param set-default EKF2_FUSE_BETA 0
 # AAS Custom
 
 # Simulated sensors
-param set-default SENS_EN_GPSSIM 1
-param set-default SENS_EN_BAROSIM 0
+param set-default SENS_EN_GPSSIM 0 # GPS from the gz-sim
+param set-default SENS_EN_BAROSIM 0 # Barometer from the gz-sim
 param set-default SENS_EN_MAGSIM 1
 
 param set-default COM_RCL_EXCEPT 7 # Disable RC loss action
