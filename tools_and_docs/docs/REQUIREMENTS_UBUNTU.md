@@ -15,7 +15,7 @@
   - Update and restart for "Device Firmware", if necessary
 - On Ubuntu 22/24, in "Software & Updates", select "Using NVIDIA driver metapackage from `nvidia-driver-580` (proprietary)"
 - On Ubuntu 26, use `sudo ubuntu-drivers install nvidia-driver-580`
-- (optional) Go to "Settings" -> "Power", select  the "Performance" "Power Mode" and disable all "Power Saving Options"
+- (optional) Go to "Settings" -> "Power", select the "Performance" "Power Mode" and disable all "Power Saving Options"
 
 ```sh
 sudo apt update && sudo apt upgrade
