@@ -15,7 +15,7 @@ To upgrade to JetPack 6, download NVIDIA SDK Manager on an Ubuntu 22 (see [compa
 ```sh
 cd ~/Downloads
 sudo apt install ./sdkmanager_[version]-[build#]_amd64.deb # Currently version 2.4.0, build 13235
-sdkmanager                          # Log in with your https://developer.nvidia.com account 
+sdkmanager                          # Log in with your https://developer.nvidia.com account
 ```
 
 - Put the Holybro Jetson baseboard in recovery mode with the dedicated switch
