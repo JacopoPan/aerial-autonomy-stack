@@ -172,7 +172,7 @@ Connect the Pixhawk 6X to the ground station with the USB-C port next to the RJ-
 
 - Access QGroundControl -> "Analyze Tools" -> "MAVLink console"
 - Copy-and-paste the following commands (these will assign an IP to the PX4 autopilot (e.g., 10.10.1.33) and let the `uxrce_dds_client` connect to the Orin NX (e.g., on IP 10.10.1.44) using namespace `Drone1`)
-- Re-start the autopilot 
+- Re-start the autopilot
 
 ```sh
 # Configure DDS Client connection to the NX
