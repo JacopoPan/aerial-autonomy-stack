@@ -4,7 +4,7 @@ This project aims to speed up the ideation-development-simulation-deployment cyc
 
 ## The Many Facets of the Sim2real Gap
 
-The *sim2real gap* is an euphemism for robotic projects that work well on a developer's laptop but not so much in the field.
+The *sim2real gap* is a euphemism for robotic projects that work well on a developer's laptop but not so much in the field.
 Aerial sim2real research often focuses on modeling and simulation of complex aerodynamics effects.
 
 Nonetheless, at deployment time, an equally important component of *sim2real gap* arises from [system design](https://arxiv.org/abs/2510.20808)—in particular, software tooling and engineering, where the dynamic range between ["average and the best is 50-to-1, maybe 100-to-1"](https://www.youtube.com/watch?v=wTgQ2PBiz-g&t=35s).
