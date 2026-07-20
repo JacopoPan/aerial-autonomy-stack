@@ -52,7 +52,7 @@ sudo chronyc makestep
 
 On Jetson, check with:
 ```sh
-chronyc -n sources # NOte it might take some time for the Jetson to switch source
+chronyc -n sources # Note it might take some time for the Jetson to switch source
 ```
 
 If `[AIR_SUBNET].90.101` has a `^*` next to it, the Jetson is syncing to the ground computer
