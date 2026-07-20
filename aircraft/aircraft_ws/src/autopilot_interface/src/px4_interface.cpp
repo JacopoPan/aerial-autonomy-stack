@@ -1009,7 +1009,7 @@ void PX4Interface::abort_action()
             std::unique_lock<std::shared_mutex> lock(node_data_mutex_);
             aircraft_fsm_state_ = PX4InterfaceState::FW_CRUISE;
         }
-    } // TODO: if a VTOL errenously ended in the MC_HOVER state, it would not be recoverable by PX4Interface as an explicit transition is not exposed (land via QGC)
+    } // TODO: if a VTOL erroneously ended in the MC_HOVER state, it would not be recoverable by PX4Interface as an explicit transition is not exposed (land via QGC)
     active_srv_or_act_flag_.store(false);
 }
 
