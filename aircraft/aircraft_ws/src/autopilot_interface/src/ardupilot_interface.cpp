@@ -170,7 +170,7 @@ void ArdupilotInterface::local_position_odom_callback(const Odometry::SharedPtr 
     velocity_[0] = msg->twist.twist.linear.x; // Body frame
     velocity_[1] = msg->twist.twist.linear.y;
     velocity_[2] = msg->twist.twist.linear.z;
-    angular_velocity_[0] = msg->twist.twist.angular.x; // TODO: double check
+    angular_velocity_[0] = msg->twist.twist.angular.x; // TODO: double-check
     angular_velocity_[1] = msg->twist.twist.angular.y;
     angular_velocity_[2] = msg->twist.twist.angular.z;
     // See also topics /mavros/local_position/velocity_body, /mavros/local_position/velocity_local
