@@ -56,7 +56,7 @@ free -h                                               # (optional) Check the mem
 
 ## Install the NVIDIA Driver on Windows 11
 
-Download and install the **NVIDIA driver 580 on Windows** using the [NVIDIA App](https://www.nvidia.com/en-us/software/nvidia-app/) 
+Download and install the **NVIDIA driver 580 on Windows** using the [NVIDIA App](https://www.nvidia.com/en-us/software/nvidia-app/)
 
 > [!WARNING] 
 > The latest NVIDIA Windows drivers fully support WSL2, enabling existing CUDA applications compiled on Linux to run unmodified in WSL, once the Windows NVIDIA driver is installed, CUDA is available in WSL2 *via* a stubbed `libcuda.so`
