@@ -76,7 +76,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  HEADLESS/CAMERA/LIDAR=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
-#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible)
+#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible")
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT=true, false (requires pymavlink, pyulog, pymap3d)
 ```
