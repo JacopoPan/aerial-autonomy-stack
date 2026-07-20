@@ -163,7 +163,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > <details>
 > <summary>Develop within <b>live containers</b> <i>(click to expand)</i></summary>
 > 
-> Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
+> Launching the `sim_run.sh` script with `DEV=true` does **not** start the simulation and mounts folders, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
 > 
 > ```sh
 > cd aerial-autonomy-stack/tools_and_docs/
