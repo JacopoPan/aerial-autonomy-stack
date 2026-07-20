@@ -63,7 +63,7 @@ sudo dmesg | grep -i imx219         # After reboot, this will show at least one 
 
 # Inspect device (e.g. /dev/video0) resolution and frame rate
 sudo apt update && sudo apt install -y v4l-utils
-v4l2-ctl --list-formats-ext -d /dev/video0 
+v4l2-ctl --list-formats-ext -d /dev/video0
 ```
 
 ## Install Docker Engine on Jetson Orin
