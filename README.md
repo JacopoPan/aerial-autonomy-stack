@@ -254,7 +254,7 @@ Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.
 - One ground computer, with IP `[SIM_SUBNET].90.101`
 - `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
 
-> **Optionally**, set up a second LAN :`AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
+> **Optionally**, set up a second LAN `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
 > 
 > - One ground computer, with IP `[AIR_SUBNET].90.101`
 > - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
