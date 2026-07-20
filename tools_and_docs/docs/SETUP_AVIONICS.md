@@ -51,7 +51,7 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 ```sh
 sudo /opt/nvidia/jetson-io/jetson-io.py
 
-# Follow these steps: 
+# Follow these steps:
 #   "Configure Jetson 24pin CSI Connector"
 #   -> "Configure for compatible hardware"
 #   -> "Camera IMX219 Dual" (even if only using one)
