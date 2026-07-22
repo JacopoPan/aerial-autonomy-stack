@@ -8,20 +8,22 @@ set -e
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-# By default, skip building advanced odometry, SLAM packages
-BUILD_ADVANCED_ODOM=${EXTRAS:-false}
+# Set up the build
+BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
+CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
+CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY; do check_enum "$v" true false; done
+print_envvars
 
 BUILD_OPTS=""
-if [ "${CLEAN_BUILD:-false}" = "true" ]; then
+if [ "$CLEAN_BUILD" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
   BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi aircraft-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
-fi
-
-BUILD_DOCKER=true
-if [ "${CLONE_ONLY:-false}" = "true" ]; then
-  BUILD_DOCKER=false # If CLONE_ONLY is "true", disable the build steps
 fi
 
 # Create a folder (ignored by git) to clone GitHub repos
@@ -72,8 +74,8 @@ for repo_info in "${REPOS[@]}"; do
   fi
 done
 
-if [ "$BUILD_DOCKER" = "true" ]; then
-  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
-else
+if [ "$CLONE_ONLY" = "true" ]; then
   echo -e "Skipping Docker build"
+else
+  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 fi

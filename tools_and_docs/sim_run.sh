@@ -28,17 +28,6 @@ START_AS_PAUSED="${START_AS_PAUSED:-false}" # Options: true, false (default)
 INSTANCE="${INSTANCE:-0}" # Integer ID to make docker network/container names unique as well as offsetting the second byte of the subnets (default = 0)
 # Note: the analysis/plotting env variable is used by this script on cleanup and NOT passed to any container
 PLOT="${PLOT:-false}" # Options: true, false (default)
-# Set unique subnets and container/network names based on INSTANCE
-SIM_BYTE_1=$(echo "$SIM_SUBNET" | cut -d'.' -f1)
-SIM_BYTE_2=$(echo "$SIM_SUBNET" | cut -d'.' -f2)
-SIM_SUBNET="${SIM_BYTE_1}.$((SIM_BYTE_2 + INSTANCE))"
-AIR_BYTE_1=$(echo "$AIR_SUBNET" | cut -d'.' -f1)
-AIR_BYTE_2=$(echo "$AIR_SUBNET" | cut -d'.' -f2)
-AIR_SUBNET="${AIR_BYTE_1}.$((AIR_BYTE_2 + INSTANCE))"
-SIM_NET_NAME="aas-sim-network-inst${INSTANCE}"
-AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
-SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
-GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
 # Detect the environment (Ubuntu/GNOME, WSL, etc.)
 if echo "$XDG_CURRENT_DESKTOP" | grep -qi "gnome"; then
@@ -56,15 +45,27 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
-check_names "${BASH_SOURCE[0]}"
 check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard shibuya_crossing swiss_town waterworld
-for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum $v true false; done
-for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int $v 0 99; done
-for v in SIM_ID GROUND_ID; do check_int $v 100 101; done
+for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
+for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
+print_envvars
+
+# Set unique subnets and container/network names based on INSTANCE
+SIM_BYTE_1=$(echo "$SIM_SUBNET" | cut -d'.' -f1)
+SIM_BYTE_2=$(echo "$SIM_SUBNET" | cut -d'.' -f2)
+SIM_SUBNET="${SIM_BYTE_1}.$((SIM_BYTE_2 + INSTANCE))"
+AIR_BYTE_1=$(echo "$AIR_SUBNET" | cut -d'.' -f1)
+AIR_BYTE_2=$(echo "$AIR_SUBNET" | cut -d'.' -f2)
+AIR_SUBNET="${AIR_BYTE_1}.$((AIR_BYTE_2 + INSTANCE))"
+SIM_NET_NAME="aas-sim-network-inst${INSTANCE}"
+AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
+SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
+GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
 # In dev mode, resources and workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then

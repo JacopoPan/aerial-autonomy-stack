@@ -29,12 +29,27 @@ DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
-# Only used by ground-container
+
+# Only used by ground-container (i.e., if GROUND is true)
+GROUND="${GROUND:-false}" # Options: true, false (default)
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
 
-GROUND="${GROUND:-false}" # Options: true, false (default)
+# Find the script's path
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+check_enum AUTOPILOT px4 ardupilot
+check_enum ODOM none openvins fastlio superodom mimosa
+check_enum DRONE_TYPE quad vtol tail
+check_int DRONE_ID 1 99
+for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
+for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
+print_envvars
+
 if [[ "$GROUND" == "true" ]]; then
   # This is a bit hacky, but allows using the deploy_run.sh script for the ground container
   # Without GPU requirements: --device /dev/dri --gpus all --env NVIDIA_DRIVER_CAPABILITIES=all
@@ -61,7 +76,6 @@ fi
 
 # In dev mode, resources and workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
-  SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   DEV_OPTS="--entrypoint /bin/bash"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_ws/src/ground_system_msgs:/aas/aircraft_ws/src/ground_system_msgs:cached"
