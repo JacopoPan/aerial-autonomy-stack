@@ -1,4 +1,10 @@
 """
+This scripts allows to set wind velocity of plugin gz::sim::systems::WindEffects
+- Wind reaches each LiftDrag/AdvancedLiftDrag/MulticopterMotorModel plugin, on every vehicle
+- On the X500 and Iris, wind also applies a force on the base_link through tag <enable_wind>
+- However, PX4's SENS_EN_ARSPDSIM, ArduPlane (SIM_)ARSPD_*, and gz::sim::systems::AirSpeed on VTOLs/tailsitters are blind to it
+- Thus, this script is only recommended for use with QUADS
+
 Use as:
     python3 gz_wind.py --from_west 0.0 --from_south 3.0
     python3 gz_wind.py --stop_wind

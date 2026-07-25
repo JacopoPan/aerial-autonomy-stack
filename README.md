@@ -158,6 +158,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > ```sh
 > python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
 > python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> # Note: only use with the quadrotor models as the simulated airspeed sensors on VTOLs/tailsitters are not Gazebo wind-aware
 > ```
 > </details>
 > <details>
@@ -554,9 +555,9 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 ## Known Issues
 
 - ArduPilot SITL for Iris uses option -f that also sets "external": True, this is not the case for the Alti Transition from ArduPilot/SITL_Models
-- ArduPilot SITL crashes when the swan_k1_hwing tailsitter model lands
+- ArduPilot SITL throws a floating point exception when the swan_k1_hwing tailsitter model lands (ignored with SIM_FLOAT_EXCEPT 0)
+- Gazebo WindEffects reach all vehicles aerodynamically, but no airspeed sensor (PX4 SENS_EN_ARSPDSIM, ArduPlane SIM_ARSPD_*, gz AirSpeed)
 - QGC will only connect to the first 10 ArduPilot vehicles when GND_CONTAINER=false because of settings in QGroundControl.ini
-- Gazebo WindEffects plugin affects cruise speeds and it is disabled for the standard_vtol's model.sdf.erb
 - Command 178 MAV_CMD_DO_CHANGE_SPEED is accepted but not effective in changing speed for ArduPilot VTOL
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
