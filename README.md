@@ -113,7 +113,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
 > / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
-> / *(vi)* `crematoria`, a cave world based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
+> / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
 
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
