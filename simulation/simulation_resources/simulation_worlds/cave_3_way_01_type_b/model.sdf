@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <model name="cave_3way_01_type_b">
+        <static>true</static>
+        <link name="base_link">
+            <collision name="collision">
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cave3way.dae</uri>
+                        <scale>1.005 1.005 1.0</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="StriatedRock_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cave3way.dae</uri>
+                        <submesh>
+                            <name>StriatedRock</name>
+                            <center>false</center>
+                        </submesh>
+                        <scale>1.005 1.005 1.0</scale>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/StriatedRock_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/StriatedRock_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/StriatedRock_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+            <visual name="RockPile_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cave3way.dae</uri>
+                        <submesh>
+                            <name>RockPile</name>
+                            <center>false</center>
+                        </submesh>
+                        <scale>1.005 1.005 1.0</scale>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/RockPile_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/RockPile_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/RockPile_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+            <visual name="CaveWall_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cave3way.dae</uri>
+                        <submesh>
+                            <name>CaveWall</name>
+                            <center>false</center>
+                        </submesh>
+                        <scale>1.005 1.005 1.0</scale>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/CaveWall_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/CaveWall_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/CaveWall_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+        </link>
+    </model>
+</sdf>

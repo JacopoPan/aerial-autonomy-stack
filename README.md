@@ -470,6 +470,7 @@ aerial-autonomy-stack
 │   │   │   └── sensor_config.yaml                    # Intrinsics and extrinsics for all sensor and vehicle models
 │   │   └── simulation_worlds
 │   │       ├── apple_orchard.sdf
+│   │       ├── crematoria.sdf
 │   │       ├── impalpable_greyness.sdf
 │   │       ├── shibuya_crossing.sdf
 │   │       ├── swiss_town.sdf

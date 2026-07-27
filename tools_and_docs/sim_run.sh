@@ -18,7 +18,7 @@ GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
-WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, shibuya_crossing, swiss_town, waterworld
+WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
@@ -47,7 +47,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
-check_enum WORLD impalpable_greyness apple_orchard shibuya_crossing swiss_town waterworld
+check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
 for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
