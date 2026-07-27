@@ -311,6 +311,7 @@
         Based on Open Robotics' simple_cave_02 world for the DARPA SubT Challenge:
         - https://github.com/osrf/subt/blob/master/subt_ign/worlds/simple_cave_02.sdf
         - https://app.gazebosim.org/OpenRobotics/fuel/worlds/Cave%20Simple%2002
+          - License: Creative Commons Attribution 4.0 International https://creativecommons.org/licenses/by/4.0/
       -->
       <include>
         <static>true</static>
