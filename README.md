@@ -8,8 +8,6 @@
 
 For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); for motivation, read [`RATIONALE.md`](/tools_and_docs/docs/RATIONALE.md)
 
-https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
-
 <details>
 <summary><b>Features</b> <i>(click to expand)</i></summary>
 
@@ -107,7 +105,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 
 ![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
 
-![worlds](https://github.com/user-attachments/assets/3d82d87b-e816-4043-8f02-dfedd8133e9c)
+![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)
 
 > `WORLD`s:
 > *(i)* `apple_orchard`, a GIS world created using [BlenderGIS](https://github.com/domlysz/BlenderGIS)
@@ -116,8 +114,6 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
 > / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
 > / *(vi)* `crematoria`, a cave world based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
-
-![waves](https://github.com/user-attachments/assets/71f1e302-c7e0-4b41-811a-41e3b1f5050f)
 
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
@@ -540,8 +536,10 @@ External repositories:
 - [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.23.2`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
+</details>
 
 ---
+https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 > You've done a man's job, sir. I guess you're through, huh?
 
 <!--
