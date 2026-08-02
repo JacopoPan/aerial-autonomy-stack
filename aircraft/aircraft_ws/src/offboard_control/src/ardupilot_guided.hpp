@@ -148,6 +148,7 @@ private:
     void att_ref_test();
     void vel_ref_test();
     void acc_ref_test();
+    void vel_ref_stalk();
     void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
 };

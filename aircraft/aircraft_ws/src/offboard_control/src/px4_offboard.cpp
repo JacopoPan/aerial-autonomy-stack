@@ -230,6 +230,11 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
         RCLCPP_WARN(get_logger(), "Target track is stale");
         return;
     }
+    // Also gate in any controller with a block like:
+    //      if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_) &&
+    //          !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+    //          (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+    // In case topic /tracks goes silent an this callback does not run again
 
     // Save target velocities
     target_vn_ = target_track.velocity_n_m_s;
@@ -237,8 +242,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     target_vd_ = target_track.velocity_d_m_s;
 
     // Predict LLA position of target
-    constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
-    constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
+    const double PREDICTION_TIME_SEC = static_cast<double>(target_track.time_since_last_update_s); // Dead-reckon based on the (ground-side) telemetry age
 
     double target_ground_speed = std::hypot(target_track.velocity_n_m_s, target_track.velocity_e_m_s);
     double target_course_rad = std::atan2(target_track.velocity_e_m_s, target_track.velocity_n_m_s); // Azimuth from North
@@ -248,7 +252,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     double future_lat = 0.0, future_lon = 0.0;
     geod.Direct(target_track.latitude_deg, target_track.longitude_deg, target_course_deg, distance_traveled,
                 future_lat, future_lon);
-    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC) + ALT_SAFETY_MARGIN;
+    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC);
 
     // Compute GeographicLib ENU position of label48 w.r.t. PX4 vehicle (using NED)
     const GeographicLib::LocalCartesian proj(reference_lat, reference_lon, reference_alt);
@@ -440,14 +444,18 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         return;
     }
     mode.position = true;
+
+    constexpr double PRED_HORIZON_S = 1.0;  // s, maximum time horizon for constant-velocity extrapolation/prediction
+
     TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
     trajectory_ref.timestamp = mode.timestamp;
     trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
     trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
     if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_) &&
-        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+        !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) { // TODO: parametrize
 
-        double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, 2.0);
+        double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, PRED_HORIZON_S);
         double current_north = traj_ref_north_ + (target_vn_ * dt);
         double current_east  = traj_ref_east_  + (target_ve_ * dt);
         double current_down  = -traj_ref_up_   + (target_vd_ * dt);
@@ -455,20 +463,15 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         double d_north = current_north - x_;
         double d_east  = current_east - y_;
         trajectory_ref.yaw = static_cast<float>(std::atan2(d_east, d_north)); // [-PI:PI]
-        if (!std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
-            mode.velocity = true; // Enable velocity feedforward
-            trajectory_ref.velocity = {static_cast<float>(target_vn_), static_cast<float>(target_ve_), static_cast<float>(target_vd_)};
-            double dist_sq = (d_north * d_north) + (d_east * d_east);
-            if (dist_sq > 1.0) {
-                double vrel_n = target_vn_ - vx_;
-                double vrel_e = target_ve_ - vy_;
-                trajectory_ref.yawspeed = static_cast<float>((d_north * vrel_e - d_east * vrel_n) / dist_sq);
-            } else {
-                trajectory_ref.yawspeed = 0.0;
-            }
+        mode.velocity = true; // Enable velocity feedforward
+        trajectory_ref.velocity = {static_cast<float>(target_vn_), static_cast<float>(target_ve_), static_cast<float>(target_vd_)};
+        double dist_sq = (d_north * d_north) + (d_east * d_east);
+        if (dist_sq > 1.0) {
+            double vrel_n = target_vn_ - vx_;
+            double vrel_e = target_ve_ - vy_;
+            trajectory_ref.yawspeed = static_cast<float>((d_north * vrel_e - d_east * vrel_n) / dist_sq);
         } else {
-            trajectory_ref.velocity = {NAN, NAN, NAN};
-            trajectory_ref.yawspeed = NAN;
+            trajectory_ref.yawspeed = 0.0;
         }
     } else { // Missing track, stay still
         mode.position = false;

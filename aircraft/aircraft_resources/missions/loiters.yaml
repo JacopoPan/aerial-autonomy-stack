@@ -1,0 +1,46 @@
+type: Sequence
+name: Loiters_Mission
+children:
+  - action: takeoff
+    name: "Takeoff to 25m"
+    params:
+      takeoff_altitude: 25.0
+
+  - type: Sequence
+    name: "Loiter lap"
+    repeat: 10
+    children:
+      - action: reposition
+        name: "Reposition before orbit"
+        params:
+         east: -20.0
+         north: 40.0
+         altitude: 30.0
+
+      - action: orbit
+        name: "Begin orbit"
+        params:
+          east: -20.0
+          north: 65.0
+          altitude: 30.0
+          radius: 25.0
+
+      - action: wait
+        name: "Stay in orbit for 15s (half orbit at 5m/s)"
+        params:
+          duration: 15.0
+
+      - action: reposition
+        name: "Reposition after orbit"
+        params:
+         east: 10.0
+         north: 65.0
+         altitude: 30.0
+
+  - action: land
+    name: "Return and land at 40m"
+    params:
+      landing_altitude: 40.0
+
+run_with:
+  ros2 run mission mission --conops loiters.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true

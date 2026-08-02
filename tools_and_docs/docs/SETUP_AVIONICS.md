@@ -264,12 +264,26 @@ To use it to connect a ground station (e.g. QGC) with a telemetry radio (e.g., [
 
 ### PX4 Configuration
 
+- Access QGroundControl -> "Analyze Tools" -> "MAVLink console"
+- Copy-and-paste the following commands to set the GLOBAL_POSITION_INT stream rate to 10Hz on TELEM1
+- Re-start the autopilot
+
+```sh
+mkdir /fs/microsd/etc
+cd /fs/microsd/etc
+echo "mavlink stream -r 10 -s GLOBAL_POSITION_INT -d /dev/ttyS6" >> extras.txt
+# Verify serial port name: https://docs.px4.io/main/en/flight_controller/pixhawk6x#serial-port-mapping
+
+# Check the content of the file
+cat /fs/microsd/etc/extras.txt
+```
+
 ```sh
 MAV_0_CONFIG        TELEM 1
 MAV_0_FLOW_CTRL     Auto-detected
 MAV_0_FORWARD       Enabled
 MAV_0_MODE          Normal
-MAV_0_RATE          1200B/s
+MAV_0_RATE          2400B/s
 
 SER_TEL1_BAUD       57600 8N1
 # All these are default values and tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"

@@ -2,7 +2,7 @@ import uuid
 import py_trees
 from mission import behaviors
 
-def create_mission_tree(node_cfg, ros_node):
+def _build_node(node_cfg, ros_node):
     # Recursively parse a YAML dictionary node into a py_trees object
 
     # Is it a leaf node (an action)?
@@ -49,3 +49,11 @@ def create_mission_tree(node_cfg, ros_node):
         composite.add_child(child_node)
 
     return composite
+
+def create_mission_tree(node_cfg, ros_node):
+    # Wrap any node in a Repeat decorator if the YAML sets 'repeat' (-1 loops forever)
+    node = _build_node(node_cfg, ros_node)
+    count = int(node_cfg.get('repeat', 1))
+    if count == 1:
+        return node
+    return py_trees.decorators.Repeat(name=f"Repeat{count}x_{node.name}", child=node, num_success=count)

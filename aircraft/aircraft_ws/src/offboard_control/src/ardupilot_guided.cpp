@@ -107,6 +107,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
     // Custom controllers
+    controller_map_["vel-sk"] = std::bind(&ArdupilotGuided::vel_ref_stalk, this);
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
 }
@@ -224,6 +225,11 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
         RCLCPP_WARN(get_logger(), "Target track is stale");
         return;
     }
+    // Also gate in any controller with a block like:
+    //      if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
+    //          !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+    //          (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+    // In case topic /tracks goes silent an this callback does not run again
 
     // Save target velocities
     target_vn_ = target_track.velocity_n_m_s;
@@ -231,8 +237,7 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
     target_vd_ = target_track.velocity_d_m_s;
 
     // Predict LLA position of target
-    constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
-    constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
+    const double PREDICTION_TIME_SEC = static_cast<double>(target_track.time_since_last_update_s); // Dead-reckon based on the (ground-side) telemetry age
 
     double target_ground_speed = std::hypot(target_track.velocity_n_m_s, target_track.velocity_e_m_s);
     double target_course_rad = std::atan2(target_track.velocity_e_m_s, target_track.velocity_n_m_s); // Azimuth from North
@@ -242,7 +247,7 @@ void ArdupilotGuided::ground_tracks_callback(const ground_system_msgs::msg::Swar
     double future_lat = 0.0, future_lon = 0.0;
     geod.Direct(target_track.latitude_deg, target_track.longitude_deg, target_course_deg, distance_traveled,
                 future_lat, future_lon);
-    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC) + ALT_SAFETY_MARGIN;
+    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC);
 
     // Compute relative spherical position (bearing, elevation, distance) of the target from the ArduPilot vehicle
     double fw_azi = 0.0, bw_azi = 0.0; // forward and backward azimuth (in degrees, clockwise from North)
@@ -410,6 +415,58 @@ void ArdupilotGuided::acc_ref_test()
     accel_msg.vector.z = 0.0; // m/s^2 Up
     setpoint_accel_pub_->publish(accel_msg);
 }
+void ArdupilotGuided::vel_ref_stalk()
+{
+    // Tunable parameters
+    constexpr double STANDOFF_M = 10.0;   // m, desired horizontal distance to the target
+    constexpr double ALT_OFFSET_M = 10.0; // m, fly this much above the target
+    constexpr double DEADBAND_M = 2.0;    // m, ignore range errors below this (absorbs link delay/jitter)
+    constexpr double KP_RANGE = 0.3;      // 1/s, range error to correction speed gain
+    constexpr double MAX_CORR = 3.0;      // m/s, maximum correction speed (catch-up speed = target speed + correction)
+    constexpr double V_MAX = 10.0;        // m/s, horizontal speed limit
+    constexpr double KP_ALT = 0.4;        // 1/s, altitude error to climb rate gain
+    constexpr double MAX_VZ = 1.5;        // m/s, climb/descent limit
+    constexpr double KP_YAW = 0.8;        // 1/s, heading error to yaw rate gain
+    constexpr double MAX_YAW_RATE = 0.5;  // rad/s, maximum yaw rate
+    constexpr double LINK_STALE_S = 2.0;  // s, timeout after which to stop if topic /tracks goes silent
+
+    auto vel_msg = geometry_msgs::msg::TwistStamped();
+    vel_msg.header.stamp = this->get_clock()->now();
+    vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
+    if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
+        !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+        (this->get_clock()->now() - last_track_time_).seconds() < LINK_STALE_S) {
+
+        // Horizontal LOS unit vector in ENU (bearing is clockwise from North)
+        double u_E = std::sin(desired_bearing_rad_);
+        double u_N = std::cos(desired_bearing_rad_);
+        // Horizontal range error with continuous deadband (>0: too far, <0: too close, back away)
+        double range_error = closing_distance_ - STANDOFF_M;
+        range_error = (std::abs(range_error) < DEADBAND_M) ? 0.0 : range_error - std::copysign(DEADBAND_M, range_error);
+        // Target velocity feedforward (tracks arbitrary speed) + bounded range correction along the LOS
+        double v_corr = std::clamp(KP_RANGE * range_error, -MAX_CORR, MAX_CORR);
+        double v_E = target_ve_ + (v_corr * u_E);
+        double v_N = target_vn_ + (v_corr * u_N);
+        double v_norm = std::hypot(v_E, v_N);
+        if (v_norm > V_MAX) { // Limit speed as a safety measure
+            v_E *= V_MAX / v_norm;
+            v_N *= V_MAX / v_norm;
+        }
+        vel_msg.twist.linear.x = v_E; // m/s East
+        vel_msg.twist.linear.y = v_N; // m/s North
+
+        // Decoupled altitude hold ALT_OFFSET_M above the target
+        double dz_m = (closing_distance_ > 0.1) ? closing_distance_ * std::tan(desired_elevation_rad_) : 0.0;
+        vel_msg.twist.linear.z = std::clamp(-target_vd_ + KP_ALT * (dz_m + ALT_OFFSET_M), -MAX_VZ, MAX_VZ); // m/s Up
+
+        // Yaw rate to point at the target
+        double heading_error = normalize_heading(((M_PI / 2.0) - desired_bearing_rad_) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
+        vel_msg.twist.angular.z = std::isnan(heading_error) ? 0.0 : std::clamp(KP_YAW * heading_error, -MAX_YAW_RATE, MAX_YAW_RATE); // rad/s
+    } else { // Invalid target info or the link is silent; zero-initialized vel_msg stops the vehicle
+        RCLCPP_WARN(get_logger(), "No valid target info, entering vel_ref_stalk else branch");
+    }
+    setpoint_vel_pub_->publish(vel_msg);
+}
 void ArdupilotGuided::vel_ref_lead_pursuit()
 {
     auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html
@@ -417,7 +474,7 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
     vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
     if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
         !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
-        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) { // TODO: parametrize
 
         // Calculate unit line-of-sight (LOS) vector in ENU
         double u_E = std::cos(desired_elevation_rad_) * std::sin(desired_bearing_rad_);
@@ -457,7 +514,7 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
     accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
     if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
         !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
-        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) { // TODO: parametrize
 
         // Calculate ENU error vector
         double r_E = closing_distance_ * std::sin(desired_bearing_rad_);
