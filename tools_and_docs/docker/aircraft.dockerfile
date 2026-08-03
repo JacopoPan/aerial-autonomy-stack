@@ -326,11 +326,11 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /aas/mimosa_custom_gtsam_ws/src
 COPY /_github_clones/mimosa /aas/mimosa_custom_gtsam_ws/src/mimosa
-# Download config_utilities (branch: dev/mimosa), gtsam (branch: feature/imu_factor_with_gravity), and gtsam_points (branch: minimal_updated)
+# Download config_utilities (branch: dev/mimosa), gtsam (commit c952ef9, see issue: https://github.com/ntnu-arl/mimosa/issues/19), and gtsam_points (branch: minimal_updated)
 RUN mkdir -p config_utilities \
     && wget -qO- https://github.com/ntnu-arl/config_utilities/archive/refs/heads/dev/mimosa.tar.gz | tar -xz -C config_utilities --strip-components=1 \
     && mkdir -p gtsam \
-    && wget -qO- https://github.com/ntnu-arl/gtsam/archive/refs/heads/feature/imu_factor_with_gravity.tar.gz | tar -xz -C gtsam --strip-components=1 \
+    && wget -qO- https://github.com/ntnu-arl/gtsam/archive/c952ef9.tar.gz | tar -xz -C gtsam --strip-components=1 \
     && mkdir -p gtsam_points \
     && wget -qO- https://github.com/ntnu-arl/gtsam_points/archive/refs/heads/minimal_updated.tar.gz | tar -xz -C gtsam_points --strip-components=1
 WORKDIR /aas/mimosa_custom_gtsam_ws
