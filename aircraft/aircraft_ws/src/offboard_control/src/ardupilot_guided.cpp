@@ -456,7 +456,7 @@ void ArdupilotGuided::vel_ref_stalk()
         vel_msg.twist.linear.y = v_N; // m/s North
 
         // Decoupled altitude hold ALT_OFFSET_M above the target
-        double dz_m = (closing_distance_ > 0.1) ? closing_distance_ * std::tan(desired_elevation_rad_) : 0.0;
+        double dz_m = closing_distance_ * std::tan(desired_elevation_rad_);
         vel_msg.twist.linear.z = std::clamp(-target_vd_ + KP_ALT * (dz_m + ALT_OFFSET_M), -MAX_VZ, MAX_VZ); // m/s Up
 
         // Yaw rate to point at the target
@@ -485,8 +485,17 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
         double vt_perp_E = target_ve_ - (vt_parallel_mag * u_E);
         double vt_perp_N = target_vn_ - (vt_parallel_mag * u_N);
         double vt_perp_U = -target_vd_ - (vt_parallel_mag * u_U);
-        // Distance-based desired closing speed (3m/s if closer than 5m and up to 10m/s if further than 50m)
-        double base_closing_speed = 3.0 + std::clamp((closing_distance_ - 5.0) / 50.0, 0.0, 1.0) * 7.0;
+        double vt_perp_mag_sq = (vt_perp_E * vt_perp_E) + (vt_perp_N * vt_perp_N) + (vt_perp_U * vt_perp_U);
+        // Distance-based desired closing speed
+        constexpr double MIN_RANGE_M = 10.0; // m, range below which the closing speed holds at its terminal value
+        constexpr double MIN_CLOSING_SPEED_MS = 3.0; // m/s, terminal closing speed (0 for rendezvous; greater than 0 for hit)
+        constexpr double K_CLOSE = 0.14; // 1/s, closing speed per meter beyond MIN_RANGE_M
+        constexpr double V_MAX_MS = 10.0; // m/s, speed limit
+        double slant_range_m = closing_distance_ / std::max(0.1, std::cos(desired_elevation_rad_)); // 3D range
+        double base_closing_speed = std::min(
+            MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, slant_range_m - MIN_RANGE_M),
+            std::max(0.0, std::sqrt(std::max(0.0, V_MAX_MS*V_MAX_MS - vt_perp_mag_sq)) - vt_parallel_mag)
+        );
         // Total desired speed along the LOS: target's escape speed + closing speed
         double vd_parallel_mag = vt_parallel_mag + base_closing_speed;
         // Final velocity reference: escape speed + closing speed + match perpendicular drift (based on pursuit type)
@@ -503,8 +512,9 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
     }
     // Computed yaw rate for alignment
     const double Kp_yaw = 1.5;
-    double heading_error = normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
-    vel_msg.twist.angular.z = Kp_yaw * heading_error; // rad/s Yaw rate
+    double cmd_speed = std::hypot(vel_msg.twist.linear.x, vel_msg.twist.linear.y);
+    double heading_error = (cmd_speed > 0.1) ? normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0))) : 0.0;
+    vel_msg.twist.angular.z = std::isnan(heading_error) ? 0.0 : std::clamp(Kp_yaw * heading_error, -1.0, 1.0); // rad/s Yaw rate
     setpoint_vel_pub_->publish(vel_msg);
 }
 void ArdupilotGuided::acc_ref_proportional_navigation()
@@ -514,6 +524,7 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
     accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
     if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
         !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+        !std::isnan(ve_) && !std::isnan(vn_) && !std::isnan(vu_) &&
         (this->get_clock()->now() - last_track_time_).seconds() < 2.0) { // TODO: parametrize
 
         // Calculate ENU error vector
@@ -536,6 +547,21 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
         double r_dot_vrel = (r_E * vrel_E) + (r_N * vrel_N) + (r_U * vrel_U);
         double Vc = -r_dot_vrel / distance_3d;
 
+        // Distance-based desired closing speed
+        constexpr double MIN_RANGE_M = 10.0; // m, range below which the closing speed holds at its terminal value
+        constexpr double MIN_CLOSING_SPEED_MS = 3.0; // m/s, terminal closing speed (0 for rendezvous; greater than 0 for hit)
+        constexpr double K_CLOSE = 0.14; // 1/s, closing speed per meter beyond MIN_RANGE_M
+        constexpr double V_MAX_MS = 10.0; // m/s, speed limit
+        double vt_parallel_mag = (target_ve_ * u_E) + (target_vn_ * u_N) + (-target_vd_ * u_U); // Target escape speed along the LOS
+        double desired_Vc = std::min(
+            MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, distance_3d - MIN_RANGE_M),
+            std::max(0.0, V_MAX_MS - vt_parallel_mag)
+        );
+        // Catch-Up acceleration (HORIZONTAL ONLY)
+        double a_fwd_mag = std::clamp(0.5 * (desired_Vc - Vc), -2.0, 3.0);
+        accel_msg.vector.x = a_fwd_mag * u_E;
+        accel_msg.vector.y = a_fwd_mag * u_N;
+
         if (Vc > 0) { // Target is closing
             // LOS angular rate vector (omega = (r x vrel) / |r|^2)
             double r_sq = distance_3d * distance_3d;
@@ -548,16 +574,8 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
             double a_pn_E = N_gain * Vc * (omega_N * u_U - omega_U * u_N);
             double a_pn_N = N_gain * Vc * (omega_U * u_E - omega_E * u_U);
 
-            // Distance-based desired closing speed (3m/s if closer than 5m and up to 10m/s if further than 50m)
-            double desired_Vc = 3.0 + std::clamp((closing_distance_ - 5.0) / 50.0, 0.0, 1.0) * 7.0;
-            // Catch-Up acceleration (HORIZONTAL ONLY)
-            double a_fwd_mag = std::clamp(0.5 * (desired_Vc - Vc), -2.0, 3.0);
-            accel_msg.vector.x = a_pn_E + (a_fwd_mag * u_E);
-            accel_msg.vector.y = a_pn_N + (a_fwd_mag * u_N);
-
-        } else { // Target is opening, just thrust in its direction (HORIZONTAL ONLY)
-            accel_msg.vector.x = u_E * 2.0;
-            accel_msg.vector.y = u_N * 2.0;
+            accel_msg.vector.x += a_pn_E;
+            accel_msg.vector.y += a_pn_N;
         }
 
         // Account for ArduPilot attitude control limits
@@ -571,16 +589,16 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
         }
 
         // Decoupled z-axis PD altitude controller (clamped to bounds)
-        const double Kp_Z = 1.0;
+        const double Kp_Z = 0.3;
         const double Kd_Z = 1.5;
         accel_msg.vector.z = (Kp_Z * r_U) + (Kd_Z * vrel_U);
         accel_msg.vector.z = std::clamp(accel_msg.vector.z, -1.5, 1.5);
 
     } else { // Missing track, break
         const double K_brake = 1.0; // Braking gain (1.0 means try to stop in ~1 second)
-        accel_msg.vector.x = -K_brake * ve_;
-        accel_msg.vector.y = -K_brake * vn_;
-        accel_msg.vector.z = -K_brake * vu_;
+        accel_msg.vector.x = std::isnan(ve_) ? 0.0 : -K_brake * ve_;
+        accel_msg.vector.y = std::isnan(vn_) ? 0.0 : -K_brake * vn_;
+        accel_msg.vector.z = std::isnan(vu_) ? 0.0 : -K_brake * vu_;
         double brake_mag = std::hypot(accel_msg.vector.x, accel_msg.vector.y);
         const double MAX_BRAKE_ACCEL = 3.0; // Clamp horizontal braking deceleration
         if (brake_mag > MAX_BRAKE_ACCEL) {
