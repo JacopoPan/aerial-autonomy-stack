@@ -8,7 +8,7 @@ children:
 
   - type: Sequence
     name: "Loiter lap"
-    repeat: 10
+    repeat: 6
     children:
       - action: reposition
         name: "Reposition before orbit"
@@ -43,4 +43,4 @@ children:
       landing_altitude: 40.0
 
 run_with:
-  ros2 run mission mission --conops loiters.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
+  ros2 run mission mission --conops cone.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
