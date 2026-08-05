@@ -492,10 +492,8 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
         constexpr double K_CLOSE = 0.14; // 1/s, closing speed per meter beyond MIN_RANGE_M
         constexpr double V_MAX_MS = 10.0; // m/s, speed limit
         double slant_range_m = closing_distance_ / std::max(0.1, std::cos(desired_elevation_rad_)); // 3D range
-        double base_closing_speed = std::min(
-            MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, slant_range_m - MIN_RANGE_M),
-            std::max(0.0, std::sqrt(std::max(0.0, V_MAX_MS*V_MAX_MS - vt_perp_mag_sq)) - vt_parallel_mag)
-        );
+        double max_closing_rate = std::sqrt(std::max(0.0, V_MAX_MS*V_MAX_MS - vt_perp_mag_sq)) - vt_parallel_mag; // Closing rate achievable at V_MAX_MS after matching drift and escape; negative if the target outruns V_MAX_MS
+        double base_closing_speed = std::min(MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, slant_range_m - MIN_RANGE_M), max_closing_rate);
         // Total desired speed along the LOS: target's escape speed + closing speed
         double vd_parallel_mag = vt_parallel_mag + base_closing_speed;
         // Final velocity reference: escape speed + closing speed + match perpendicular drift (based on pursuit type)
@@ -553,10 +551,9 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
         constexpr double K_CLOSE = 0.14; // 1/s, closing speed per meter beyond MIN_RANGE_M
         constexpr double V_MAX_MS = 10.0; // m/s, speed limit
         double vt_parallel_mag = (target_ve_ * u_E) + (target_vn_ * u_N) + (-target_vd_ * u_U); // Target escape speed along the LOS
-        double desired_Vc = std::min(
-            MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, distance_3d - MIN_RANGE_M),
-            std::max(0.0, V_MAX_MS - vt_parallel_mag)
-        );
+        double vt_perp_mag_sq = (target_ve_*target_ve_ + target_vn_*target_vn_ + target_vd_*target_vd_) - (vt_parallel_mag * vt_parallel_mag);
+        double max_closing_rate = std::sqrt(std::max(0.0, V_MAX_MS*V_MAX_MS - vt_perp_mag_sq)) - vt_parallel_mag; // Closing rate achievable at V_MAX_MS after matching drift and escape; negative if the target outruns V_MAX_MS
+        double desired_Vc = std::min(MIN_CLOSING_SPEED_MS + K_CLOSE * std::max(0.0, distance_3d - MIN_RANGE_M), max_closing_rate);
         // Catch-Up acceleration (HORIZONTAL ONLY)
         double a_fwd_mag = std::clamp(0.5 * (desired_Vc - Vc), -2.0, 3.0);
         accel_msg.vector.x = a_fwd_mag * u_E;
