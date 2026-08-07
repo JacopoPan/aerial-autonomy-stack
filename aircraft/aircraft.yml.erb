@@ -150,7 +150,7 @@ windows:
   - logging:
       layout: tiled
       panes:
-        - mkdir -p /aas/rosbags && cd /aas/rosbags && ros2 bag record <%= rosbag_topics.join(' ') %> -s mcap -b 1000000000 <%= simulated_time ? '--use-sim-time' : '' %>
+        - mkdir -p /aas/rosbags && cd /aas/rosbags && ros2 bag record <%= rosbag_topics.join(' ') %> -s mcap <%= simulated_time ? '--use-sim-time' : '' %>
   <% end %>
 
   <% if gymnasium %>
