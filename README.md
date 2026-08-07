@@ -78,7 +78,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible")
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
-#  PLOT=true, false (requires pymavlink, pyulog, pymap3d)
+#  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
 
 There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
@@ -231,7 +231,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#  HEADLESS/CAMERA/LIDAR=true, false
+#  HEADLESS/CAMERA/LIDAR/RECORD_ROSBAG=true, false
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):

@@ -386,7 +386,7 @@ RUN pip3 install --no-cache-dir --upgrade pip \
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ros-humble-plotjuggler \
-    ros-humble-plotjuggler-ros \
+    ros-humble-plotjuggler-ros ros-humble-rosbag2-storage-mcap \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Analyze an aircraft's rosbag using PlotJuggler
-# To use this script, enable RECORD_ROSBAG in 'aircraft.yml.erb'
+# To use this script, set RECORD_ROSBAG=true when running sim_run.sh or deploy_run.sh
 
 TMUX_PANE="logging.0" # The tmux <window_name>.<pane_index> where the recording is happening
 BAG_PARENT_DIR="/aas/rosbags" # The directory where bags are saved

@@ -26,6 +26,7 @@ GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 
 DRONE_TYPE="${DRONE_TYPE:-quad}" # Options: quad (default), vtol, tail
 DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 #
+RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
@@ -45,7 +46,7 @@ check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
-for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 print_envvars
@@ -117,10 +118,12 @@ docker run $DOCKER_RUN_FLAGS \
   --env GND_CONTAINER=$GND_CONTAINER \
   --env ROS_DOMAIN_ID=$DRONE_ID \
   --env REMOTE_VIDEO_STREAMS=true \
+  --env RECORD_ROSBAG=$RECORD_ROSBAG \
   --net=host \
   --privileged \
   --name aircraft-container_$DRONE_ID \
   --volume ~/Downloads/:/aas/mounted_downloads_folder \
+  --volume ~/Downloads/aas_rosbags:/aas/rosbags \
   ${DEV_OPTS} \
   ${AAS_SSH_OPTS} \
   aircraft-image

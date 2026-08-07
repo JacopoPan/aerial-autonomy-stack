@@ -20,6 +20,7 @@ NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
 WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #
+RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
@@ -48,7 +49,7 @@ source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
-for v in HEADLESS CAMERA LIDAR DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
@@ -209,6 +210,7 @@ if [[ "$HITL" == "false" ]]; then
         --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \
         --env GND_CONTAINER=$GND_CONTAINER \
         --env ROS_DOMAIN_ID=$DRONE_ID \
+        --env RECORD_ROSBAG=$RECORD_ROSBAG \
         --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.$DRONE_ID \
         --privileged \
         --name $NAME_AIRCRAFT_CNT"
@@ -264,6 +266,23 @@ cleanup() {
       echo "No log found for drone $i"
     fi
   done
+  # Copy the aircraft rosbags, if any were recorded
+  if [[ "$RECORD_ROSBAG" == "true" ]]; then
+    for i in $(seq 1 $NUM_DRONES); do
+      docker exec "aircraft-container-inst${INSTANCE}_${i}" tmux send-keys -t logging.0 C-c >/dev/null 2>&1 || true
+    done
+    sleep 2 # Wait for ros2 bag to write metadata.yaml
+    for i in $(seq 1 $NUM_DRONES); do
+      AIR_CNT="aircraft-container-inst${INSTANCE}_${i}"
+      LATEST_BAG=$(docker exec "$AIR_CNT" bash -c "ls -td /aas/rosbags/* 2>/dev/null | head -n 1" || true)
+      if [ -n "$LATEST_BAG" ]; then
+        docker cp "${AIR_CNT}:${LATEST_BAG}" "${PLOT_DIR}/drone_${i}_rosbag" >/dev/null 2>&1 \
+          && echo "Copied drone $i rosbag: $(basename "$LATEST_BAG")" || echo "Could not copy the rosbag of drone $i"
+      else
+        echo "No rosbag found for drone $i"
+      fi
+    done
+  fi
   # Cleanup
   DOCKER_PIDS=$(pgrep -f "docker run.*inst${INSTANCE}([^0-9]|$)" 2>/dev/null || true)
   CONTAINER_NAMES=("${SIM_CONT_NAME}" "${GND_CONT_NAME}" "aircraft-container-inst${INSTANCE}")
