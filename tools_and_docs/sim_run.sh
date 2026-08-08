@@ -271,7 +271,7 @@ cleanup() {
     for i in $(seq 1 $NUM_DRONES); do
       docker exec "aircraft-container-inst${INSTANCE}_${i}" tmux send-keys -t logging.0 C-c >/dev/null 2>&1 || true
     done
-    sleep 2 # Wait for ros2 bag to write metadata.yaml
+    sleep 2 # Wait for ros2 bag to close the file and write metadata.yaml
     for i in $(seq 1 $NUM_DRONES); do
       AIR_CONT="aircraft-container-inst${INSTANCE}_${i}"
       LATEST_BAG=$(docker exec "$AIR_CONT" bash -c "ls -td /aas/rosbags/* 2>/dev/null | head -n 1" || true)

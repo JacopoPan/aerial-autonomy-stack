@@ -133,8 +133,17 @@ windows:
   <% if record_rosbag %>
   <%
     # Topics recorded when record_rosbag is true (opt-in: add the names of the topics to save)
+    rosbag_topics = %W[
+      /tf
+      /tf_static
+      /rosout
+      /detections
+      /dtc_commands
+      /tracks
+      /offboard_flag
+      /kiss/odometry
+    ]
     # Omitted for size: /lidar_points, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
-    rosbag_topics = %w[/tf /tf_static /rosout /detections /dtc_commands /tracks /offboard_flag /kiss/odometry]
     rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
     case autopilot
     when 'px4'
@@ -144,7 +153,11 @@ windows:
         /Drone#{drone_id}/fmu/out/vehicle_global_position
       ]
     when 'ardupilot'
-      rosbag_topics += %w[/mavros/state /mavros/local_position/odom /mavros/global_position/global]
+      rosbag_topics += %W[
+        /mavros/state
+        /mavros/local_position/odom
+        /mavros/global_position/global
+      ]
     end
   %>
   - logging:
