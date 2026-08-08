@@ -132,7 +132,7 @@ windows:
 
   <% if record_rosbag %>
   <%
-    # Topics recorded when record_rosbag is true (opt-in, add what to save)
+    # Topics recorded when record_rosbag is true (opt-in: add the names of the topics to save)
     # Omitted for size: /lidar_points, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
     rosbag_topics = %w[/tf /tf_static /rosout /detections /dtc_commands /tracks /offboard_flag /kiss/odometry]
     rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones

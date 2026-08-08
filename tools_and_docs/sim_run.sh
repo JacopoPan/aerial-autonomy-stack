@@ -266,17 +266,17 @@ cleanup() {
       echo "No log found for drone $i"
     fi
   done
-  # Copy the aircraft rosbags, if any were recorded
+  # Copy the aircraft rosbags (if recorded) to the host
   if [[ "$RECORD_ROSBAG" == "true" ]]; then
     for i in $(seq 1 $NUM_DRONES); do
       docker exec "aircraft-container-inst${INSTANCE}_${i}" tmux send-keys -t logging.0 C-c >/dev/null 2>&1 || true
     done
     sleep 2 # Wait for ros2 bag to write metadata.yaml
     for i in $(seq 1 $NUM_DRONES); do
-      AIR_CNT="aircraft-container-inst${INSTANCE}_${i}"
-      LATEST_BAG=$(docker exec "$AIR_CNT" bash -c "ls -td /aas/rosbags/* 2>/dev/null | head -n 1" || true)
+      AIR_CONT="aircraft-container-inst${INSTANCE}_${i}"
+      LATEST_BAG=$(docker exec "$AIR_CONT" bash -c "ls -td /aas/rosbags/* 2>/dev/null | head -n 1" || true)
       if [ -n "$LATEST_BAG" ]; then
-        docker cp "${AIR_CNT}:${LATEST_BAG}" "${PLOT_DIR}/drone_${i}_rosbag" >/dev/null 2>&1 \
+        docker cp "${AIR_CONT}:${LATEST_BAG}" "${PLOT_DIR}/drone_${i}_rosbag" >/dev/null 2>&1 \
           && echo "Copied drone $i rosbag: $(basename "$LATEST_BAG")" || echo "Could not copy the rosbag of drone $i"
       else
         echo "No rosbag found for drone $i"
