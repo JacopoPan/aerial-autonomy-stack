@@ -11,12 +11,12 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     this->declare_parameter("track_timeout", 20.0); // s: drop a track after this long with no update (0 = never)
     // Simulated radio link (active when use_sim_time and degrade_simulated_link are both true)
     this->declare_parameter("degrade_simulated_link", true); // Default to true
-    this->declare_parameter("simulated_link_delay", 0.12); // s: mean one-way latency added to ros2 topic
-    this->declare_parameter("simulated_link_jitter", 0.04); // s: +/- uniform jitter on the latency
-    this->declare_parameter("simulated_link_loss", 0.02); // packet-loss probability [0,1]
+    this->declare_parameter("simulated_link_delay", 0.18); // s: mean one-way latency added to ros2 topic
+    this->declare_parameter("simulated_link_jitter", 0.08); // s: +/- uniform jitter on the latency
+    this->declare_parameter("simulated_link_loss", 0.04); // packet-loss probability [0,1]
     this->declare_parameter("simulated_link_rate", 10.0); // Hz: max per-drone position rate over a real radio (e.g., for ArduPilot, SRx_POSITION)
-    this->declare_parameter("simulated_link_outage_rate", 0.02); // Hz: per-drone telemetry link outages (exponential gaps between fades, 0 = never)
-    this->declare_parameter("simulated_link_outage_duration", 3.0); // s: max outage duration (uniform in [0, max])
+    this->declare_parameter("simulated_link_outage_rate", 0.04); // Hz: per-drone telemetry link outages (exponential gaps between fades, 0 = never)
+    this->declare_parameter("simulated_link_outage_duration", 4.5); // s: max outage duration (uniform in [0, max])
 
     // Get Parameters
     num_drones_ = static_cast<int>(this->get_parameter("num_drones").as_int());
