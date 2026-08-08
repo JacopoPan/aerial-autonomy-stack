@@ -573,7 +573,7 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 
 ```sh
 # Stop and remove all containers and networks
-docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
+docker ps -q | xargs -r docker stop && docker container prune -f && docker network prune -f
 
 docker ps -a                          # List containers
 docker stop $(docker ps -q)           # Stop all containers

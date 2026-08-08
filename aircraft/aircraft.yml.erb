@@ -40,7 +40,7 @@ windows:
   - ap_interface:
       layout: even-horizontal
       panes:
-        - clear && echo "So nice to have you with us, this is the aircraft <%= drone_id %> container."
+        - clear && echo "So nice to have you with us, this is the aircraft <%= drone_id %> container.<%= simulated_time ? '' : ' Once done, stop it with tmux kill-server.' %>"
         <% if autopilot == 'px4' %>
         - ros2 run autopilot_interface px4_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>

@@ -102,7 +102,7 @@ else
     echo -e "\t docker exec -it aircraft-container_$DRONE_ID tmux attach\n"
   fi
   echo -e "To stop all containers and remove stopped containers:\n"
-  echo -e '\t docker stop $(docker ps -q) && docker container prune -f\n'
+  echo -e '\t docker ps -q | xargs -r docker stop && docker container prune -f\n'
 fi
 
 # Launch the aircraft container
