@@ -48,7 +48,7 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     simulated_link_outage_rate_ = this->get_parameter("simulated_link_outage_rate").as_double();
     simulated_link_outage_duration_s_ = this->get_parameter("simulated_link_outage_duration").as_double();
     if (simulate_link_degradation_) {
-        RCLCPP_WARN(this->get_logger(), "Simulated radio link (%.0fHz) ON: delay=%.0fms jitter=%.0fms loss=%.0f%% outages=%.2f/s<=%.0fs", simulated_link_rate_, simulated_link_delay_s_ * 1e3, simulated_link_jitter_s_ * 1e3, simulated_link_loss_prob_ * 1e2, simulated_link_outage_rate_, simulated_link_outage_duration_s_);
+        RCLCPP_WARN(this->get_logger(), "Simulated radio link (%.0fHz) ON: delay=%.0fms jitter=%.0fms loss=%.0f%% outages=%.2f/s<=%.1fs", simulated_link_rate_, simulated_link_delay_s_ * 1e3, simulated_link_jitter_s_ * 1e3, simulated_link_loss_prob_ * 1e2, simulated_link_outage_rate_, simulated_link_outage_duration_s_);
     }
 
     // Random Seed
