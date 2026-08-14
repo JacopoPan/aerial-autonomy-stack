@@ -16,12 +16,10 @@ RUN useradd -m -s /bin/bash qgcuser \
 # RUN apt-get remove modemmanager -y
 RUN apt update \
     && apt install -y --no-install-recommends \
-        gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
-        libfuse2 \
-        libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor-dev \
+        libfuse2 libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor0 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
-    && wget https://d176tv9ibo4jno.cloudfront.net/latest/QGroundControl-x86_64.AppImage && \
+    && wget https://d176tv9ibo4jno.cloudfront.net/builds/master/QGroundControl-x86_64.AppImage && \
     chmod +x /QGroundControl-x86_64.AppImage && \
     /QGroundControl-x86_64.AppImage --appimage-extract && \
     rm /QGroundControl-x86_64.AppImage
