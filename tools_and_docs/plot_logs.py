@@ -54,9 +54,9 @@ def read_bin(bin_file):
 
 if __name__ == '__main__':
     log_dir = sys.argv[1] if len(sys.argv) > 1 else os.getcwd()
-    log_files = sorted(glob.glob(os.path.join(log_dir, '*.ulg')) + glob.glob(os.path.join(log_dir, '*.BIN')))
+    log_files = sorted(f for f in glob.glob(os.path.join(log_dir, '*')) if f.lower().endswith(('.ulg', '.bin')))
     if not log_files:
-        sys.exit(f'No .ulg or .BIN logs found in {log_dir}')
+        sys.exit(f'No .ulg or .bin logs found in {log_dir}')
     fig = plt.figure(num='Flight Summary', figsize=(16, max(8, 3 * len(log_files))), layout='constrained')
     gs = fig.add_gridspec(2 * len(log_files), 2, width_ratios=[2, 1])
     ax = fig.add_subplot(gs[:, 0], projection='3d')
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     for k, log_file in enumerate(log_files):
         label = os.path.splitext(os.path.basename(log_file))[0]
         try:
-            t_us, lat, lon, alt, home, t_spd_us, vn, ve = read_ulg(log_file) if log_file.endswith('.ulg') else read_bin(log_file)
+            t_us, lat, lon, alt, home, t_spd_us, vn, ve = read_ulg(log_file) if log_file.lower().endswith('.ulg') else read_bin(log_file)
             if origin is None:
                 origin = home
             east, north, up = pymap3d.geodetic2enu(lat, lon, alt, *origin)
