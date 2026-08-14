@@ -1,0 +1,659 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.9">
+  <world name="crematoria">
+
+    <!-- Gazebo/PX4 pyhsics, it is overridden when using Ardupilot -->
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <plugin name="gz::sim::systems::Physics" filename="gz-sim-physics-system">
+      <engine>
+        <filename>libgz-physics-dartsim-plugin</filename>
+        <!-- libgz-physics-dartsim-plugin is the default -->
+        <!-- The other installed plugins do not allow flight -->
+        <!-- libgz-physics-bullet-plugin libgz-physics-bullet-featherstone-plugin libgz-physics-tpe-plugin -->
+      </engine>
+    </plugin>
+    <plugin name="gz::sim::systems::UserCommands" filename="gz-sim-user-commands-system"/>
+    <plugin name="gz::sim::systems::SceneBroadcaster" filename="gz-sim-scene-broadcaster-system"/>
+    <plugin name="gz::sim::systems::Contact" filename="gz-sim-contact-system"/>
+    <plugin name="gz::sim::systems::Imu" filename="gz-sim-imu-system"/>
+    <plugin name="gz::sim::systems::AirPressure" filename="gz-sim-air-pressure-system"/>
+    <plugin name="gz::sim::systems::ApplyLinkWrench" filename="gz-sim-apply-link-wrench-system"/>
+    <plugin name="gz::sim::systems::NavSat" filename="gz-sim-navsat-system"/>
+    <plugin name="gz::sim::systems::Sensors" filename="gz-sim-sensors-system">
+      <!-- options: ogre (better performance), ogre2 (better quality) -->
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-wind-effects-system" name="gz::sim::systems::WindEffects">
+      <force_approximation_scaling_factor>0.15</force_approximation_scaling_factor> <!-- Tuned: hovering x500 leans ~4 deg in 5 m/s wind -->
+      <horizontal>
+        <magnitude> <!-- Randomized strength -->
+          <time_for_rise>5</time_for_rise> <!-- 5s to reach full strength -->
+          <sin>
+            <amplitude_percent>0.1</amplitude_percent> <!-- 10% gusts -->
+            <period>30</period>
+          </sin>
+          <noise type="gaussian">
+           <mean>0</mean>
+           <stddev>0.0002</stddev>
+          </noise>
+        </magnitude>
+        <direction> <!-- Randomized direction -->
+          <time_for_rise>10</time_for_rise> <!-- 10s to adjust to new bearing -->
+          <sin>
+            <amplitude>5</amplitude> <!-- 5deg oscillations in bearing -->
+            <period>20</period>
+          </sin>
+          <noise type="gaussian">
+           <mean>0</mean>
+           <stddev>0.03</stddev>
+          </noise>
+        </direction>
+      </horizontal>
+      <vertical> <!-- Updrafts and downdrafts -->
+        <noise type="gaussian">
+         <mean>0</mean>
+         <stddev>0.03</stddev>
+        </noise>
+      </vertical>
+    </plugin>
+
+    <gui fullscreen="false">
+      <!-- 3D scene -->
+      <plugin filename="MinimalScene" name="3D View">
+        <gz-gui>
+          <title>3D View</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="string" key="state">docked</property>
+        </gz-gui>
+        <engine>ogre2</engine>
+        <scene>scene</scene>
+        <ambient_light>0.4 0.4 0.4</ambient_light>
+        <background_color>0.8 0.8 0.8</background_color>
+        <camera_pose>-6 0 6 0 0.5 0</camera_pose>
+        <camera_clip>
+          <near>0.25</near>
+          <far>25000</far>
+        </camera_clip>
+      </plugin>
+      <!-- Plugins that add functionality to the scene -->
+      <plugin filename="EntityContextMenuPlugin" name="Entity context menu">
+        <gz-gui>
+          <property key="state" type="string">floating</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="GzSceneManager" name="Scene Manager">
+        <gz-gui>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="InteractiveViewControl" name="Interactive view control">
+        <gz-gui>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="CameraTracking" name="Camera Tracking">
+        <gz-gui>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="MarkerManager" name="Marker manager">
+        <gz-gui>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="SelectEntities" name="Select Entities">
+        <gz-gui>
+          <anchors target="Select entities">
+            <line own="right" target="right"/>
+            <line own="top" target="top"/>
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="VisualizationCapabilities" name="Visualization Capabilities">
+        <gz-gui>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin filename="Spawn" name="Spawn Entities">
+        <gz-gui>
+          <anchors target="Select entities">
+            <line own="right" target="right"/>
+            <line own="top" target="top"/>
+          </anchors>
+          <property key="resizable" type="bool">false</property>
+          <property key="width" type="double">5</property>
+          <property key="height" type="double">5</property>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">false</property>
+        </gz-gui>
+      </plugin>
+      <plugin name="World control" filename="WorldControl">
+        <gz-gui>
+          <title>World control</title>
+          <property type="bool" key="showTitleBar">0</property>
+          <property type="bool" key="resizable">0</property>
+          <property type="double" key="height">72</property>
+          <property type="double" key="width">121</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="left" target="left"/>
+            <line own="bottom" target="bottom"/>
+          </anchors>
+        </gz-gui>
+        <play_pause>1</play_pause>
+        <step>1</step>
+        <start_paused>1</start_paused>
+      </plugin>
+      <plugin name="World stats" filename="WorldStats">
+        <gz-gui>
+          <title>World stats</title>
+          <property type="bool" key="showTitleBar">0</property>
+          <property type="bool" key="resizable">0</property>
+          <property type="double" key="height">110</property>
+          <property type="double" key="width">290</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="right" target="right"/>
+            <line own="bottom" target="bottom"/>
+          </anchors>
+        </gz-gui>
+        <sim_time>1</sim_time>
+        <real_time>1</real_time>
+        <real_time_factor>1</real_time_factor>
+        <iterations>1</iterations>
+      </plugin>
+      <plugin name="Entity tree" filename="EntityTree">
+        <gz-gui>
+          <property key="state" type="string">floating</property>
+          <property key="showTitleBar" type="bool">true</property>
+          <property key="width" type="double">150</property>
+          <property key="height" type="double">4096</property>
+        </gz-gui>
+      </plugin>
+    </gui>
+
+    <gravity>0 0 -9.8</gravity>
+    <!-- <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field> -->
+    <atmosphere type="adiabatic"/>
+    <scene>
+      <grid>false</grid>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+      <!-- <sky></sky> -->
+    </scene>
+
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>32.190556</latitude_deg>
+      <longitude_deg>-104.503056</longitude_deg>
+      <elevation>1410</elevation>
+    </spherical_coordinates>
+
+    <wind>
+      <linear_velocity>0.0 0.0 0.0</linear_velocity> <!-- positive X blows from West, positive Y blows from South  -->
+    </wind>
+
+    <model name="objects">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+
+      <link name="lighting_link">
+        <pose>0 0 0 0 0 0</pose>
+        <light name="sun" type="directional">
+          <pose>0 0 500 0 -0 0</pose>
+          <cast_shadows>true</cast_shadows>
+          <intensity>1</intensity>
+          <direction>0.001 0.625 -0.78</direction>
+          <diffuse>0.904 0.904 0.904 1</diffuse>
+          <specular>0.271 0.271 0.271 1</specular>
+          <attenuation>
+            <range>2000</range>
+            <constant>0.9</constant>
+            <linear>0.01</linear>
+            <quadratic>0.001</quadratic>
+          </attenuation>
+          <spot>
+            <inner_angle>0</inner_angle>
+            <outer_angle>0</outer_angle>
+            <falloff>0</falloff>
+          </spot>
+        </light>
+      </link>
+
+      <model name="axes">
+        <static>1</static>
+        <link name="link">
+          <visual name="r">
+            <cast_shadows>0</cast_shadows>
+            <pose>5 0 0.1 0 0 0</pose>
+            <geometry>
+              <box>
+                <size>10 0.01 0.01</size>
+              </box>
+            </geometry>
+            <material>
+              <ambient>1 0 0 0.8</ambient>
+              <diffuse>1 0 0 0.8</diffuse>
+              <emissive>1 0 0 0.8</emissive>
+              <specular>0.5 0.5 0.5 0.8</specular>
+            </material>
+          </visual>
+          <visual name="g">
+            <cast_shadows>0</cast_shadows>
+            <pose>0 5 0.1 0 0 0</pose>
+            <geometry>
+              <box>
+                <size>0.01 10 0.01</size>
+              </box>
+            </geometry>
+            <material>
+              <ambient>0 1 0 0.8</ambient>
+              <diffuse>0 1 0 0.8</diffuse>
+              <emissive>0 1 0 0.8</emissive>
+              <specular>0.5 0.5 0.5 0.8</specular>
+            </material>
+          </visual>
+          <visual name="b">
+            <cast_shadows>0</cast_shadows>
+            <pose>0 0 5.1 0 0 0</pose>
+            <geometry>
+              <box>
+                <size>0.01 0.01 10</size>
+              </box>
+            </geometry>
+            <material>
+              <ambient>0 0 1 0.8</ambient>
+              <diffuse>0 0 1 0.8</diffuse>
+              <emissive>0 0 1 0.8</emissive>
+              <specular>0.5 0.5 0.5 0.8</specular>
+            </material>
+          </visual>
+        </link>
+      </model>
+
+      <!--
+        Based on Open Robotics' simple_cave_02 world for the DARPA SubT Challenge:
+        - https://github.com/osrf/subt/blob/master/subt_ign/worlds/simple_cave_02.sdf
+        - https://app.gazebosim.org/OpenRobotics/fuel/worlds/Cave%20Simple%2002
+          - License: Creative Commons Attribution 4.0 International https://creativecommons.org/licenses/by/4.0/
+      -->
+      <include>
+        <static>true</static>
+        <name>staging_area</name>
+        <pose>0 0 0 0 0 0</pose>
+        <uri>model://cave_starting_area_type_b</uri>
+      </include>
+      <include>
+        <name>cave_cap_1</name>
+        <uri>model://cave_cap_type_b</uri>
+        <pose>225.000000 175.000000 10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_1</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>225.000000 150.000000 10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_2</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>25.000000 125.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_3</name>
+        <uri>model://cave_straight_02_type_b</uri>
+        <pose>50.000000 125.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_4</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>75.000000 125.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_5</name>
+        <uri>model://cave_straight_02_type_b</uri>
+        <pose>100.000000 125.000000 0.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_6</name>
+        <uri>model://cave_straight_05_type_b</uri>
+        <pose>125.000000 125.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_7</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>150.000000 125.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_8</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>175.000000 125.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_9</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>200.000000 125.000000 10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_10</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>225.000000 125.000000 10.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_11</name>
+        <uri>model://cave_straight_03_type_b</uri>
+        <pose>25.000000 100.000000 0.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_12</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>150.000000 100.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_13</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>200.000000 100.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_14</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>25.000000 75.000000 0.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_15</name>
+        <uri>model://cave_corner_02_type_b</uri>
+        <pose>100.000000 75.000000 0.000000 0 0 -3.141593</pose>
+      </include>
+      <include>
+        <name>tile_16</name>
+        <uri>model://cave_straight_05_type_b</uri>
+        <pose>125.000000 75.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_17</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>150.000000 75.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_18</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>200.000000 75.000000 -10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_19</name>
+        <uri>model://cave_straight_05_type_b</uri>
+        <pose>25.000000 50.000000 0.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_20</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>100.000000 50.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_21</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>150.000000 50.000000 -10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>cave_cap_2</name>
+        <uri>model://cave_cap_type_b</uri>
+        <pose>175.000000 50.000000 -10.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_22</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>200.000000 50.000000 -10.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_23</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>25.000000 25.000000 0.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_24</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>100.000000 25.000000 0.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_25</name>
+        <uri>model://cave_straight_02_type_b</uri>
+        <pose>150.000000 25.000000 -10.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_26</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>200.000000 25.000000 -10.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_27</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>25.000000 0.000000 0.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_28</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>100.000000 0.000000 0.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_29</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>150.000000 0.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_30</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>200.000000 0.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_31</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>25.000000 -25.000000 -10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_32</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>100.000000 -25.000000 -10.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_33</name>
+        <uri>model://cave_straight_03_type_b</uri>
+        <pose>150.000000 -25.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_34</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>200.000000 -25.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_35</name>
+        <uri>model://cave_corner_02_type_b</uri>
+        <pose>25.000000 -50.000000 -10.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_36</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>50.000000 -50.000000 -10.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_37</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>100.000000 -50.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_38</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>150.000000 -50.000000 -20.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_39</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>175.000000 -50.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_40</name>
+        <uri>model://cave_corner_02_type_b</uri>
+        <pose>200.000000 -50.000000 -20.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_41</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>50.000000 -75.000000 -20.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_42</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>100.000000 -75.000000 -30.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_43</name>
+        <uri>model://cave_straight_05_type_b</uri>
+        <pose>175.000000 -75.000000 -20.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_44</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>50.000000 -100.000000 -20.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_45</name>
+        <uri>model://cave_straight_02_type_b</uri>
+        <pose>100.000000 -100.000000 -30.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_46</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>175.000000 -100.000000 -30.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_47</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>50.000000 -125.000000 -30.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_48</name>
+        <uri>model://cave_straight_04_type_b</uri>
+        <pose>100.000000 -125.000000 -30.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_49</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>175.000000 -125.000000 -40.000000 0 0 3.141593</pose>
+      </include>
+      <include>
+        <name>tile_50</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>50.000000 -150.000000 -30.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_51</name>
+        <uri>model://cave_straight_02_type_b</uri>
+        <pose>75.000000 -150.000000 -30.000000 0 0 1.570796</pose>
+      </include>
+      <include>
+        <name>tile_52</name>
+        <uri>model://cave_3_way_01_type_b</uri>
+        <pose>100.000000 -150.000000 -30.000000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>tile_53</name>
+        <uri>model://cave_straight_01_type_b</uri>
+        <pose>125.000000 -150.000000 -30.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_54</name>
+        <uri>model://cave_elevation_type_b</uri>
+        <pose>150.000000 -150.000000 -40.000000 0 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>tile_55</name>
+        <uri>model://cave_corner_01_type_b</uri>
+        <pose>175.000000 -150.000000 -40.000000 0 0 0.000000</pose>
+      </include>
+
+    </model>
+
+    <model name="artifacts">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+
+      <include>
+        <name>backpack_1</name>
+        <uri>model://jansport_backpack_red</uri>
+        <pose>227.100000 150.330000 10.430000 0 0 -1.535890</pose>
+      </include>
+      <include>
+        <name>backpack_2</name>
+        <uri>model://jansport_backpack_red</uri>
+        <pose>150.000000 102.110000 0.500000 0 0.200015 2.539978</pose>
+      </include>
+      <include>
+        <name>backpack_3</name>
+        <uri>model://jansport_backpack_red</uri>
+        <pose>150.560000 -49.220000 -19.675000 0 0 -0.619941</pose>
+      </include>
+      <include>
+        <name>backpack_4</name>
+        <uri>model://jansport_backpack_red</uri>
+        <pose>100.040000 -109.110000 -30.220000 -0.087266 0 -1.396263</pose>
+      </include>
+
+      <include>
+        <name>rescue_randy_1</name>
+        <uri>model://rescue_randy_sitting</uri>
+        <pose>150.000000 133.650000 0.760000 0 0 0.000000</pose>
+      </include>
+      <include>
+        <name>rescue_randy_2</name>
+        <uri>model://rescue_randy_sitting</uri>
+        <pose>26.670000 103.910000 1.180000 0.260054 0 0.000000</pose>
+      </include>
+      <include>
+        <name>rescue_randy_3</name>
+        <uri>model://rescue_randy_sitting</uri>
+        <pose>102.210000 -142.470000 -29.880000 -0.049916 0 -1.570796</pose>
+      </include>
+      <include>
+        <name>rescue_randy_4</name>
+        <uri>model://rescue_randy_sitting</uri>
+        <pose>177.860000 -149.970000 -40.000000 -0.099484 0 -1.658063</pose>
+      </include>
+
+    </model>
+
+  </world>
+</sdf>

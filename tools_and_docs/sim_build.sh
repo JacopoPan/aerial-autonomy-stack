@@ -6,21 +6,23 @@ set -e
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-# By default, skip building advanced odometry, SLAM packages
-BUILD_ADVANCED_ODOM=${EXTRAS:-false}
+# Set up the build
+BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
+CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
+CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY; do check_enum "$v" true false; done
+print_envvars
 
 BUILD_OPTS=""
-if [ "${CLEAN_BUILD:-false}" = "true" ]; then
+if [ "$CLEAN_BUILD" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
   BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi transitional-ros2-image:latest transitional-ros2-qgc-image:latest \
     aircraft-image:latest ground-image:latest simulation-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
-fi
-
-BUILD_DOCKER=true
-if [ "${CLONE_ONLY:-false}" = "true" ]; then
-  BUILD_DOCKER=false # If CLONE_ONLY is "true", disable the build steps
 fi
 
 # Create a folder (ignored by git) to clone GitHub repos
@@ -57,8 +59,9 @@ for repo_info in "${REPOS[@]}"; do
   if [ -d "$TARGET_DIR" ]; then
     cd "$TARGET_DIR"
     BRANCH=$(git branch --show-current)
-    TAGS=$(git tag --points-at HEAD)
-    echo "There is a clone of ${dir} on branch: ${BRANCH}, tags: [${TAGS}]"
+    TAGS=$(git tag --points-at HEAD | paste -sd, -)
+    HEAD_INFO=$(git log -1 --format='%h %cs (%cr)')
+    printf '%-30s %-20s %-20s %s\n' "$dir" "${BRANCH:-[detached]}" "$TAGS" "$HEAD_INFO"
     # The script does not automatically pull changes for already cloned repos (as they should be on fixed tags)
     # This avoids breaking the Docker cache but it requires manually deleting the _github_clones folder for branch/tag updates
     # git pull
@@ -66,21 +69,28 @@ for repo_info in "${REPOS[@]}"; do
     cd "$CLONE_DIR"
   else
     echo "Clone not found, cloning ${dir}..."
-    TEMP_DIR="${TARGET_DIR}_temp"     
-    rm -rf "$TEMP_DIR" # Clean up any failed clone from a previous run   
-    git clone --depth 1 --shallow-submodules --branch "$branch" --recursive "$url" "$TEMP_DIR" && mv "$TEMP_DIR" "$TARGET_DIR"
+    TEMP_DIR="${TARGET_DIR}_temp"
+    rm -rf "$TEMP_DIR" # Clean up any failed clone from a previous run
+    for attempt in 1 2 3; do # Up to 3 tries
+      git clone --depth 1 --shallow-submodules --branch "$branch" --recursive "$url" "$TEMP_DIR" && break
+      echo "Clone of ${dir} failed (attempt ${attempt}/3), retrying..."
+      rm -rf "$TEMP_DIR"
+      sleep 2
+    done
+    [ -d "$TEMP_DIR" ] || { echo "ERROR: could not clone ${dir}"; exit 1; }
+    mv "$TEMP_DIR" "$TARGET_DIR"
   fi
 done
 
 # Get simulation_assets from GitHub release
-ASSETS_URL="https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v1.4.0/simulation_assets_v4.zip"
-EXPECTED_HASH="36eebde1a467f6ddb3fa7cca9ac94aa13551e672a72616ec1e8466a74614e71e" # sha256sum simulation_assets_v4.zip
-ZIP_FILE="$CLONE_DIR/simulation_assets_v4.zip" # Created by zipping the simulation/ folder with `zip -r simulation_assets_v4.zip simulation`
+ASSETS_URL="https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v1.5.0/simulation_assets_v5.zip"
+EXPECTED_HASH="b04b5c983929ffb633acc265ad258f1fdc37d3a2e5af4db7c95cf90369d552b2" # sha256sum simulation_assets_v5.zip
+ZIP_FILE="$CLONE_DIR/simulation_assets_v5.zip" # Created by zipping the simulation/ folder with `zip -r simulation_assets_v5.zip simulation`
 DOWNLOAD_NEEDED=true
 if [ -f "$ZIP_FILE" ]; then
   CURRENT_HASH=$(sha256sum "$ZIP_FILE" | awk '{print $1}')
   if [ "$CURRENT_HASH" = "$EXPECTED_HASH" ]; then
-    echo "simulation_assets_v4.zip already downloaded"
+    echo "simulation_assets_v5.zip already downloaded"
     DOWNLOAD_NEEDED=false
   fi
 fi
@@ -102,7 +112,9 @@ fi
 # Unzip quietly (-q), overwrite (-o), into the repository root directory (-d) above tools_and_docs/ to merge into simulation/
 unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
-if [ "$BUILD_DOCKER" = "true" ]; then
+if [ "$CLONE_ONLY" = "true" ]; then
+  echo -e "Skipping Docker builds"
+else
   # Build common layers reused between images
   docker build $BUILD_OPTS --target ros2-image -t transitional-ros2-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_OPTS --target ros2-qgc-image -t transitional-ros2-qgc-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
@@ -110,6 +122,4 @@ if [ "$BUILD_DOCKER" = "true" ]; then
   docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_OPTS -t ground-image -f "${SCRIPT_DIR}/docker/ground.dockerfile" "${SCRIPT_DIR}/.."
   docker build $BUILD_OPTS -t simulation-image -f "${SCRIPT_DIR}/docker/simulation.dockerfile" "${SCRIPT_DIR}/.."
-else
-  echo -e "Skipping Docker builds"
 fi

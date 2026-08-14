@@ -33,10 +33,7 @@ GYM_RUN_SCRIPT="$SCRIPT_DIR/../gym_run.py"
 
 # Docker clean-up helper function
 cleanup_docker() {
-    # Check if there are running containers before trying to stop them
-    if [ -n "$(docker ps -q)" ]; then
-        docker stop $(docker ps -q) >/dev/null 2>&1
-    fi
+    docker ps -q | xargs -r docker stop >/dev/null 2>&1
     docker container prune -f >/dev/null 2>&1
     docker network prune -f >/dev/null 2>&1
     # Wait to let the os release socket file handles
@@ -91,7 +88,7 @@ suite_start_time=$(date +%s)
                                 val=$(echo "$output" | grep "Avg Speedup:" | sed -E 's/.*: +([0-9.]+)x.*/\1/')
                                 
                                 if [ -n "$val" ]; then
-                                    speedup_values+=($val)
+                                    speedup_values+=("$val")
                                     success=true
                                     break # Exit retry loop
                                 fi

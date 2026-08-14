@@ -1,6 +1,6 @@
 # aerial-autonomy-stack
 
-*Aerial autonomy stack* (AAS) is a "batteries included" open software and the simplest/fastest way to:
+*Aerial autonomy stack* (AAS) is a "batteries included", flight-proven, open software and the simplest/fastest way to:
 
 1. **Develop** multi-drone autonomy—with PX4, ArduPilot, and ROS2
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - Multi-**Jetson-in-the-loop (HITL) simulation** to test NVIDIA- and ARM-based on-board compute
 - Dual network to separate simulated sensors (`SIM_SUBNET`) and inter-vehicle comms (`AIR_SUBNET`)
 - [Zenoh](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds) inter-vehicle ROS2 bridge
-- [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight) 
+- [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (`rosbag`)
 </details>
@@ -62,22 +62,23 @@ done
 
 ## 2. Multi-drone Simulation
 
-![workspace](https://github.com/user-attachments/assets/ad909fcc-69de-44ac-84b3-c5bc7a1c896f)
+![workspace](https://github.com/user-attachments/assets/81b6df7f-f85f-4764-acb3-055e37f6419d)
 
 Start AAS:
 
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
+NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
 # Simulation options:
 #  AUTOPILOT=px4, ardupilot
 #  HEADLESS/CAMERA/LIDAR=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
-#  WORLD=impalpable_greyness, apple_orchard, shibuya_crossing, swiss_town, waterworld
-#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible)
+#  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
+#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible")
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
+#  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
 
 There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
@@ -104,7 +105,9 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 # Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
 ```
 
-![worlds](https://github.com/user-attachments/assets/b9f7635a-0b1f-4698-ba6a-70ab1b412aef)
+![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
+
+![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)
 
 > `WORLD`s:
 > *(i)* `apple_orchard`, a GIS world created using [BlenderGIS](https://github.com/domlysz/BlenderGIS)
@@ -112,8 +115,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
 > / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
-
-![waves](https://github.com/user-attachments/assets/71f1e302-c7e0-4b41-811a-41e3b1f5050f)
+> / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
 
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
@@ -125,10 +127,10 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > # Takeoff action (quads and VTOLs/tailsitters)
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 40.0, vtol_transition_heading: 330.0, vtol_loiter_north: 200.0, vtol_loiter_east: 100.0, vtol_loiter_alt: 120.0}'"
 >
-> # Land (at home) action (quads and VTOLs/tailsitters)
+> # Land (at home) action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites params RTL_ALT/Q_RTL_ALT
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
 >
-> # Orbit action (quads and VTOLs/tailsitters)
+> # Orbit action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites param CIRCLE_RATE
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
 >
 > # Reposition service (quads only)
@@ -137,7 +139,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot)
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test, max_duration_sec: 5.0}'"
 >
-> # SetSpeed service (always limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs) 
+> # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs)
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
 >
 > # Gimbal status and position control (in radians)
@@ -146,7 +148,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > ```
 > To analyze the flight logs, in the `Simulation`'s terminal:
 > ```sh
-> /aas/simulation_resources/scripts/plot_logs.sh                                                # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
+> /aas/simulation_resources/scripts/analyze_logs.sh                                           # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
 > ```
 > </details>
 > <details>
@@ -155,16 +157,17 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > ```sh
 > python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
 > python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> # Note: only use with the quadrotor models as the simulated airspeed sensors on VTOLs/tailsitters are not Gazebo wind-aware
 > ```
 > </details>
 > <details>
 > <summary>Develop within <b>live containers</b> <i>(click to expand)</i></summary>
 > 
-> Launching the `sim_run.sh` script with `DEV=true`, does **not** start the simulation and mounts folders `[aircraft|ground|simulation]_resources`, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
+> Launching the `sim_run.sh` script with `DEV=true` does **not** start the simulation and mounts folders, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
 > 
 > ```sh
 > cd aerial-autonomy-stack/tools_and_docs/
-> DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_resources/ and *_ws/src/ folders are mounted from the host
+> DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_ws/src/ folders are mounted from the host
 > ```
 > 
 > To build changes—**made on the host**—in the `Ground` or `QUAD` terminal:
@@ -194,6 +197,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
 > </details>
 
 ![vio](https://github.com/user-attachments/assets/b1a97041-a508-4365-8197-9bf6ba32bcc1)
+> `BUILD_ADVANCED_ODOM=true ./sim_build.sh` adds to the `aircraft-image` several VIO and LIVO packages, including `openvins`, `rovio`, `fastlio`, `superodom`, and `mimosa`
 
 ## 3. Deployment on Jetson
 
@@ -227,7 +231,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#  HEADLESS/CAMERA/LIDAR=true, false
+#  HEADLESS/CAMERA/LIDAR/RECORD_ROSBAG=true, false
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -251,12 +255,18 @@ Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.
 - One ground computer, with IP `[SIM_SUBNET].90.101`
 - `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
 
-> **Optionally**, set up a second LAN :`AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
+> **Optionally**, set up a second LAN `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
 > 
 > - One ground computer, with IP `[AIR_SUBNET].90.101`
 > - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
 
-First, start all aircraft containers, one on each Jetson (e.g. *via* SSH):
+First, start the ground container:
+```sh
+# On the computer with IPs ending in 90.101
+HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+```
+
+Then, start all aircraft containers, one on each Jetson (e.g. *via* SSH from the ground container):
 ```sh
 # On the Jetson with IPs ending in 90.1
 HITL=true DRONE_ID=1 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
@@ -267,21 +277,15 @@ HITL=true DRONE_ID=1 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh        
 HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh                      # Add HEADLESS=false if a screen is connected to the Jetson
 ```
 
-Then, start the simulation:
+Finally, start the simulation container:
 ```sh
 # On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 ./sim_run.sh
+HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh
 ```
 
-Finally, start QGC and the Zenoh bridge:
-```sh
-# On the computer with IPs ending in 90.101
-HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
-```
+> **Note:** running only the last 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
 
-> **Note:** running only the first 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
-
-Once done, detach Tmux (and remove the containers) with `Ctrl + b`, then `d`
+Once done, detach Tmux (and remove the containers) with `tmux kill-server`
 </details>
 
 ## 4. Gymnasium RL Environment
@@ -465,6 +469,7 @@ aerial-autonomy-stack
 │   │   │   └── sensor_config.yaml                    # Intrinsics and extrinsics for all sensor and vehicle models
 │   │   └── simulation_worlds
 │   │       ├── apple_orchard.sdf
+│   │       ├── crematoria.sdf
 │   │       ├── impalpable_greyness.sdf
 │   │       ├── shibuya_crossing.sdf
 │   │       ├── swiss_town.sdf
@@ -493,19 +498,23 @@ aerial-autonomy-stack
 
 - [x] Host OS: [Ubuntu 22.04/24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
 - [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
-    - **TODO: upgrade to JP 7.2 [L4T 39.2, Ubuntu 24-based]**
-- [x] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)
+  - **TODO: upgrade to JetPack 7.2 [L4T 39.2, Ubuntu 24-based]**
+- [ ] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)
+  - **TODO: upgrade to `nvidia-driver-610` once all base images are Ubuntu 24-based**
 - [x] [Docker Engine v29](https://docs.docker.com/engine/release-notes/)
 - [x] [NVIDIA Container Toolkit 1.19](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
 - [x] `amd64` base image: [`cuda:12.9.2-cudnn-runtime-ubuntu22.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags)
 - [x] `arm64`/Jetson base image: [`l4t-jetpack:r36.4.0`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-jetpack/tags)
-- [x] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
+- [ ] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
+  - **TODO: upgrade to DeepStream 9.1 on JetPack 7.2**
 - [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
-- [x] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
+- [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
+  - **TODO: upgrade to 4.7.0**
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
-- [x] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
+- [ ] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
+  - **TODO: upgrade to 1.28.0 with system Python 3.12 on Ubuntu 24**
 
 Transitive constraints (as of May 2026):
 
@@ -513,7 +522,7 @@ Transitive constraints (as of May 2026):
   - JetPack 6/Orin latest supported DeepStream version is 7.1 (DS 8.0, 9.0 are on JetPack 7/Thor)
   - JetPack 6 is based on L4T 36 (Ubuntu 22)
     - Ubuntu 22's system Python is version 3.10
-      - The last available ONNX Runtime GPU wheel for Python 3.10 is version 1.23.2 ([ORT 1.24+ is available on Python 3.11+](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
+      - The last available ONNX Runtime GPU wheel for Python 3.10 is version 1.23.2 ([ORT >=1.24 is available on Python >=3.11](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
         - ONNX Runtime GPU 1.23.2 only supports CUDA 12 ([CUDA 13 added in ORT 1.24.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
           - The latest CUDA 12 on the [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags) is 12.9.2 (e.g., `cuda:12.9.2-cudnn-runtime-ubuntu22.04`)
     - Ubuntu 22's GStreamer `apt` package is version 1.20
@@ -533,6 +542,7 @@ External repositories:
 - [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.23.2`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
+</details>
 
 ---
 > You've done a man's job, sir. I guess you're through, huh?
@@ -551,9 +561,9 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 ## Known Issues
 
 - ArduPilot SITL for Iris uses option -f that also sets "external": True, this is not the case for the Alti Transition from ArduPilot/SITL_Models
-- ArduPilot SITL crashes when the swan_k1_hwing tailsitter model lands
+- ArduPilot SITL throws a floating point exception when the swan_k1_hwing tailsitter model lands (ignored with SIM_FLOAT_EXCEPT 0)
+- Gazebo WindEffects reach all vehicles aerodynamically, but no airspeed sensor (PX4 SENS_EN_ARSPDSIM, ArduPlane SIM_ARSPD_*, gz AirSpeed)
 - QGC will only connect to the first 10 ArduPilot vehicles when GND_CONTAINER=false because of settings in QGroundControl.ini
-- Gazebo WindEffects plugin affects cruise speeds and it is disabled for the standard_vtol's model.sdf.erb
 - Command 178 MAV_CMD_DO_CHANGE_SPEED is accepted but not effective in changing speed for ArduPilot VTOL
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
@@ -563,7 +573,7 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 
 ```sh
 # Stop and remove all containers and networks
-docker stop $(docker ps -q) && docker container prune -f && docker network prune -f
+docker ps -q | xargs -r docker stop && docker container prune -f && docker network prune -f
 
 docker ps -a                          # List containers
 docker stop $(docker ps -q)           # Stop all containers

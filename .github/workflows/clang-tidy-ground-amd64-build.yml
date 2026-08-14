@@ -1,0 +1,93 @@
+name: clang-tidy ground-image amd64
+
+on:
+  schedule:
+    - cron: '0 4 * * 6'
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ "main" ]
+    types: [ready_for_review]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet &
+          sudo rm -rf /usr/local/lib/android &
+          sudo rm -rf /opt/ghc &
+          sudo rm -rf /opt/hostedtoolcache/CodeQL &
+          sudo rm -rf /usr/local/share/boost &
+          sudo rm -rf /usr/share/swift &
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" &
+          wait
+          sudo docker image prune --all --force
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+
+      - name: Add swap space
+        run: |
+          sudo swapoff -a || true
+          sudo rm -f /swapfile
+          sudo fallocate -l 10G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+      - name: Check swap
+        run: |
+          free -h
+          sudo swapon --show
+
+      - name: Check disk space
+        run: df -h
+
+      - name: Move Docker to /mnt
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker
+          echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl start docker
+          docker info | grep "Docker Root Dir"
+
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Clone external repos
+        run: CLONE_ONLY=true ./tools_and_docs/sim_build.sh
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the ground image locally for linting
+        run: |
+          docker buildx build --target ros2-image \
+            --output type=oci,dest=/tmp/transitional-ros2-image,tar=false \
+            -f ./tools_and_docs/docker/aircraft.dockerfile .
+          docker buildx build --load \
+            --build-context transitional-ros2-image=oci-layout:///tmp/transitional-ros2-image \
+            -t ground-image:lint \
+            -f ./tools_and_docs/docker/ground.dockerfile .
+
+      - name: Check disk space after build
+        run: df -h
+
+      - name: Run clang-tidy
+        run: |
+          docker run --rm --entrypoint bash ground-image:lint -lc '
+            apt-get update && apt-get install -y clang-tidy || { echo "clang-tidy install failed"; exit 1; }
+            . /opt/ros/humble/setup.sh
+            cd /aas/ground_ws
+            colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || { echo "db build failed"; exit 1; }
+            returncode=0
+            for db in build/*/compile_commands.json; do
+              pkg=$(basename "$(dirname "$db")")
+              echo "=== clang-tidy: $pkg ==="
+              run-clang-tidy -quiet -p "build/$pkg" -extra-arg=-std=c++17 ".*/src/.*" || returncode=1
+            done
+            exit $returncode'

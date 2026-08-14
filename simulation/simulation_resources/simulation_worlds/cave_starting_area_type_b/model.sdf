@@ -1,0 +1,181 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+    <model name="cave_starting_area">
+        <static>true</static>
+        <link name="fence_link">
+            <pose>-12 0 0 0 0 0</pose>
+            <collision name="collision_top">
+                <pose>0 0 30 0 0 0</pose>
+                <geometry>
+                    <box>
+                        <size>55 60 0.2</size>
+                    </box>
+                </geometry>
+            </collision>
+            <collision name="collision_left">
+                <pose>0 30 15 0 0 0</pose>
+                <geometry>
+                    <box>
+                        <size>55 0.2 30</size>
+                    </box>
+                </geometry>
+            </collision>
+            <collision name="collision_right">
+                <pose>0 -30 15 0 0 0</pose>
+                <geometry>
+                    <box>
+                        <size>55 0.2 30</size>
+                    </box>
+                </geometry>
+            </collision>
+            <collision name="collision_back">
+                <pose>-27.5 0 15 0 0 0</pose>
+                <geometry>
+                    <box>
+                        <size>0.2 60 30</size>
+                    </box>
+                </geometry>
+            </collision>
+        </link>
+        <link name="base_link">
+            <pose>0 0 0 0 0 1.5708</pose>
+            <collision name="collision">
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cavestartingarea.dae</uri>
+                        <scale>1.0 1.0 1.0</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="Grass_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cavestartingarea.dae</uri>
+                        <submesh>
+                            <name>Grass</name>
+                            <center>false</center>
+                        </submesh>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/Grass_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/Grass_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/Grass_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+            <visual name="StriatedRock_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cavestartingarea.dae</uri>
+                        <submesh>
+                            <name>StriatedRock</name>
+                            <center>false</center>
+                        </submesh>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/StriatedRock_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/StriatedRock_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/StriatedRock_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+            <visual name="RockPile_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cavestartingarea.dae</uri>
+                        <submesh>
+                            <name>RockPile</name>
+                            <center>false</center>
+                        </submesh>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/RockPile_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/RockPile_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/RockPile_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+            <visual name="CaveWall_visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/cavestartingarea.dae</uri>
+                        <submesh>
+                            <name>CaveWall</name>
+                            <center>false</center>
+                        </submesh>
+                    </mesh>
+                </geometry>
+                <material>
+                    <diffuse>1.0 1.0 1.0</diffuse>
+                    <specular>1.0 1.0 1.0</specular>
+                    <pbr>
+                        <metal>
+                            <albedo_map>model://cave_straight_type_a/materials/textures/CaveWall_Albedo.jpg</albedo_map>
+                            <normal_map>model://cave_straight_type_a/materials/textures/CaveWall_Normal.jpg</normal_map>
+                            <roughness_map>model://cave_straight_type_a/materials/textures/CaveWall_Roughness.jpg</roughness_map>
+                        </metal>
+                    </pbr>
+                    <!-- fallback to script if no PBR support-->
+                </material>
+            </visual>
+        </link>
+        <link name="lights">
+            <light type="spot" name="spot_light1">
+                <pose>-8 0.0 18.0 0 0.0 0</pose>
+                <diffuse>1.0 1.0 1.0 1</diffuse>
+                <specular>0.1 0.1 0.1 1</specular>
+                <attenuation>
+                    <range>30</range>
+                    <linear>0.0</linear>
+                    <constant>0.01</constant>
+                    <quadratic>0.001</quadratic>
+                </attenuation>
+                <spot>
+                    <inner_angle>2.0</inner_angle>
+                    <outer_angle>2.9</outer_angle>
+                    <falloff>0.4</falloff>
+                </spot>
+                <cast_shadows>false</cast_shadows>
+            </light>
+            <light type="spot" name="spot_light2">
+                <pose>0 0.0 15.0 0 0 0</pose>
+                <diffuse>1.0 1.0 1.0 1</diffuse>
+                <specular>0.8 0.8 0.8 1</specular>
+                <attenuation>
+                    <range>20</range>
+                    <linear>0.0</linear>
+                    <constant>0.01</constant>
+                    <quadratic>0.001</quadratic>
+                </attenuation>
+                <spot>
+                    <inner_angle>1.5</inner_angle>
+                    <outer_angle>1.8</outer_angle>
+                    <falloff>0.52</falloff>
+                </spot>
+                <cast_shadows>false</cast_shadows>
+            </light>
+        </link>
+    </model>
+</sdf>

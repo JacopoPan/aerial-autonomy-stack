@@ -6,6 +6,7 @@
     <self_collide>false</self_collide>
     <static>false</static>
     <link name="base_link">
+      <!-- Allow the WindEffects plugin to push the quad frame -->
       <enable_wind>true</enable_wind>
       <inertial>
         <mass>2.0</mass>
@@ -287,6 +288,7 @@
           </linear_acceleration>
         </imu>
       </sensor>
+      <!-- gz_bridge hardcodes base_link/navsat_sensor for the simulated GNSS -->
       <sensor name="navsat_sensor" type="navsat">
         <always_on>1</always_on>
         <update_rate>30</update_rate>

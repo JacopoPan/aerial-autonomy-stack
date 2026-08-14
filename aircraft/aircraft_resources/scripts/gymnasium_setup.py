@@ -1,4 +1,3 @@
-import time
 import argparse
 
 import rclpy

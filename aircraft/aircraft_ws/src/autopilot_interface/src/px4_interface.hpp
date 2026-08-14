@@ -122,6 +122,7 @@ private:
     double x_, y_, z_, heading_, vx_, vy_, vz_;
     double ref_lat_, ref_lon_, ref_alt_;
     int pose_frame_, velocity_frame_;
+    // float to match PX4 float32 VehicleOdometry
     std::array<float, 3> position_;
     std::array<float, 4> q_;
     std::array<float, 3> velocity_;
@@ -203,6 +204,8 @@ private:
 
     // Utility
     std::string fsm_state_to_string(PX4InterfaceState state);
+    static uint64_t sec_to_us(double sec) { return static_cast<uint64_t>(sec * 1000000); }
+
 };
 
 #endif // AUTOPILOT_INTERFACE__PX4_INTERFACE_HPP_

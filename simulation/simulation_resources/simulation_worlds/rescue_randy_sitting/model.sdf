@@ -1,0 +1,27 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+    <model name="rescue_randy_sitting">
+        <static>true</static>
+        <link name="link">
+            <pose>0 0 -0.623996 0 0 0</pose>
+            <collision name="collision">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/rescue_randy.dae</uri>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="visual">
+                <geometry>
+                    <mesh>
+                        <uri>meshes/rescue_randy.dae</uri>
+                    </mesh>
+                </geometry>
+                <plugin filename="gz-sim-thermal-system" name="gz::sim::systems::Thermal">
+                    <heat_signature>model://rescue_randy_sitting/materials/textures/RescueRandy_Thermal.png</heat_signature>
+                    <max_temp>305</max_temp>
+                </plugin>
+            </visual>
+        </link>
+    </model>
+</sdf>

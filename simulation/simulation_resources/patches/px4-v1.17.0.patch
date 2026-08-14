@@ -1,5 +1,5 @@
 diff --git a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink b/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
-index 17ef44521b..ccf6907a1b 100644
+index 17ef44521b..052bb52708 100644
 --- a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
 +++ b/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
 @@ -4,6 +4,8 @@
@@ -11,12 +11,13 @@ index 17ef44521b..ccf6907a1b 100644
  udp_onboard_payload_port_local=$((14280+px4_instance))
  udp_onboard_payload_port_remote=$((14030+px4_instance))
  udp_onboard_gimbal_port_local=$((13030+px4_instance))
-@@ -25,6 +27,9 @@ mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u $udp_gcs_port_local
+@@ -25,6 +27,10 @@ mavlink stream -r 10 -s OPTICAL_FLOW_RAD -u $udp_gcs_port_local
  # API/Offboard link
  mavlink start -x -u $udp_offboard_port_local -r 4000000 -f -m onboard -o $udp_offboard_port_remote
  
-+# AAS link
++# AAS link (10Hz GLOBAL_POSITION_INT for the ground_system)
 +mavlink start -x -u $udp_aas_port_local -r 4000000 -f -t "${AAS_GROUND_IP:-127.0.0.1}" -o $udp_aas_port_remote
++mavlink stream -r 10 -s GLOBAL_POSITION_INT -u $udp_aas_port_local
 +
  # Onboard link to camera
  mavlink start -x -u $udp_onboard_payload_port_local -r 4000 -f -m onboard -o $udp_onboard_payload_port_remote

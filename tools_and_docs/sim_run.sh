@@ -13,30 +13,22 @@ ODOM="${ODOM:-none}" # Options: none (default), openvins, fastlio, superodom, mi
 SIM_SUBNET="${SIM_SUBNET:-10.42}" # Simulation subnet (default = 10.42) Note: this is overridden if INSTANCE != 0
 AIR_SUBNET="${AIR_SUBNET:-10.22}" # Inter-vehicle subnet (default = 10.22) Note: this is overridden if INSTANCE != 0
 SIM_ID="${SIM_ID:-100}" # Last byte of the simulation container IP (default = 100)
-GROUND_ID="${GROUND_ID:-101}" # Last byte of the simulation container IP (default = 101)
+GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 101)
 #
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
-WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, shibuya_crossing, swiss_town
+WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #
+RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
 RTF="${RTF:-1.0}" # Real-time factor (default = 1.0), set to <=0.0 for as fast as possible execution
 START_AS_PAUSED="${START_AS_PAUSED:-false}" # Options: true, false (default)
 INSTANCE="${INSTANCE:-0}" # Integer ID to make docker network/container names unique as well as offsetting the second byte of the subnets (default = 0)
-# Set unique subnets and container/network names based on INSTANCE
-SIM_BYTE_1=$(echo "$SIM_SUBNET" | cut -d'.' -f1)
-SIM_BYTE_2=$(echo "$SIM_SUBNET" | cut -d'.' -f2)
-SIM_SUBNET="${SIM_BYTE_1}.$((SIM_BYTE_2 + INSTANCE))"
-AIR_BYTE_1=$(echo "$AIR_SUBNET" | cut -d'.' -f1)
-AIR_BYTE_2=$(echo "$AIR_SUBNET" | cut -d'.' -f2)
-AIR_SUBNET="${AIR_BYTE_1}.$((AIR_BYTE_2 + INSTANCE))"
-SIM_NET_NAME="aas-sim-network-inst${INSTANCE}"
-AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
-SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
-GND_CONT_NAME="ground-container-inst${INSTANCE}"
+# Note: the analysis/plotting env variable is used by this script on cleanup and NOT passed to any container
+PLOT="${PLOT:-false}" # Options: true, false (default)
 
 # Detect the environment (Ubuntu/GNOME, WSL, etc.)
 if echo "$XDG_CURRENT_DESKTOP" | grep -qi "gnome"; then
@@ -49,21 +41,47 @@ else
 fi
 echo "Desktop environment: $DESK_ENV"
 
+# Find the script's path
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+check_enum AUTOPILOT px4 ardupilot
+check_enum ODOM none openvins fastlio superodom mimosa
+check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
+for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
+check_int INSTANCE 0 99
+check_num RTF
+print_envvars
+
+# Set unique subnets and container/network names based on INSTANCE
+SIM_BYTE_1=$(echo "$SIM_SUBNET" | cut -d'.' -f1)
+SIM_BYTE_2=$(echo "$SIM_SUBNET" | cut -d'.' -f2)
+SIM_SUBNET="${SIM_BYTE_1}.$((SIM_BYTE_2 + INSTANCE))"
+AIR_BYTE_1=$(echo "$AIR_SUBNET" | cut -d'.' -f1)
+AIR_BYTE_2=$(echo "$AIR_SUBNET" | cut -d'.' -f2)
+AIR_SUBNET="${AIR_BYTE_1}.$((AIR_BYTE_2 + INSTANCE))"
+SIM_NET_NAME="aas-sim-network-inst${INSTANCE}"
+AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
+SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
+GND_CONT_NAME="ground-container-inst${INSTANCE}"
+
 # In dev mode, resources and workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
-  SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-  #
   DEV_SIM_OPTS="--entrypoint /bin/bash"
-  DEV_SIM_OPTS+=" -v ${SCRIPT_DIR}/../simulation/simulation_resources/:/aas/simulation_resources:cached"
+  DEV_SIM_OPTS+=" -v ${SCRIPT_DIR}/../simulation/simulation_ws/src:/aas/simulation_ws/src:cached"
+  DEV_SIM_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
   #
   DEV_GND_OPTS="--entrypoint /bin/bash"
-  DEV_GND_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_resources/:/aas/ground_resources:cached"
   DEV_GND_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_ws/src:/aas/ground_ws/src:cached"
+  DEV_GND_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
   #
   DEV_AIR_OPTS="--entrypoint /bin/bash"
-  DEV_AIR_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_resources/:/aas/aircraft_resources:cached"
   DEV_AIR_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"
   DEV_AIR_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_ws/src/ground_system_msgs:/aas/aircraft_ws/src/ground_system_msgs:cached"
+  DEV_AIR_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
 fi
 
 # Create docker networks for SITL
@@ -192,6 +210,7 @@ if [[ "$HITL" == "false" ]]; then
         --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \
         --env GND_CONTAINER=$GND_CONTAINER \
         --env ROS_DOMAIN_ID=$DRONE_ID \
+        --env RECORD_ROSBAG=$RECORD_ROSBAG \
         --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.$DRONE_ID \
         --privileged \
         --name $NAME_AIRCRAFT_CNT"
@@ -228,6 +247,43 @@ read -n 1 -s # Wait for user input
 
 # Cleanup function
 cleanup() {
+  # Copy autopilot SITL logs to the host
+  PLOT_DIR="${SCRIPT_DIR}/logs/postmortem_$(date +%Y-%m-%d_%H-%M-%S)"
+  NUM_DRONES=$((NUM_QUADS + NUM_VTOLS + NUM_TAILS))
+  echo "Copying the latest log of $NUM_DRONES drone(s) to $PLOT_DIR..."
+  mkdir -p "$PLOT_DIR" 2>/dev/null || echo "Could not create $PLOT_DIR"
+  for i in $(seq 1 $NUM_DRONES); do
+    if [ "$AUTOPILOT" == "ardupilot" ]; then
+      LOG_GLOB="/aas/ardu_sitl_${i}/logs/*.BIN" # sim_vehicle.py runs in /aas/ardu_sitl_${i}, see simulation.yml.erb
+    else
+      LOG_GLOB="/aas/github_apps/PX4-Autopilot/build/px4_sitl_default/rootfs/$((i - 1))/log/*/*.ulg" # px4 -i is 0-based
+    fi
+    LATEST_LOG=$(docker exec "$SIM_CONT_NAME" bash -c "ls -t $LOG_GLOB 2>/dev/null | head -n 1" || true)
+    if [ -n "$LATEST_LOG" ]; then
+      docker cp "${SIM_CONT_NAME}:${LATEST_LOG}" "${PLOT_DIR}/drone_${i}.${LATEST_LOG##*.}" >/dev/null 2>&1 \
+        && echo "Copied drone $i log: $(basename "$LATEST_LOG")" || echo "Could not copy the log of drone $i"
+    else
+      echo "No log found for drone $i"
+    fi
+  done
+  # Copy the aircraft rosbags (if recorded) to the host
+  if [[ "$RECORD_ROSBAG" == "true" ]]; then
+    for i in $(seq 1 $NUM_DRONES); do
+      docker exec "aircraft-container-inst${INSTANCE}_${i}" tmux send-keys -t logging.0 C-c >/dev/null 2>&1 || true
+    done
+    sleep 2 # Wait for ros2 bag to close the file and write metadata.yaml
+    for i in $(seq 1 $NUM_DRONES); do
+      AIR_CONT="aircraft-container-inst${INSTANCE}_${i}"
+      LATEST_BAG=$(docker exec "$AIR_CONT" bash -c "ls -td /aas/rosbags/* 2>/dev/null | head -n 1" || true)
+      if [ -n "$LATEST_BAG" ]; then
+        docker cp "${AIR_CONT}:${LATEST_BAG}" "${PLOT_DIR}/drone_${i}_rosbag" >/dev/null 2>&1 \
+          && echo "Copied drone $i rosbag: $(basename "$LATEST_BAG")" || echo "Could not copy the rosbag of drone $i"
+      else
+        echo "No rosbag found for drone $i"
+      fi
+    done
+  fi
+  # Cleanup
   DOCKER_PIDS=$(pgrep -f "docker run.*inst${INSTANCE}([^0-9]|$)" 2>/dev/null || true)
   CONTAINER_NAMES=("${SIM_CONT_NAME}" "${GND_CONT_NAME}" "aircraft-container-inst${INSTANCE}")
   echo "Stopping Docker containers (this will take a few seconds)..."
@@ -257,6 +313,9 @@ cleanup() {
     sleep 1 && xhost -local:docker >/dev/null
   fi
   echo "All-clear"
+  if [[ "$PLOT" == "true" ]]; then
+    python3 "${SCRIPT_DIR}/plot_logs.py" "$PLOT_DIR" || echo "Plotting failed: missing logs or dependencies (matplotlib, pymavlink, pyulog, pymap3d), use 'conda activate aas'"
+  fi
 }
 # Set trap to cleanup on script interruption (Ctrl+C, etc.)
 trap cleanup EXIT INT TERM

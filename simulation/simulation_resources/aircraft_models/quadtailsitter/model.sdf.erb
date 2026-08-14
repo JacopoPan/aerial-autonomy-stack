@@ -128,15 +128,17 @@
           </pressure>
         </air_pressure>
       </sensor>
+      <!-- TODO: update to fix units and coordinate system when we move past Harmonic -->
+      <!-- See https://github.com/gazebosim/gz-sim/pull/2460 -->
+      <!-- 3mgauss RMS: NOTE: noise is in tesla but sensor reports data in gauss -->
+      <!-- Noise modeled after IIS2MDC -->
+      <!-- Currently unused: no magnetometer plugin is loaded in any world/model; PX4 mag comes from SENS_EN_MAGSIM -->
+      <!--
       <sensor name="magnetometer_sensor" type="magnetometer">
-        <!-- <gz_frame_id>base_link</gz_frame_id> -->
+        <gz_frame_id>base_link</gz_frame_id>
         <always_on>1</always_on>
         <update_rate>100</update_rate>
         <magnetometer>
-          <!-- TODO: update to fix units and coordinate system when we move past Harmonic -->
-          <!-- See https://github.com/gazebosim/gz-sim/pull/2460 -->
-          <!-- 3mgauss RMS: NOTE: noise is in tesla but sensor reports data in gauss -->
-          <!-- Noise modeled after IIS2MDC -->
           <x>
             <noise type="gaussian">
               <stddev>0.0001</stddev>
@@ -154,6 +156,8 @@
           </z>
         </magnetometer>
       </sensor>
+      -->
+      <!-- gz_bridge hardcodes base_link/navsat_sensor for the simulated GNSS -->
       <sensor name="navsat_sensor" type="navsat">
         <!-- <gz_frame_id>base_link</gz_frame_id> -->
         <always_on>1</always_on>
@@ -161,6 +165,8 @@
       </sensor>
     </link>
 
+    <!-- standard_vtol uses "param set-default SENS_EN_ARSPDSIM 1" instead -->
+    <!-- quadtailsitter uses the AirSpeed plugin and a sensor mounted with 90deg pitch -->
     <plugin filename="gz-sim-air-speed-system"
       name="gz::sim::systems::AirSpeed">
     </plugin>

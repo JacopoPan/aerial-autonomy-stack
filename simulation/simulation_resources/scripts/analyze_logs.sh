@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# This scrip allows to analyze ArduPilot logs using MAVExplorer and PX4 logs with flight_review
-# Note that the 3D and map features of flight_review require to add API keys to _github_clones/flight_review/app/config_default.ini
+# This script analyzes ArduPilot logs using MAVExplorer and PX4 logs with flight_review
+# Note that the 3D and map features of flight_review require adding API keys to _github_clones/flight_review/app/config_default.ini
 
 NUM_DRONES=$((NUM_QUADS + NUM_VTOLS + NUM_TAILS))
 if [[ -n "$NUM_DRONES" && "$NUM_DRONES" =~ ^[0-9]+$ ]]; then
@@ -26,7 +26,7 @@ if [[ -n "$NUM_DRONES" && "$NUM_DRONES" =~ ^[0-9]+$ ]]; then
         SIM_SUBNET_IP=$(hostname -I | grep -oE "${SIM_SUBNET}\.[0-9]+\.[0-9]+" | head -n 1)
         SIM_ID=$(echo "$SIM_SUBNET_IP" | awk -F'.' '{print $NF}')
 
-        cd /aas/github_apps/flight_review/
+        cd /aas/github_apps/flight_review/ || exit 1
         /px4fr-env/bin/python3 ./app/setup_db.py
         /px4fr-env/bin/python3 ./app/serve.py --allow-websocket-origin=${SIM_SUBNET}.90.${SIM_ID}:5006 2>/dev/null & # Starting flight_review (suppress "Address already in use" when running this script more than once)
         sleep 2

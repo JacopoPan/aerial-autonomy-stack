@@ -97,8 +97,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ros-jazzy-mavros ros-jazzy-mavros-extras ros-jazzy-mavros-msgs \
     && apt clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh
+    && rm -rf /var/lib/apt/lists/*
+# Re-try install_geographiclib_datasets.sh if egm96-5.pgm was not downloaded (timeout is ~10x the time needed on a healthy link)
+RUN for i in 1 2 3; do \
+        rm -f /usr/share/GeographicLib/geoids/egm96-5*; \
+        timeout 180 /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh; \
+        test -r /usr/share/GeographicLib/geoids/egm96-5.pgm && break; \
+        sleep 5; \
+    done && test -r /usr/share/GeographicLib/geoids/egm96-5.pgm
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################
@@ -298,7 +304,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
 RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
-    wget -qO- https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/refs/heads/main.tar.gz | tar -xz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1
+    SHA=$(git ls-remote https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git refs/heads/main | cut -f1) && [ -n "$SHA" ] && \
+    wget -qO- https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/${SHA}.tar.gz | tar -xz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1 && \
+    echo "rviz_2d_overlay_plugins main ${SHA} $(find /aas/github_ws/src/rviz_2d_overlay_plugins -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
@@ -322,13 +330,17 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /aas/mimosa_custom_gtsam_ws/src
 COPY /_github_clones/mimosa /aas/mimosa_custom_gtsam_ws/src/mimosa
-# Download config_utilities (branch: dev/mimosa), gtsam (branch: feature/imu_factor_with_gravity), and gtsam_points (branch: minimal_updated)
+# Download config_utilities (branch: dev/mimosa), gtsam (commit c952ef9, see issue: https://github.com/ntnu-arl/mimosa/issues/19), and gtsam_points (branch: minimal_updated)
 RUN mkdir -p config_utilities \
-    && wget -qO- https://github.com/ntnu-arl/config_utilities/archive/refs/heads/dev/mimosa.tar.gz | tar -xz -C config_utilities --strip-components=1 \
+    && SHA=$(git ls-remote https://github.com/ntnu-arl/config_utilities.git refs/heads/dev/mimosa | cut -f1) && [ -n "$SHA" ] \
+    && wget -qO- https://github.com/ntnu-arl/config_utilities/archive/${SHA}.tar.gz | tar -xz -C config_utilities --strip-components=1 \
+    && echo "config_utilities dev/mimosa ${SHA} $(find config_utilities -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
     && mkdir -p gtsam \
-    && wget -qO- https://github.com/ntnu-arl/gtsam/archive/refs/heads/feature/imu_factor_with_gravity.tar.gz | tar -xz -C gtsam --strip-components=1 \
+    && wget -qO- https://github.com/ntnu-arl/gtsam/archive/c952ef9.tar.gz | tar -xz -C gtsam --strip-components=1 \
     && mkdir -p gtsam_points \
-    && wget -qO- https://github.com/ntnu-arl/gtsam_points/archive/refs/heads/minimal_updated.tar.gz | tar -xz -C gtsam_points --strip-components=1
+    && SHA=$(git ls-remote https://github.com/ntnu-arl/gtsam_points.git refs/heads/minimal_updated | cut -f1) && [ -n "$SHA" ] \
+    && wget -qO- https://github.com/ntnu-arl/gtsam_points/archive/${SHA}.tar.gz | tar -xz -C gtsam_points --strip-components=1 \
+    && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/mimosa_custom_gtsam_ws
 # Fix ROS 2 Humble compatibility:
 # 1. mimosa expects cv_bridge.hpp (Iron/Jazzy), but Humble uses cv_bridge.h
@@ -352,7 +364,9 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir kindr \
-    && wget -qO- https://github.com/ethz-asl/kindr/archive/refs/heads/master.tar.gz | tar -xz -C kindr --strip-components=1 \
+    && SHA=$(git ls-remote https://github.com/ethz-asl/kindr.git refs/heads/master | cut -f1) && [ -n "$SHA" ] \
+    && wget -qO- https://github.com/ethz-asl/kindr/archive/${SHA}.tar.gz | tar -xz -C kindr --strip-components=1 \
+    && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
     && cd kindr \
     && mkdir build && cd build \
     && cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -373,7 +387,7 @@ RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ros-jazzy-plotjuggler \
-    ros-jazzy-plotjuggler-ros \
+    ros-jazzy-plotjuggler-ros ros-jazzy-rosbag2-storage-mcap \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -396,6 +410,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-dev
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
+COPY tools_and_docs/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
 WORKDIR /aas/aircraft_ws
 RUN rosdep update
 RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*

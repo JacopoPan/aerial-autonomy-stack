@@ -18,7 +18,7 @@ public:
         this->declare_parameter<std::string>("autopilot", "px4");
         this->declare_parameter<int>("drone_id", 1);
         autopilot = this->get_parameter("autopilot").as_string();
-        drone_id_ = this->get_parameter("drone_id").as_int();
+        drone_id_ = static_cast<int>(this->get_parameter("drone_id").as_int());
 
         if (this->get_parameter("use_sim_time").as_bool()) {
             RCLCPP_INFO(this->get_logger(), "Simulation time is enabled.");
@@ -98,7 +98,7 @@ private:
         latest_state_.vx = msg->vx;
         latest_state_.vy = msg->vy;
         latest_state_.vz = msg->vz;
-        latest_state_.heading_deg = msg->heading * (180.0 / M_PI); // Convert radians to degrees
+        latest_state_.heading_deg = static_cast<float>(msg->heading * (180.0 / M_PI)); // Convert radians to degrees
     }
 
     void ardupilot_navsat_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
@@ -106,15 +106,15 @@ private:
         std::lock_guard<std::mutex> lock(data_mutex_);
         latest_state_.latitude_deg = msg->latitude;
         latest_state_.longitude_deg = msg->longitude;
-        latest_state_.altitude_m = msg->altitude; // This is ellipsoid altitude
+        latest_state_.altitude_m = static_cast<float>(msg->altitude); // This is ellipsoid altitude
     }
 
     void ardupilot_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
-        latest_state_.vx = msg->twist.linear.x;
-        latest_state_.vy = msg->twist.linear.y;
-        latest_state_.vz = msg->twist.linear.z;
+        latest_state_.vx = static_cast<float>(msg->twist.linear.x);
+        latest_state_.vy = static_cast<float>(msg->twist.linear.y);
+        latest_state_.vz = static_cast<float>(msg->twist.linear.z);
     }
 
     void ardupilot_hud_callback(const mavros_msgs::msg::VfrHud::SharedPtr msg)

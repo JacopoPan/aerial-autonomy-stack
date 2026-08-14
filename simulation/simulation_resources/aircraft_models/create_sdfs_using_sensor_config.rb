@@ -3,8 +3,12 @@ require 'erb'
 
 # This script automatically generates the SDF files for all vehicles based on the content of sensor_config.yaml
 
+MODELS_DIR = '/aas/simulation_resources/aircraft_models'
+
 # Helper method to render ERB templates and save the output
-def render_and_save(template_path, output_path, template_binding)
+def render_and_save(template_name, output_name, template_binding)
+  template_path = File.join(MODELS_DIR, template_name)
+  output_path   = File.join(MODELS_DIR, output_name)
   if File.exist?(template_path)
     rendered_content = ERB.new(File.read(template_path)).result(template_binding)
     File.write(output_path, rendered_content)
@@ -15,7 +19,7 @@ def render_and_save(template_path, output_path, template_binding)
 end
 
 # Load the configuration file
-config = YAML.load_file('sensor_config.yaml')
+config = YAML.load_file(File.join(MODELS_DIR, 'sensor_config.yaml'))
 
 # Generate sensor SDFs
 camera_intrinsics = config['sensors']['camera_intrinsics']

@@ -191,10 +191,6 @@ RUN mkdir build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
     && make
 
-# Create sensor and aircraft SDFs based on sensor_config.yaml parameters
-WORKDIR /aas/simulation_resources/aircraft_models/
-RUN ruby create_sdfs_using_sensor_config.rb
-
 # Source the workspaces
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \
     && echo "source /aas/simulation_ws/install/setup.bash" >> /root/.bashrc

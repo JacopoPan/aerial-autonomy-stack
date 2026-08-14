@@ -8,7 +8,10 @@
   <license>MIT License</license>
 
   <depend>rclpy</depend>
+  <depend>cv_bridge</depend>
 
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>vision_msgs</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>

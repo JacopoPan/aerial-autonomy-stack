@@ -733,10 +733,65 @@
           <izz>0.00002</izz>
         </inertia>
       </inertial>
+      <!-- IMU frequency is limited by the world SDF physics step size -->
       <sensor name="imu_sensor" type="imu">
         <pose degrees="true">0 0 0 180 0 0</pose>
         <always_on>1</always_on>
         <update_rate>1000.0</update_rate>
+        <imu>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.0003394</stddev>
+                <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.0003394</stddev>
+                <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.0003394</stddev>
+                <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.004</stddev>
+                <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.004</stddev>
+                <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.004</stddev>
+                <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
       </sensor>
     </link>
     <joint name='imu_joint' type='revolute'>
@@ -922,8 +977,8 @@
     </plugin>
 
     <!--
-    Use AdvancedLiftDrag once instead of the 5 instances of LiftDrag (wing, left/right winglet and stabilizers) in:
-    https://github.com/ArduPilot/SITL_Models/blob/master/Gazebo/models/swan_k1_hwing/model.sdf
+      Use AdvancedLiftDrag once instead of the 5 instances of LiftDrag (wing, left/right winglet and stabilizers) in:
+      https://github.com/ArduPilot/SITL_Models/blob/master/Gazebo/models/swan_k1_hwing/model.sdf
     -->
     <plugin filename="gz-sim-advanced-lift-drag-system" name="gz::sim::systems::AdvancedLiftDrag">
       <a0>0.0</a0>
@@ -969,6 +1024,97 @@
       <link_name>base_link</link_name>
       <num_ctrl_surfaces>0</num_ctrl_surfaces>
     </plugin>
+    <!--
+      The original five LiftDrag blocks in https://github.com/ArduPilot/SITL_Models/blob/master/Gazebo/models/swan_k1_hwing/model.sdf
+      Wing, left and right winglet, left and right vertical stabilizer, do NOT generate enough lift with the parameters in this repository
+    -->
+    <!--
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.13</a0>
+      <cla>3.7</cla>
+      <cda>0.06417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.025 0 0</cp>
+      <area>0.18</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 0 1</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.14 0.59 0.035</cp>
+      <area>0.0068</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.14 -0.59 0.035</cp>
+      <area>0.0068</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 -1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.07 0.25 0</cp>
+      <area>0.01</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    <plugin filename="gz-sim-lift-drag-system"
+        name="gz::sim::systems::LiftDrag">
+      <a0>0.0</a0>
+      <cla>4.752798721</cla>
+      <cda>0.6417112299</cda>
+      <cma>0.0</cma>
+      <alpha_stall>0.3391428111</alpha_stall>
+      <cla_stall>-3.85</cla_stall>
+      <cda_stall>-0.9233984055</cda_stall>
+      <cma_stall>0.0</cma_stall>
+      <cp>-0.07 -0.25 0</cp>
+      <area>0.01</area>
+      <air_density>1.2041</air_density>
+      <forward>1 0 0</forward>
+      <upward>0 -1 0</upward>
+      <link_name>base_link</link_name>
+    </plugin>
+    -->
 
     <plugin name="ArduPilotPlugin" filename="ArduPilotPlugin">
       <fdm_addr>127.0.0.1</fdm_addr>

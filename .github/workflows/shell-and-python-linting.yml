@@ -1,0 +1,30 @@
+name: shell and python linting
+
+on:
+  schedule:
+    - cron: '0 2 * * 6'
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck (warnings and errors)
+        run: git ls-files -z '*.sh' | xargs -0 -r shellcheck -x -S warning
+
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install ruff
+      - name: Run ruff (syntax and undefined names)
+        run: ruff check --select E9,F,B .
