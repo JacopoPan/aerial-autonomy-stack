@@ -6,6 +6,7 @@ Use as:
 """
 
 import glob
+import itertools
 import os
 import sys
 import warnings
@@ -74,9 +75,11 @@ if __name__ == '__main__':
         sys.exit(f'No .ulg or .bin logs found in {log_dir}')
     fig = plt.figure(num='Flight Summary', figsize=(16, max(8, 3 * len(log_files))), layout='constrained')
     gs = fig.add_gridspec(2 * len(log_files), 2, width_ratios=[2, 1])
-    ax = fig.add_subplot(gs[:, 0], projection='3d')
+    gs_left = gs[:, 0].subgridspec(4, 1) # Split the left column so the inter-drone distance plot is a quarter of its height
+    ax = fig.add_subplot(gs_left[:3, 0] if len(log_files) > 1 else gs_left[:, 0], projection='3d')
     origin = None # Saved home of the first readable log, common to all trajectories
     ax_time = None # First time axis, shared by every later panel
+    tracks = [] # (label, time, ENU) per readable log, all on a shared origin and clock
     for k, log_file in enumerate(log_files):
         label = os.path.splitext(os.path.basename(log_file))[0]
         try:
@@ -89,6 +92,7 @@ if __name__ == '__main__':
             t_spd = (t_spd_us - t_zero_us) / 1e6 # Same zero as t, to keep the time axes aligned
             if abs(t[0]) > 86400: # A day is a safe threshold
                 print(f'Warning: {label} is not on the same clock as the reference log')
+            tracks.append((label, t, np.array([east, north, up])))
             hspeed = np.hypot(vn, ve)
             line, = ax.plot(east, north, up, alpha=0.6, label=label)
             ax.scatter(east[0], north[0], up[0], color=line.get_color(), marker='o')  # Marker on the first sample of this log
@@ -114,6 +118,18 @@ if __name__ == '__main__':
         ax.set_aspect('equal')
     except NotImplementedError:
         pass # 3D equal aspect requires matplotlib >= 3.7
+    if len(tracks) > 1:
+        ax_dist = fig.add_subplot(gs_left[3, 0], sharex=ax_time)
+        for (label_a, t_a, enu_a), (label_b, t_b, enu_b) in itertools.combinations(tracks, 2):
+            overlap = (t_a >= t_b[0]) & (t_a <= t_b[-1]) # Samples of a inside b's span, outside which np.interp would clamp to the end values
+            if not overlap.any():
+                print(f'Warning: {label_a} and {label_b} never overlap in time')
+                continue
+            enu_b_at_a = np.array([np.interp(t_a[overlap], t_b, c) for c in enu_b]) # Resample b onto a's timestamps
+            ax_dist.plot(t_a[overlap], np.linalg.norm(enu_a[:, overlap] - enu_b_at_a, axis=0), alpha=0.8, label=f'{label_a} - {label_b}')
+        ax_dist.set_ylabel('Distance [m]')
+        ax_dist.set_xlabel('Time [s]')
+        ax_dist.legend(fontsize=8)
     plot_file = os.path.join(log_dir, 'flight_summary.png')
     plt.savefig(plot_file, dpi=150, bbox_inches='tight')
     print(f'Saved: {plot_file}')
