@@ -65,7 +65,7 @@ def read_bin(bin_file):
     t_spd, vn, ve = np.array(t_spd), np.array(vn), np.array(ve)
     if utc_offset is None:
         utc_offset = 0
-        print(f'Warning: no GPS time in {os.path.basename(bin_file)}, its time axis is not aligned with the other logs')
+        print(f'Warning: no GPS time in {os.path.basename(bin_file)}, its time axis will not be aligned with the other logs')
     return t + utc_offset, lat, lon, alt, (lat[0], lon[0], alt[0]), t_spd + utc_offset, vn, ve # ArduPilot sets home at arming, when POS logging also starts
 
 if __name__ == '__main__':
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     gs_left = gs[:, 0].subgridspec(4, 1) # Split the left column so the inter-drone distance plot is a quarter of its height
     ax = fig.add_subplot(gs_left[:3, 0] if len(log_files) > 1 else gs_left[:, 0], projection='3d')
     origin = None # Saved home of the first readable log, common to all trajectories
-    ax_time = None # First time axis, shared by every later panel
+    ax_time = None # First time axis created, every later one links to it via sharex to share one common time range
     tracks = [] # (label, time, ENU) per readable log, all on a shared origin and clock
     for k, log_file in enumerate(log_files):
         label = os.path.splitext(os.path.basename(log_file))[0]
@@ -90,7 +90,7 @@ if __name__ == '__main__':
             east, north, up = pymap3d.geodetic2enu(lat, lon, alt, *origin)
             t = (t_us - t_zero_us) / 1e6
             t_spd = (t_spd_us - t_zero_us) / 1e6 # Same zero as t, to keep the time axes aligned
-            if abs(t[0]) > 86400: # A day is a safe threshold
+            if abs(t[0]) > 86400: # If logs are separated by more than a day (86400s) throw a warning message
                 print(f'Warning: {label} is not on the same clock as the reference log')
             tracks.append((label, t, np.array([east, north, up])))
             hspeed = np.hypot(vn, ve)
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     except NotImplementedError:
         pass # 3D equal aspect requires matplotlib >= 3.7
     if len(tracks) > 1:
-        ax_dist = fig.add_subplot(gs_left[3, 0], sharex=ax_time)
+        ax_dist = fig.add_subplot(gs_left[3, 0], sharex=ax_time) # Use the last quarted of the left column of the group plot
         for (label_a, t_a, enu_a), (label_b, t_b, enu_b) in itertools.combinations(tracks, 2):
             overlap = (t_a >= t_b[0]) & (t_a <= t_b[-1]) # Samples of a inside b's span, outside which np.interp would clamp to the end values
             if not overlap.any():
