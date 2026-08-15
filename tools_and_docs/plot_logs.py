@@ -99,14 +99,17 @@ if __name__ == '__main__':
             ax_alt = fig.add_subplot(gs[2 * k, 1], sharex=ax_time)
             if ax_time is None:
                 ax_time = ax_alt
+                ax_alt.xaxis.set_major_locator(plt.MultipleLocator(30)) # Ticks every 30s
             ax_spd = fig.add_subplot(gs[2 * k + 1, 1], sharex=ax_time)
             ax_alt.plot(t, up, color=line.get_color(), alpha=0.8)
             ax_alt.set_ylabel('Up [m]')
             ax_alt.set_title(label, fontsize=10)
             ax_alt.tick_params(labelbottom=False)
+            ax_alt.grid(alpha=0.3)
             ax_spd.plot(t_spd, hspeed, color=line.get_color(), alpha=0.8)
             ax_spd.set_ylabel('X-Y Speed [m/s]')
             ax_spd.set_xlabel('Time [s]')
+            ax_spd.grid(alpha=0.3)
         except Exception as e:
             print(f'Skipping {label}: {e}')
     ax.set_xlabel('East [m]')
@@ -129,6 +132,7 @@ if __name__ == '__main__':
             ax_dist.plot(t_a[overlap], np.linalg.norm(enu_a[:, overlap] - enu_b_at_a, axis=0), alpha=0.8, label=f'{label_a} - {label_b}')
         ax_dist.set_ylabel('Distance [m]')
         ax_dist.set_xlabel('Time [s]')
+        ax_dist.grid(alpha=0.3)
         ax_dist.legend(fontsize=8)
     plot_file = os.path.join(log_dir, 'flight_summary.png')
     plt.savefig(plot_file, dpi=150, bbox_inches='tight')
