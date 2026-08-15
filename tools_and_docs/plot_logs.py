@@ -122,7 +122,7 @@ if __name__ == '__main__':
     except NotImplementedError:
         pass # 3D equal aspect requires matplotlib >= 3.7
     if len(tracks) > 1:
-        ax_dist = fig.add_subplot(gs_left[3, 0], sharex=ax_time) # Use the last quarted of the left column of the group plot
+        ax_dist = fig.add_subplot(gs_left[3, 0], sharex=ax_time) # Use the last quarter of the left column of the group plot
         for (label_a, t_a, enu_a), (label_b, t_b, enu_b) in itertools.combinations(tracks, 2):
             overlap = (t_a >= t_b[0]) & (t_a <= t_b[-1]) # Samples of a inside b's span, outside which np.interp would clamp to the end values
             if not overlap.any():
