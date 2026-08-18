@@ -170,7 +170,8 @@ WPNAV_SPEED         500             # 5m/s maximum horizontal speed in AUTO/GUID
 WPNAV_SPEED_UP      250             # 2.5m/s climb rate in AUTO/GUIDED
 WPNAV_SPEED_DN      150             # 1.5m/s descent rate in AUTO/GUIDED
 RTL_SPEED           500             # 5m/s maximum horizontal speed in RTL
-ACRO_Y_RATE         120             # 120 deg/s maximum yaw rate
+ACRO_Y_RATE         120             # 120 deg/s maximum yaw rate in ACRO
+PILOT_Y_RATE        120             # 120 deg/s maximum yaw rate in LOITER and other piloted modes
 
 # Compass configuration
 # The F9P external IST8310 compass should be automatically recognized with ID 6589xx on COMPASS_DEV_ID, auto-populating COMPASS_EXTERNAL, COMPASS_ORIENT
