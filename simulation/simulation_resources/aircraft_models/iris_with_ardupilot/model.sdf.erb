@@ -5,6 +5,7 @@
     <model name='iris'>
       <pose>0 0 0 0 0 0</pose>
       <link name='base_link'>
+        <!-- Allow the WindEffects plugin to push the quad frame -->
         <enable_wind>true</enable_wind>
         <velocity_decay>
           <linear>0.0</linear>
@@ -157,10 +158,65 @@
             <izz>0.00002</izz>
           </inertia>
         </inertial>
+        <!-- IMU frequency is limited by the world SDF physics step size -->
         <sensor name="imu_sensor" type="imu">
           <pose degrees="true">0 0 0 180 0 0</pose>
           <always_on>1</always_on>
           <update_rate>1000.0</update_rate>
+          <imu>
+            <angular_velocity>
+              <x>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00018665</stddev>
+                  <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+                </noise>
+              </x>
+              <y>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00018665</stddev>
+                  <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+                </noise>
+              </y>
+              <z>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00018665</stddev>
+                  <dynamic_bias_stddev>3.8785e-05</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>1000</dynamic_bias_correlation_time>
+                </noise>
+              </z>
+            </angular_velocity>
+            <linear_acceleration>
+              <x>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00186</stddev>
+                  <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+                </noise>
+              </x>
+              <y>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00186</stddev>
+                  <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+                </noise>
+              </y>
+              <z>
+                <noise type="gaussian">
+                  <mean>0</mean>
+                  <stddev>0.00186</stddev>
+                  <dynamic_bias_stddev>0.006</dynamic_bias_stddev>
+                  <dynamic_bias_correlation_time>300</dynamic_bias_correlation_time>
+                </noise>
+              </z>
+            </linear_acceleration>
+          </imu>
         </sensor>
       </link>
       <joint name='imu_joint' type='revolute'>
@@ -481,8 +537,8 @@
       <%
         # Compute the gimbal pose based on the desired camera pose
         cam_pose = camera_ext.split(' ').map(&:to_f)
-        gimbal_x = cam_pose[0] - 0.05 # Pull the gimbal base back by 5cm, see gimbal dimensions in sensor_gimbal/model.sdf
-        gimbal_z = cam_pose[2] + 0.02 # Pull the gimbal base up by 2cm, see gimbal dimensions in sensor_gimbal/model.sdf
+        gimbal_x = cam_pose[0] - 0.04 # Pull the gimbal base back by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
+        gimbal_z = cam_pose[2] + 0.04 # Pull the gimbal base up by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
         gimbal_ext = "#{gimbal_x} #{cam_pose[1]} #{gimbal_z} #{cam_pose[3]} #{cam_pose[4]} #{cam_pose[5]}"
       %>
       <include merge="true">
@@ -496,7 +552,7 @@
       <include>
         <uri>model://sensor_camera</uri>
         <name>simple_camera</name>
-        <pose degrees="true"><%= camera_ext %></pose>
+        <pose relative_to="pitch_link">0 0 0 0 0 0</pose>
       </include>
       <joint name="CameraJoint" type="fixed">
         <parent>pitch_link</parent>

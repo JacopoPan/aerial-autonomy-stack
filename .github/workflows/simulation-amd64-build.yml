@@ -86,7 +86,6 @@ jobs:
 
       - name: Build the simulation image
         run: |
-
           docker buildx build --target ros2-image --output type=oci,dest=/tmp/transitional-ros2-image,tar=false -f ./tools_and_docs/docker/aircraft.dockerfile .
           docker buildx build --target ros2-qgc-image --build-context transitional-ros2-image=oci-layout:///tmp/transitional-ros2-image --output type=oci,dest=/tmp/transitional-ros2-qgc-image,tar=false -f ./tools_and_docs/docker/ground.dockerfile .
           docker buildx build --push --build-context transitional-ros2-qgc-image=oci-layout:///tmp/transitional-ros2-qgc-image -t ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/simulation.dockerfile .

@@ -12,7 +12,7 @@ public:
         this->declare_parameter<std::string>("autopilot", "px4");
         this->declare_parameter<int>("drone_id", 1);
         autopilot = this->get_parameter("autopilot").as_string();
-        drone_id_ = this->get_parameter("drone_id").as_int();
+        drone_id_ = static_cast<int>(this->get_parameter("drone_id").as_int());
 
         if (this->get_parameter("use_sim_time").as_bool()) {
             RCLCPP_INFO(this->get_logger(), "Simulation time is enabled.");
@@ -68,8 +68,8 @@ private:
         imu_msg.linear_acceleration.x = msg->accelerometer_m_s2[0];
         imu_msg.linear_acceleration.y = -msg->accelerometer_m_s2[1];
         imu_msg.linear_acceleration.z = -msg->accelerometer_m_s2[2];
-        // Convert PX4 timestamp to ROS timestamp
-        imu_msg.header.stamp = rclcpp::Time(msg->timestamp * 1000ull);
+        // Convert PX4 timestamp (uint64 microseconds since boot) to ROS Time (int64 nanoseconds)
+        imu_msg.header.stamp = rclcpp::Time(static_cast<int64_t>(msg->timestamp * 1000ull));
 
         imu_msg.header.frame_id = "imu_link";
         imu_pub_->publish(imu_msg);

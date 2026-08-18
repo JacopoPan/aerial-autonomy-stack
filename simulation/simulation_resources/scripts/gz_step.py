@@ -23,7 +23,7 @@ def main():
     if autopilot == 'px4':
         req.multi_step = int(args.step_sec * 250) # PX4 SDF worlds use 250 steps per simulation step (4ms)
     elif autopilot == 'ardupilot':
-        req.multi_step = int(args.step_sec * 500) # ArduPilot SDF worlds use 250 steps per simulation step (2ms)
+        req.multi_step = int(args.step_sec * 500) # ArduPilot SDF worlds use 500 steps per simulation step (2ms)
     req.pause = True # Stops the simulation after the step
 
     result, response = gz_node.request(

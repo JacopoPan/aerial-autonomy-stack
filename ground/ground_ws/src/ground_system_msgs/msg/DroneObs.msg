@@ -6,3 +6,4 @@ float32 altitude_m
 float32 velocity_n_m_s
 float32 velocity_e_m_s
 float32 velocity_d_m_s
+float32 time_since_last_update_s

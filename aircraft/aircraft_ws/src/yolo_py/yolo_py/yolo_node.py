@@ -15,7 +15,7 @@ import math
 import platform
 
 from vision_msgs.msg import Detection2DArray, Detection2D, BoundingBox2D, ObjectHypothesis, ObjectHypothesisWithPose
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Bool
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
@@ -58,12 +58,19 @@ class YoloInferenceNode(Node):
         
         # Create publishers
         if self.run_inference:
-            self.detection_publisher = self.create_publisher(Detection2DArray, f'detections', 10)
+            self.detection_publisher = self.create_publisher(Detection2DArray, 'detections', 10)
         if self.ros2_frame_publisher:
             self.image_publisher = self.create_publisher(Image, f'camera_frames_{self.camera_id}', 10)
         self.bridge = CvBridge()
+
+        # Create subscribers
+        self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
         
         self.get_logger().info("YOLO inference started.")
+
+    def enable_remote_video_streams_callback(self, msg):
+        self.remote_video_streams = msg.data
+        self.get_logger().info(f"Remote video streams flag set to {self.remote_video_streams}")
 
     def run_inference_loop(self):
         # Acquire video stream
@@ -148,7 +155,8 @@ class YoloInferenceNode(Node):
                 # )
                 cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
         # cap = cv2.VideoCapture("/sample.mp4") # Load sample video for testing
-        assert cap.isOpened(), "Failed to open video stream"
+        if not cap.isOpened():
+            raise RuntimeError("Failed to open video stream")
         print(f"Pipeline FPS: {cap.get(cv2.CAP_PROP_FPS)}")
         stream_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         stream_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -275,6 +283,7 @@ class YoloInferenceNode(Node):
 
             # Only on Jetson, stream to the ground station via UDP using GStreamer
             # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
+            # To turn the stream off: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: false}'
             if self.remote_video_streams and self.is_jetson: # Use cached boolean flag in loops
                 if not hasattr(self, 'gnd_stream_writer'):
                     h, w = frame.shape[:2]
@@ -295,7 +304,8 @@ class YoloInferenceNode(Node):
                     self.get_logger().info(f"Started UDP stream to {gnd_ip}:{port}")
                 if self.gnd_stream_writer.isOpened():
                     ros_time_sec = self.get_clock().now().nanoseconds / 1e9
-                    cv2.putText(frame, f"ROS T: {ros_time_sec:.3f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 1) # Timestamp frames
+                    time_label = f"ROS T: ..{ros_time_sec % 10000:07.2f}" # Last 4 integer digits and 2 decimals
+                    cv2.putText(frame, time_label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2) # Timestamp frames
                     self.gnd_stream_writer.write(frame)
 
         # Cleanup
@@ -311,7 +321,7 @@ class YoloInferenceNode(Node):
 
     def ros_spin_thread(self):
         while rclpy.ok():
-            rclpy.spin_once(self, timeout_sec=0.001) # This is only to get the simulation time from /clock
+            rclpy.spin_once(self, timeout_sec=0.001) # This is only to get the simulation time from /clock and updates on /enable_remote_video_streams
 
     def frame_capture_thread(self, cap, frame_queue, is_running):
         try:
@@ -344,6 +354,7 @@ class YoloInferenceNode(Node):
         h0, w0 = frame.shape[:2]
 
         img = cv2.dnn.blobFromImage(frame, 1/255.0, (self.input_size, self.input_size), swapRB=True, crop=False)
+        # Consider letterboxed preprocessing instead of `blobFromImage`'s stretch-resize if aspect-ratio distortion hurts detection
 
         with Profiler("ONNX Runtime Inference"):
             outputs = self.session.run(None, {self.input_name: img})
@@ -466,7 +477,7 @@ def main(args=None):
     parser = argparse.ArgumentParser(description="YOLO ROS2 Inference Node.")
     parser.add_argument('--camera-id', type=int, default=0, help="Generic camera ID (0 for mono/left, 1 for right).")
     parser.add_argument('--headless', action='store_true', help="Run in headless mode.")
-    parser.add_argument('--hitl', action='store_true', help="Open camerafrom gz-sim for HITL.")
+    parser.add_argument('--hitl', action='store_true', help="Open camera from gz-sim for HITL.")
     parser.add_argument('--remote-video-streams', action='store_true', help="Send video streams to the ground container.")
     parser.add_argument('--hfov', type=float, default=100.0, help="Horizontal field of view in degrees.")
     parser.add_argument('--ros2-frame-publisher', action='store_true', help="Publish raw frames to ROS 2.")

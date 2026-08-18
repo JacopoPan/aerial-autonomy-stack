@@ -84,5 +84,5 @@ jobs:
             echo "DOCKER_TAG=${BRANCH_TAG}" >> $GITHUB_ENV
           fi
 
-      - name: Build the aircraft
+      - name: Build the aircraft image
         run: docker buildx build --push --build-arg BUILD_ADVANCED_ODOM=true -t ghcr.io/jacopopan/aircraft-image:${{ env.DOCKER_TAG }} -f ./tools_and_docs/docker/aircraft.dockerfile .

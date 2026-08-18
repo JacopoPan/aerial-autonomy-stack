@@ -8,12 +8,22 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     this->declare_parameter("base_port", 18540);
     this->declare_parameter("rate", 10.0);
     this->declare_parameter<std::vector<std::string>>("assignments", std::vector<std::string>{});
+    this->declare_parameter("track_timeout", 20.0); // s: drop a track after this long with no update (0 = never)
+    // Simulated radio link (active when use_sim_time and degrade_simulated_link are both true)
+    this->declare_parameter("degrade_simulated_link", true); // Default to true
+    this->declare_parameter("simulated_link_delay", 0.18); // s: mean one-way latency added to ros2 topic
+    this->declare_parameter("simulated_link_jitter", 0.08); // s: +/- uniform jitter on the latency
+    this->declare_parameter("simulated_link_loss", 0.04); // packet-loss probability [0,1]
+    this->declare_parameter("simulated_link_rate", 10.0); // Hz: max per-drone position rate over a real radio (e.g., for ArduPilot, SRx_POSITION)
+    this->declare_parameter("simulated_link_outage_rate", 0.04); // Hz: per-drone telemetry link outages (exponential gaps between fades, 0 = never)
+    this->declare_parameter("simulated_link_outage_duration", 4.5); // s: max outage duration (uniform in [0, max])
 
     // Get Parameters
-    num_drones_ = this->get_parameter("num_drones").as_int();
+    num_drones_ = static_cast<int>(this->get_parameter("num_drones").as_int());
     ip_ = this->get_parameter("ip").as_string();
-    base_port_ = this->get_parameter("base_port").as_int();
+    base_port_ = static_cast<int>(this->get_parameter("base_port").as_int());
     publish_rate_ = this->get_parameter("rate").as_double();
+    track_timeout_s_ = this->get_parameter("track_timeout").as_double();
     auto assignment_strings = this->get_parameter("assignments").as_string_array();
     for (const auto& pair_str : assignment_strings) {
         size_t delimiter_pos = pair_str.find('-');
@@ -30,6 +40,16 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
             RCLCPP_WARN(this->get_logger(), "Missing hyphen in assignment: '%s'", pair_str.c_str());
         }
     }
+    simulate_link_degradation_ = this->get_parameter("use_sim_time").as_bool() && this->get_parameter("degrade_simulated_link").as_bool();
+    simulated_link_delay_s_ = this->get_parameter("simulated_link_delay").as_double();
+    simulated_link_jitter_s_ = this->get_parameter("simulated_link_jitter").as_double();
+    simulated_link_loss_prob_ = this->get_parameter("simulated_link_loss").as_double();
+    simulated_link_rate_ = this->get_parameter("simulated_link_rate").as_double();
+    simulated_link_outage_rate_ = this->get_parameter("simulated_link_outage_rate").as_double();
+    simulated_link_outage_duration_s_ = this->get_parameter("simulated_link_outage_duration").as_double();
+    if (simulate_link_degradation_) {
+        RCLCPP_WARN(this->get_logger(), "Simulated radio link (%.0fHz) ON: delay=%.0fms jitter=%.0fms loss=%.0f%% outages=%.2f/s<=%.1fs", simulated_link_rate_, simulated_link_delay_s_ * 1e3, simulated_link_jitter_s_ * 1e3, simulated_link_loss_prob_ * 1e2, simulated_link_outage_rate_, simulated_link_outage_duration_s_);
+    }
 
     // Random Seed
     rng_.seed(std::random_device()());
@@ -38,14 +58,14 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     publisher_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", 10);
 
     // Timer
-    auto timer_period = std::chrono::duration<double>(1.0 / publish_rate_);
-    timer_ = this->create_wall_timer(timer_period, std::bind(&GroundSystem::publish_swarm_obs, this));
+    timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(1.0 / publish_rate_), std::bind(&GroundSystem::publish_swarm_obs, this));
 
     // Single listener thread, use base_port_ and pass drone_id = -1 to signal "auto-detect ID from message"
-    listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, -1, base_port_);
+    listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, -1, base_port_, 0);
     RCLCPP_INFO(this->get_logger(), "Listening to the streams from %d drones on single port %d", num_drones_, base_port_);
     // To listen to separate UDP streams on separate ports, create multiple threads using:
-    // listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, drone_id, port);
+    // listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, drone_id, port, thread_idx);
+    // Make sure thread_idx < MAVLINK_COMM_NUM_BUFFERS
 }
 
 GroundSystem::~GroundSystem()
@@ -58,10 +78,19 @@ GroundSystem::~GroundSystem()
     }
 }
 
-void GroundSystem::mavlink_listener(int drone_id, int port)
+void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
 {
+    if (thread_idx < 0 || thread_idx >= MAVLINK_COMM_NUM_BUFFERS) {
+        RCLCPP_ERROR(this->get_logger(), "Invalid thread_idx %d. Must be strictly less than %d", thread_idx, MAVLINK_COMM_NUM_BUFFERS);
+        return;
+    }
+
+    std::mt19937 simulated_link_rng(std::random_device{}());
+    std::uniform_real_distribution<double> simulated_link_unif(0.0, 1.0);
+    std::exponential_distribution<double> simulated_link_fade_gap(simulated_link_outage_rate_ > 0.0 ? simulated_link_outage_rate_ : 1.0); // Lambda must be > 0: 1.0 turns outages off (never drawn)
+
     // Setup UDP Socket
-    int sockfd;
+    int sockfd = -1;
     struct sockaddr_in servaddr;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -77,8 +106,12 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
 
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(ip_.c_str());
     servaddr.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip_.c_str(), &servaddr.sin_addr) <= 0) {
+        RCLCPP_ERROR(this->get_logger(), "Invalid IP address: %s", ip_.c_str());
+        close(sockfd);
+        return;
+    }
 
     if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
         RCLCPP_ERROR(this->get_logger(), "Bind failed for drone %d on port %d", drone_id, port);
@@ -89,6 +122,7 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
     uint8_t buffer[2048];
     mavlink_message_t msg;
     mavlink_status_t status;
+    mavlink_channel_t channel = static_cast<mavlink_channel_t>(MAVLINK_COMM_0 + thread_idx);
 
     while (keep_running_ && rclcpp::ok()) {
         ssize_t len = recvfrom(sockfd, (char *)buffer, 2048, 0, NULL, NULL);
@@ -96,7 +130,7 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
         if (len > 0) {
             // Parse bytes
             for (ssize_t i = 0; i < len; ++i) {
-                if (mavlink_parse_char(MAVLINK_COMM_0, buffer[i], &msg, &status)) {
+                if (mavlink_parse_char(channel, buffer[i], &msg, &status)) {
 
                     // In single-port/single-thread mode (drone_id == -1), detect ID from the message
                     int current_id = drone_id;
@@ -119,7 +153,37 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
                         obs.vz = pos.vz / 100.0;
                         {
                             std::lock_guard<std::mutex> lock(data_mutex_);
-                            drone_obs_[current_id] = obs;
+                            if (simulate_link_degradation_) {
+                                const rclcpp::Time t = this->now();
+                                // Simulated RF telemetry outage: drop everything while active (exponential gaps, uniform durations)
+                                if (simulated_link_outage_rate_ > 0.0) {
+                                    auto until = sim_outage_until_.find(current_id);
+                                    if (until != sim_outage_until_.end() && t < until->second) continue; // Outage
+                                    auto next = sim_next_outage_.find(current_id);
+                                    if (next == sim_next_outage_.end()) { // First ever message for a drone: schedule first outage
+                                        sim_next_outage_[current_id] = t + rclcpp::Duration::from_seconds(simulated_link_fade_gap(simulated_link_rng));
+                                    } else if (t >= next->second) { // Outage starts now: fix its duration, schedule the following one
+                                        sim_outage_until_[current_id] = t + rclcpp::Duration::from_seconds(simulated_link_unif(simulated_link_rng) * simulated_link_outage_duration_s_);
+                                        sim_next_outage_[current_id] = sim_outage_until_[current_id] + rclcpp::Duration::from_seconds(simulated_link_fade_gap(simulated_link_rng));
+                                        continue; // This message is the first dropped by the outage
+                                    }
+                                }
+                                // Simulated message rate: drop messages that arrive faster
+                                if (simulated_link_rate_ > 0.0) {
+                                    auto it = last_sim_msg_.find(current_id);
+                                    if (it != last_sim_msg_.end() && (t - it->second).seconds() < 1.0 / simulated_link_rate_) continue;
+                                    last_sim_msg_[current_id] = t;
+                                }
+                                // Simulated message loss: skip observation
+                                if (simulated_link_loss_prob_ > 0.0 && simulated_link_unif(simulated_link_rng) < simulated_link_loss_prob_) continue;
+                                // Simulate latency and jitter: do not deliver now, schedule visibility for later
+                                const double jitter = simulated_link_jitter_s_ > 0.0 ? (simulated_link_unif(simulated_link_rng) * 2.0 - 1.0) * simulated_link_jitter_s_ : 0.0;
+                                const rclcpp::Time release = t + rclcpp::Duration::from_seconds(std::max(0.0, simulated_link_delay_s_ + jitter));
+                                delayed_sim_obs_buf_[current_id].push_back({release, obs});
+                            } else { // Real world deployment: deliver immediately
+                                drone_obs_[current_id] = obs;
+                                last_seen_[current_id] = this->now();
+                            }
                         }
                     }
                 }
@@ -128,7 +192,9 @@ void GroundSystem::mavlink_listener(int drone_id, int port)
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 continue; // Just a timeout, continue loop to check keep_running_
             } else {
-                RCLCPP_WARN(this->get_logger(), "Recv failed for drone %d: %s", drone_id, strerror(errno));
+                char errbuf[256];
+                const char *err_msg = strerror_r(errno, errbuf, sizeof(errbuf));
+                RCLCPP_WARN(this->get_logger(), "Recv failed for drone %d: %s", drone_id, err_msg);
             }
         }
     }
@@ -143,14 +209,38 @@ void GroundSystem::publish_swarm_obs()
     const double ALT_STD_DEV_M = 0.0; // 0.5;
     const double VEL_STD_DEV_MS = 0.0; // 0.1;
 
+    const rclcpp::Time now = this->now();
     ground_system_msgs::msg::SwarmObs swarm_msg;
-    swarm_msg.header.stamp = this->now();
-
+    swarm_msg.header.stamp = now;
     // Copy data to minimize lock duration
     std::map<int, DroneData> current_obs;
+    std::map<int, rclcpp::Time> current_seen;
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
+        if (simulate_link_degradation_) { // In simulation only, release buffered observations whose link latency has elapsed
+            for (auto &kv : delayed_sim_obs_buf_) {
+                auto &q = kv.second;
+                while (!q.empty() && q.front().release <= now) {
+                    drone_obs_[kv.first] = q.front().data;
+                    last_seen_[kv.first] = now;
+                    q.pop_front();
+                }
+            }
+        }
+        // Drop stale tracks so a dead link disappears from /tracks instead of being republished forever as a frozen ghost
+        if (track_timeout_s_ > 0.0) {
+            for (auto it = drone_obs_.begin(); it != drone_obs_.end(); ) {
+                auto seen = last_seen_.find(it->first);
+                if (seen == last_seen_.end() || (now - seen->second).seconds() > track_timeout_s_) {
+                    last_seen_.erase(it->first);
+                    it = drone_obs_.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
         current_obs = drone_obs_;
+        current_seen = last_seen_;
     }
 
     for (const auto &pair : current_obs) {
@@ -168,10 +258,14 @@ void GroundSystem::publish_swarm_obs()
         // Add noise
         drone_msg.latitude_deg = add_noise(track.lat, POS_STD_DEV_DEG);
         drone_msg.longitude_deg = add_noise(track.lon, POS_STD_DEV_DEG);
-        drone_msg.altitude_m = add_noise(track.alt, ALT_STD_DEV_M);
-        drone_msg.velocity_n_m_s = add_noise(track.vx, VEL_STD_DEV_MS);
-        drone_msg.velocity_e_m_s = add_noise(track.vy, VEL_STD_DEV_MS);
-        drone_msg.velocity_d_m_s = add_noise(track.vz, VEL_STD_DEV_MS);
+        drone_msg.altitude_m = static_cast<float>(add_noise(track.alt, ALT_STD_DEV_M));
+        drone_msg.velocity_n_m_s = static_cast<float>(add_noise(track.vx, VEL_STD_DEV_MS));
+        drone_msg.velocity_e_m_s = static_cast<float>(add_noise(track.vy, VEL_STD_DEV_MS));
+        drone_msg.velocity_d_m_s = static_cast<float>(add_noise(track.vz, VEL_STD_DEV_MS));
+
+        // Compute the track's age
+        auto seen = current_seen.find(id);
+        drone_msg.time_since_last_update_s = static_cast<float>(seen != current_seen.end() ? (now - seen->second).seconds() : 0.0);
 
         swarm_msg.tracks.push_back(drone_msg);
     }

@@ -5,10 +5,13 @@
 
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
   num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
+  num_tails = ENV.fetch('NUM_TAILS', 0).to_i
+  num_drones = num_quads + num_vtols + num_tails
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
   ssh_connections = ENV.fetch('SSH_CONNECTIONS', 'false') == 'true'
+  gnd_telem_baud = ENV.fetch('GND_TELEM_BAUD', '57600') # 57600 for SiK point-to-point, 230400 for Microhard point-to-multipoint with two drones
 
   # Load sensor information from the sensor_config.yaml file
   require 'yaml'
@@ -27,7 +30,7 @@ windows:
       layout: even-horizontal
       panes:
         - clear && echo "So nice to have you with us, this is the ground container."
-        - ros2 run ground_system ground_system --ros-args -p num_drones:=<%= num_quads + num_vtols %> -p base_port:=18540 -p rate:=1.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-0']"
+        - ros2 run ground_system ground_system --ros-args -p num_drones:=<%= num_drones %> -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-0']"
 
   - mavlink-router:
       layout: tiled
@@ -35,7 +38,7 @@ windows:
         - >
           cp /aas/ground_resources/comms/mavlink_router_base.conf /aas/ground_resources/comms/mavlink_router_main.conf &&
           <% if simulated_time %>
-          <% (1..(num_quads + num_vtols)).each do |drone_id| %>
+          <% (1..num_drones).each do |drone_id| %>
           <% sitl_instance = drone_id - 1 %>
           echo "[UdpEndpoint drone<%= drone_id %>]" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
           echo "Mode = Eavesdropping" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
@@ -53,7 +56,7 @@ windows:
               echo "    Adding telemetry radio found at: $real_dev"
               echo "[UartEndpoint radio${radio_endpoint_idx}]" >> /aas/ground_resources/comms/mavlink_router_main.conf
               echo "Device = $real_dev" >> /aas/ground_resources/comms/mavlink_router_main.conf
-              echo "Baud = 57600" >> /aas/ground_resources/comms/mavlink_router_main.conf
+              echo "Baud = <%= gnd_telem_baud %>" >> /aas/ground_resources/comms/mavlink_router_main.conf
               radio_endpoint_idx=$((radio_endpoint_idx + 1))
             done
           ) &&
@@ -69,7 +72,7 @@ windows:
         - echo "Headless mode, not launching QGroundControl."
         <% else %>
         - >
-          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= (num_quads + num_vtols) == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
+          sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= simulated_time && (num_drones == 1) %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           sed -i 's/^virtualJoystickAutoCenterThrottle=.*/virtualJoystickAutoCenterThrottle=<%= num_quads == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           gosu qgcuser /squashfs-root/AppRun &
           (
@@ -94,7 +97,7 @@ windows:
   - video_streams:
       layout: tiled
       panes:
-        <% (1..(num_quads + num_vtols)).each do |drone_id| %>
+        <% (1..num_drones).each do |drone_id| %>
         <% camera_ids.each do |cam_id| %>
         - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"; do sleep 2; done
         <% end %>
@@ -105,7 +108,7 @@ windows:
   - ssh_connections:
       layout: tiled
       panes:
-        <% (1..(num_quads + num_vtols)).each do |drone_id| %>
+        <% (1..num_drones).each do |drone_id| %>
         - |
           echo -e "\n\n Attach the AAS container with:\n\n\tdocker exec -it aircraft-container_<%= drone_id %> tmux attach\n\n"
           ssh -o ConnectTimeout=5 -o ServerAliveInterval=3 -o ServerAliveCountMax=3 orin@<%= "#{air_subnet}.90.#{drone_id}" %>

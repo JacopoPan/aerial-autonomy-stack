@@ -67,7 +67,8 @@ private:
     int own_id_;
 
     // Callback groups
-    rclcpp::CallbackGroup::SharedPtr callback_group_timer_;
+    rclcpp::CallbackGroup::SharedPtr callback_group_printout_;
+    rclcpp::CallbackGroup::SharedPtr callback_group_offboard_control_;
     rclcpp::CallbackGroup::SharedPtr callback_group_subscriber_;
 
     // Node timers
@@ -95,14 +96,16 @@ private:
     double x_, y_, z_, heading_, vx_, vy_, vz_;
     double ref_lat_, ref_lon_, ref_alt_;
     int pose_frame_, velocity_frame_;
+    // float to match PX4 float32 VehicleOdometry
     std::array<float, 3> position_;
     std::array<float, 4> q_;
     std::array<float, 3> velocity_;
     std::array<float, 3> angular_velocity_;
     double true_airspeed_m_s_;
     int vehicle_type_;
-    std::array<float, 3> kiss_position_;
-    std::array<float, 4> kiss_q_;
+    bool is_vtol_, is_vtol_tailsitter_;
+    std::array<double, 3> kiss_position_;
+    std::array<double, 4> kiss_q_;
     ground_system_msgs::msg::SwarmObs::SharedPtr ground_tracks_;
     vision_msgs::msg::Detection2DArray::SharedPtr yolo_detections_;
 
@@ -129,7 +132,7 @@ private:
     void status_callback(const VehicleStatus::SharedPtr msg);
 
     // Offboard flag call back
-    void offboard_flag_callaback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg);
+    void offboard_flag_callback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg);
 
     // Callbacks for perception subscribers
     void ground_tracks_callback(const ground_system_msgs::msg::SwarmObs::SharedPtr msg);

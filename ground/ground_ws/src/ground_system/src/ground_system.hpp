@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
+#include <deque>
+#include <algorithm>
 
 #include "ground_system_msgs/msg/swarm_obs.hpp"
 #include "ground_system_msgs/msg/drone_obs.hpp"
@@ -28,6 +30,11 @@ struct DroneData {
     double vx;
     double vy;
     double vz;
+};
+
+struct DelayedSimObs {
+    rclcpp::Time release;
+    DroneData data;
 };
 
 class GroundSystem : public rclcpp::Node
@@ -49,16 +56,31 @@ private:
     std::map<int, DroneData> drone_obs_;
     std::vector<std::thread> listener_threads_;
     std::atomic<bool> keep_running_;
+    std::map<int, rclcpp::Time> last_seen_;
+    double track_timeout_s_;
 
     // Random Number Generation
     std::default_random_engine rng_;
+
+    // Simulated radio-link model active when use_sim_time and degrade_simulated_link (default: true) are both true
+    bool simulate_link_degradation_;
+    double simulated_link_delay_s_;
+    double simulated_link_jitter_s_;
+    double simulated_link_loss_prob_;
+    double simulated_link_rate_;
+    double simulated_link_outage_rate_;
+    double simulated_link_outage_duration_s_;
+    std::map<int, rclcpp::Time> sim_next_outage_;
+    std::map<int, rclcpp::Time> sim_outage_until_;
+    std::map<int, rclcpp::Time> last_sim_msg_;
+    std::map<int, std::deque<DelayedSimObs>> delayed_sim_obs_buf_;
 
     // ROS Handles
     rclcpp::Publisher<ground_system_msgs::msg::SwarmObs>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     // Methods
-    void mavlink_listener(int drone_id, int port);
+    void mavlink_listener(int drone_id, int port, int thread_idx);
     void publish_swarm_obs();
     double add_noise(double value, double std_dev);
 };

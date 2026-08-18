@@ -19,6 +19,7 @@ class DTCController(Node):
         # Mission Parameters
         self.quad_to_alt = 40.0
         self.vtol_to_alt = 40.0
+        self.tail_to_alt = 40.0
         self.poly_alt = 90.0
         self.poly_radius = 40.0
         self.poly_center_e = 30.0
@@ -33,10 +34,13 @@ class DTCController(Node):
 
         self.nq = int(os.environ.get('num_quads', os.environ.get('NUM_QUADS', '1')))
         self.nv = int(os.environ.get('num_vtols', os.environ.get('NUM_VTOLS', '0')))
+        self.nt = int(os.environ.get('num_tails', os.environ.get('NUM_TAILS', '0')))
         self.quad_ids = list(range(1, self.nq + 1))
         self.vtol_ids = list(range(self.nq + 1, self.nq + self.nv + 1))
-        self.expected_ids = self.quad_ids + self.vtol_ids
-        self.drones = {i: {'home': None, 'curr': None, 'alt': 0.0, 'target_enu': None} for i in self.expected_ids}
+        self.tail_ids = list(range(self.nq + self.nv + 1, self.nq + self.nv + self.nt + 1))
+        self.expected_ids = self.quad_ids + self.vtol_ids + self.tail_ids
+        self.drones = {i: {'home': None, 'curr': None, 'alt': 0.0, 'target_enu': None, 'track_age': math.inf} for i in self.expected_ids}
+        self.MAX_TRACK_AGE_SEC = 2.0 # Maximum acceptable age (in seconds) of track information to trigger an advance in the state machine
         self.state = 'WAIT_HOMES'
 
         self.get_logger().info(f"DTC Active. Waiting for tracks from drones: {self.expected_ids}")
@@ -47,6 +51,7 @@ class DTCController(Node):
             if did in self.drones:
                 self.drones[did]['curr'] = (t.latitude_deg, t.longitude_deg)
                 self.drones[did]['alt'] = t.altitude_m
+                self.drones[did]['track_age'] = t.time_since_last_update_s
 
     def send_cmd(self, drone_id, action, **kwargs):
         payload = {"drone_id": drone_id, "action": action}
@@ -56,23 +61,27 @@ class DTCController(Node):
     def loop(self):
         if self.state == 'WAIT_HOMES':
             # Check if we have current tracking data for every expected drone
-            if all(d['curr'] is not None for d in self.drones.values()):
+            if all(d['curr'] is not None and d['track_age'] < self.MAX_TRACK_AGE_SEC for d in self.drones.values()):
                 self.get_logger().info("All drones online. Locking homes and commanding takeoffs.")
                 # Lock in the home position for all drones just before takeoff
-                for did, d in self.drones.items():
+                for _did, d in self.drones.items():
                     d['home'] = (d['curr'][0], d['curr'][1], d['alt'])
                 for did in self.quad_ids:
                     self.send_cmd(did, 'takeoff', alt=self.quad_to_alt)
                 for did in self.vtol_ids:
                     self.send_cmd(did, 'takeoff', alt=self.vtol_to_alt)
+                for did in self.tail_ids:
+                    self.send_cmd(did, 'takeoff', alt=self.tail_to_alt)
                 self.state = 'WAIT_TAKEOFF'
 
         elif self.state == 'WAIT_TAKEOFF':
             quads_ready = all(d['alt'] >= (d['home'][2] + self.quad_to_alt - 2.0) for d_id, d in self.drones.items() if d_id in self.quad_ids)
             vtols_ready = all(d['alt'] >= (d['home'][2] + self.vtol_to_alt - 2.0) for d_id, d in self.drones.items() if d_id in self.vtol_ids)
-            if quads_ready and (vtols_ready or self.nv == 0):
+            tails_ready = all(d['alt'] >= (d['home'][2] + self.tail_to_alt - 2.0) for d_id, d in self.drones.items() if d_id in self.tail_ids)
+            if quads_ready and (vtols_ready or self.nv == 0) and (tails_ready or self.nt == 0):
                 self.get_logger().info("Takeoffs complete. Starting formation.")
                 self.command_vtol_orbits()
+                self.command_tail_orbits()
                 self.command_quad_polygon()
                 self.state = 'ENFORCE_POLYGON'
 
@@ -80,7 +89,7 @@ class DTCController(Node):
             ref_lat, ref_lon, _ = self.drones[self.expected_ids[0]]['home']
             all_quads_arrived = True
             for did in self.quad_ids:
-                if self.drones[did]['curr'] is None or self.drones[did]['target_enu'] is None:
+                if self.drones[did]['curr'] is None or self.drones[did]['target_enu'] is None or self.drones[did]['track_age'] > self.MAX_TRACK_AGE_SEC:
                     all_quads_arrived = False
                     continue
                 # Compare current ENU to target ENU
@@ -118,8 +127,16 @@ class DTCController(Node):
         for did in self.vtol_ids:
             h_lat, h_lon, _ = self.drones[did]['home']
             home_e, home_n = gps_to_enu(h_lat, h_lon, ref_lat, ref_lon)
-            # Send orbit command, circumscribing the poly radius
+            # Send orbit command, circumscribing the poly radius, 10m higher, 20m wider
             self.send_cmd(did, 'orbit', east=self.poly_center_e - home_e, north=self.poly_center_n - home_n, alt=self.poly_alt + 10.0, radius=self.poly_radius + 20.0)
+
+    def command_tail_orbits(self):
+        ref_lat, ref_lon, _ = self.drones[self.expected_ids[0]]['home']
+        for did in self.tail_ids:
+            h_lat, h_lon, _ = self.drones[did]['home']
+            home_e, home_n = gps_to_enu(h_lat, h_lon, ref_lat, ref_lon)
+            # Send orbit command, circumscribing the poly radius, 20m higher, 30m wider
+            self.send_cmd(did, 'orbit', east=self.poly_center_e - home_e, north=self.poly_center_n - home_n, alt=self.poly_alt + 20.0, radius=self.poly_radius + 30.0)
 
     def command_quad_polygon(self):
         ref_lat, ref_lon, _ = self.drones[self.expected_ids[0]]['home']

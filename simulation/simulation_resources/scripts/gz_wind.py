@@ -1,4 +1,10 @@
 """
+This scripts allows to set wind velocity of plugin gz::sim::systems::WindEffects
+- Wind reaches each LiftDrag/AdvancedLiftDrag/MulticopterMotorModel plugin, on every vehicle
+- On the X500 and Iris, wind also applies a force on the base_link through tag <enable_wind>
+- However, PX4's SENS_EN_ARSPDSIM, ArduPlane (SIM_)ARSPD_*, and gz::sim::systems::AirSpeed on VTOLs/tailsitters are blind to it
+- Thus, this script is only recommended for use with QUADS
+
 Use as:
     python3 gz_wind.py --from_west 0.0 --from_south 3.0
     python3 gz_wind.py --stop_wind
@@ -12,9 +18,9 @@ from gz.msgs10.wind_pb2 import Wind
 
 def main():
     parser = argparse.ArgumentParser(description='Control Gazebo wind plugin')
-    parser.add_argument('--from_west', type=float, default=0.0, help='Number of seconds to advance the simulation')
-    parser.add_argument('--from_south', type=float, default=0.0, help='Number of seconds to advance the simulation')
-    parser.add_argument('--stop_wind', dest='stop_wind', action='store_true', help='Pause simulation after stepping (default)')
+    parser.add_argument('--from_west', type=float, default=0.0, help='Wind velocity from west toward east (m/s, Gazebo +X)')
+    parser.add_argument('--from_south', type=float, default=0.0, help='Wind velocity from south toward north (m/s, Gazebo +Y)')
+    parser.add_argument('--stop_wind', dest='stop_wind', action='store_true', help='Disable WindEffects (stop wind)')
     args = parser.parse_args()
     
     world_name = os.environ.get('WORLD', 'default')

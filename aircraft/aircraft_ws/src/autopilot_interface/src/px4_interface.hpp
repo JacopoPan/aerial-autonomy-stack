@@ -67,27 +67,18 @@ public:
     PX4Interface();
 
 private:
-    // Constants - Action Handle Accepted (Landing, Offboard, Orbit, Takeoff)
-    static constexpr int ACTION_LOOP_RATE_HZ = 100; // Frequency of the while loops in long duration action handles for takeoff, landing, orbit, and offboard
-    // Constants - Landing
-    static constexpr double LAND_INIT_DIST_THRESH = 3.0; // Distance (m) from home, for a multicopter or VTOL, to start the final landing descent
-    static constexpr double VTOL_LAND_LOITER_DIST = 300.0; // Distance (m) from home, for a VTOL, of the pre-landing loiter descent
-    static constexpr double VTOL_LAND_LOITER_RADIUS = 150.0; // Radius (m), for a VTOL, of the pre-landing loiter descent
-    static constexpr double VTOL_LAND_LOITER_ALT_HIGH = 150.0; // Initial altitude (m), for a VTOL, of the pre-landing loiter descent
-    static constexpr double VTOL_LAND_LOITER_ALT_LOW = 65.0; // Final altitude (m), for a VTOL, of the pre-landing loiter descent
-    static constexpr double VTOL_LAND_LOITER_STARTED_DIST_THRESH = 50.0; // Threshold (m) in X-Y to consider the pre-landing loiter descent started
-    static constexpr double VTOL_LAND_LOITER_EXIT_DIST_THRESH = 30.0; // Threshold (m) in X-Y to exit the pre-landing loiter descent
-    static constexpr double VTOL_LAND_LOITER_EXIT_ALT_THRESH = 10.0; // Threshold (m) in Z to exit the pre-landing loiter descent
-    static constexpr double VTOL_LAND_FAKE_REPOSITION_DISTANCE = 600.0; // Reposition point (m) behind home, must be greater than NAV_LOITER_RAD (e.g. 500m). NOTE: it will not be reached because the VTOL will transition and land at home
-    static constexpr double VTOL_LAND_TRANSITION_START_DISTANCE = 120.0; // Distance (m) from home to start the transition, affected by the platforms's cruise speed, mass, wind
-    // Constants - Orbit
-    static constexpr double MC_ORBIT_SPEED_MS = 5.0; // Tangential speed (m/s) of the orbit for quads
-    // Constants - Takeoff
-    static constexpr double MC_TAKEOFF_COMPLETED_RATIO = 0.9; // Percentage of the target altitude, for a multicopter, to consider the takeoff action complete
-    static constexpr double VTOL_TAKEOFF_TRANSITION_WAIT_SEC = 10.0; // Time in seconds to wait after the transition before sending the VTOL takeoff loiter
-    static constexpr double VTOL_TAKEOFF_LOITER_RADIUS = 200.0; // Radius (m), for a VTOL, of the post-takeoff loiter
-    // Constants - Abort Action Handle (Landing, Offboard, Orbit, Takeoff)
-    static constexpr double ABORT_REPOSITION_ALT = 100.0; // Altitude (m) of the hover/loiter triggered when aborting an action
+    // Parameters - Action Handle Accepted (Landing, Offboard, Orbit, Takeoff)
+    int ACTION_LOOP_RATE_HZ;
+    // Parameters - Landing
+    double LAND_INIT_DIST_THRESH, VTOL_LAND_LOITER_DIST, VTOL_LAND_LOITER_RADIUS, VTOL_LAND_LOITER_ALT_HIGH, VTOL_LAND_LOITER_ALT_LOW;
+    double VTOL_LAND_LOITER_STARTED_DIST_THRESH, VTOL_LAND_LOITER_EXIT_DIST_THRESH, VTOL_LAND_LOITER_EXIT_ALT_THRESH, VTOL_LAND_FAKE_REPOSITION_DISTANCE;
+    double VTOL_LAND_TRANSITION_START_DISTANCE, TAIL_LAND_TRANSITION_START_DISTANCE;
+    // Parameters - Orbit
+    double MC_ORBIT_SPEED_MS;
+    // Parameters - Takeoff
+    double MC_TAKEOFF_COMPLETED_RATIO, VTOL_TAKEOFF_TRANSITION_WAIT_SEC, VTOL_TAKEOFF_LOITER_RADIUS;
+    // Parameters - Abort Action Handle (Landing, Offboard, Orbit, Takeoff)
+    double ABORT_REPOSITION_ALT;
 
     std::shared_mutex node_data_mutex_;
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
@@ -101,9 +92,11 @@ private:
     std::atomic<int> last_offboard_flag_count_;
     rclcpp::Time last_offboard_flag_rate_check_time_;
     std::string active_offboard_controller_name_;
+    static constexpr uint64_t UNSET_TIME_US = std::numeric_limits<uint64_t>::max();
 
     // Callback groups
-    rclcpp::CallbackGroup::SharedPtr callback_group_timer_;
+    rclcpp::CallbackGroup::SharedPtr callback_group_printout_;
+    rclcpp::CallbackGroup::SharedPtr callback_group_offboard_control_;
     rclcpp::CallbackGroup::SharedPtr callback_group_subscriber_;
     rclcpp::CallbackGroup::SharedPtr callback_group_service_;
     rclcpp::CallbackGroup::SharedPtr callback_group_action_;
@@ -121,13 +114,15 @@ private:
     rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_command_ack_sub_;
 
     // Subscribers variables
-    int target_system_id_, arming_state_, vehicle_type_;
+    std::atomic<int> target_system_id_;
+    int arming_state_, vehicle_type_;
     bool is_vtol_, is_vtol_tailsitter_, in_transition_mode_, in_transition_to_fw_, pre_flight_checks_pass_;
     double lat_, lon_, alt_, alt_ellipsoid_;
     bool xy_valid_, z_valid_, v_xy_valid_, v_z_valid_, xy_global_, z_global_;
     double x_, y_, z_, heading_, vx_, vy_, vz_;
     double ref_lat_, ref_lon_, ref_alt_;
     int pose_frame_, velocity_frame_;
+    // float to match PX4 float32 VehicleOdometry
     std::array<float, 3> position_;
     std::array<float, 4> q_;
     std::array<float, 3> velocity_;
@@ -189,14 +184,14 @@ private:
     void takeoff_handle_accepted(const std::shared_ptr<rclcpp_action::ServerGoalHandle<autopilot_interface_msgs::action::Takeoff>> goal_handle);
 
     // vehicle_command methods
-    void do_takeoff(double alt, double yaw);
-    void do_orbit(double lat, double lon, double alt, double r, double speed = NAN);
-    void do_change_altitude(double alt);
+    void do_takeoff(double alt, double yaw, bool is_vtol, double home_lat, double home_lon, double home_alt);
+    void do_orbit(double lat, double lon, double alt, double r, double speed, double home_alt);
+    void do_change_altitude(double alt, double home_alt);
     void do_change_speed(double speed);
-    void do_reposition(double lat, double lon, double alt, double heading = 0.0);
+    void do_reposition(double lat, double lon, double alt, double heading, double home_alt);
     void do_vtol_transition(int trans_type);
     void do_rtl();
-    void do_land();
+    void do_land(double home_lat, double home_lon, double home_alt);
     void do_set_mode(int mode, int submode);
     void send_vehicle_command(int command, double param1 = 0.0, double param2 = 0.0, double param3 = 0.0, 
                                 double param4 = 0.0, double param5 = 0.0, double param6 = 0.0, double param7 = 0.0, 
@@ -209,6 +204,8 @@ private:
 
     // Utility
     std::string fsm_state_to_string(PX4InterfaceState state);
+    static uint64_t sec_to_us(double sec) { return static_cast<uint64_t>(sec * 1000000); }
+
 };
 
 #endif // AUTOPILOT_INTERFACE__PX4_INTERFACE_HPP_

@@ -23,6 +23,7 @@ children:
             name: "Check if tracks are even"
             params:
               key: "ground_tracks"
+              timeout_sec: 30.0 # Use null to wait forever
               expression: "len(data.tracks) % 2 == 0"
 
           - action: reposition
@@ -45,6 +46,7 @@ children:
             name: "Check if tracks are odd"
             params:
               key: "ground_tracks"
+              timeout_sec: 30.0 # Use null to wait forever
               expression: "len(data.tracks) % 2 != 0"
 
           - action: reposition

@@ -8,15 +8,12 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 import os
 import argparse
 import threading
-import random
-import time
 import yaml
 import py_trees
 import py_trees_ros
 
 from mission import tree_builder
 
-from action_msgs.msg import GoalStatus
 from sensor_msgs.msg import NavSatFix
 from mavros_msgs.msg import VfrHud
 from vision_msgs.msg import Detection2DArray
@@ -102,7 +99,7 @@ class MissionNode(Node):
         self.create_subscription( # 15Hz
             Detection2DArray, '/detections', self.yolo_detections_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
-        self.create_subscription( # 1Hz
+        self.create_subscription( # 10Hz
             SwarmObs, '/tracks', self.ground_tracks_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
 
@@ -197,7 +194,7 @@ class MissionNode(Node):
         now = self.get_clock().now()
         stale_ids = []
         with self.data_lock:
-            for drone_id, (last_msg, last_seen_time) in self.drone_states.items():
+            for drone_id, (_last_msg, last_seen_time) in self.drone_states.items():
                 duration = now - last_seen_time
                 if duration.nanoseconds / 1e9 > self.STALE_DRONE_TIMEOUT_SEC:
                     stale_ids.append(drone_id)
@@ -266,7 +263,7 @@ class MissionNode(Node):
         if ground_tracks and ground_tracks.tracks:
             output += "Ground Tracks:\n"
             for track in ground_tracks.tracks:
-                output += f"  Id {track.id}, lat: {track.latitude_deg:.5f} lon: {track.longitude_deg:.5f} alt (msl): {track.altitude_m:.2f}\n"
+                output += f"  Id {track.id}, lat: {track.latitude_deg:.5f} lon: {track.longitude_deg:.5f} alt (msl): {track.altitude_m:.2f} ({track.time_since_last_update_s:.1f}s old)\n"
         else:
             output += "Ground Tracks: [No data]\n"
         

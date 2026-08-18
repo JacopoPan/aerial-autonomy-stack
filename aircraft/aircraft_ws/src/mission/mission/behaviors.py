@@ -1,9 +1,9 @@
 import os
 import py_trees
 
-import rclpy
 from action_msgs.msg import GoalStatus
 from geographiclib.geodesic import Geodesic
+from simpleeval import simple_eval
 
 from autopilot_interface_msgs.action import Takeoff, Land, Orbit, Offboard
 from autopilot_interface_msgs.srv import SetSpeed, SetReposition
@@ -42,17 +42,33 @@ class CheckBlackboardBehavior(py_trees.behaviour.Behaviour):
         self.ros_node = ros_node
         self.key = params.get('key')
         self.expression = params.get('expression', None)
+        raw_timeout_param = params.get('timeout_sec', 10.0) # Wait for data for up to 10 seconds by default
+        self.timeout_sec = None if raw_timeout_param is None else float(raw_timeout_param) # Defense against malformed parameter
         self.blackboard = py_trees.blackboard.Blackboard()
+        # Wait for data tracking variable
+        self.start_time = None
+
+    def initialise(self):
+        self.start_time = self.ros_node.get_clock().now()
 
     def update(self):
         data = self.blackboard.get(self.key)
         if data is None:
-            self.ros_node.get_logger().info(f"[{self.name}] Condition failed: No data for {self.key}")
-            return py_trees.common.Status.FAILURE
+            if self.timeout_sec is not None:
+                elapsed = (self.ros_node.get_clock().now() - self.start_time).nanoseconds / 1e9
+                if elapsed >= self.timeout_sec:
+                    self.ros_node.get_logger().warn(f"[{self.name}] Timed out after {self.timeout_sec}s waiting for '{self.key}'")
+                    return py_trees.common.Status.FAILURE
+            self.ros_node.get_logger().info(f"[{self.name}] Waiting for data: No data for {self.key}", throttle_duration_sec=2.0)
+            return py_trees.common.Status.RUNNING
         condition_met = False
         if self.expression:
             try:
-                condition_met = bool(eval(self.expression, {}, {"data": data}))
+                condition_met = bool(simple_eval( # simple_eval requires to explicitly pass allowed functions and variables
+                    self.expression,
+                    functions={"len": len},
+                    names={"data": data}
+                ))
             except Exception as e:
                 self.ros_node.get_logger().error(f"[{self.name}] Expression eval error: {e}")
                 return py_trees.common.Status.FAILURE
@@ -68,7 +84,7 @@ class CheckBlackboardBehavior(py_trees.behaviour.Behaviour):
         if condition_met:
             self.ros_node.get_logger().info(f"[{self.name}] Condition met for key: {self.key}")
             return py_trees.common.Status.SUCCESS
-        self.ros_node.get_logger().info(f"[{self.name}] Condition for {self.key}")
+        self.ros_node.get_logger().info(f"[{self.name}] Condition for {self.key} not met")
         return py_trees.common.Status.FAILURE
 
 # BASE ACTION CLIENT BEHAVIOR (NON-BLOCKING)
@@ -97,10 +113,11 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
         self.goal_sent = False
         self.goal_future = None
         self.result_future = None
+        self._reject_count = 0
         self.goal = self.create_goal()
 
     def update(self):
-        if self.goal == "SKIPPED": # E.g. non-supported actions like Offboard for ArduPilot VTOLs
+        if self.goal is None: # E.g. non-supported actions like Offboard for ArduPilot VTOLs
             return py_trees.common.Status.SUCCESS
         if self.action_client is None:
             self.ros_node.get_logger().error(f"[{self.name}] Client {self.client_name} missing!")
@@ -119,6 +136,12 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
             if self.goal_future.done():
                 goal_handle = self.goal_future.result()
                 if not goal_handle.accepted:
+                    MAX_GOAL_RETRIES = 20 # Retry a non-accepted goal for 20 ticks @2Hz = 10sec
+                    self._reject_count += 1
+                    if self._reject_count <= MAX_GOAL_RETRIES:
+                        self.goal_sent = False # The interface is busy; try again on the next tick
+                        self.ros_node.get_logger().error(f"[{self.name}] Goal rejected. Will re-try.")
+                        return py_trees.common.Status.RUNNING
                     self.ros_node.get_logger().error(f"[{self.name}] Goal rejected.")
                     return py_trees.common.Status.FAILURE
                 self.result_future = goal_handle.get_result_async()
@@ -136,7 +159,7 @@ class BaseActionBehavior(py_trees.behaviour.Behaviour):
 
     def terminate(self, new_status):
         # If interrupted by a higher priority node, cancel the running goal
-        if new_status == py_trees.common.Status.INVALID and self.goal_future and not self.result_future:
+        if new_status == py_trees.common.Status.INVALID and self.goal_future:
             self.ros_node.get_logger().warn(f"[{self.name}] Interrupted! Cancelling goal...")
             if self.goal_future.done():
                 goal_handle = self.goal_future.result()
@@ -156,7 +179,7 @@ class TakeoffBehavior(BaseActionBehavior):
         goal = Takeoff.Goal()
         goal.takeoff_altitude = float(self.params.get('takeoff_altitude', 20.0))
         goal.vtol_transition_heading = float(self.params.get('vtol_transition_heading', 0.0))
-        goal.vtol_loiter_nord = float(self.params.get('vtol_loiter_nord', 100.0))
+        goal.vtol_loiter_north = float(self.params.get('vtol_loiter_north', 100.0))
         goal.vtol_loiter_east = float(self.params.get('vtol_loiter_east', 100.0))
         goal.vtol_loiter_alt = float(self.params.get('vtol_loiter_alt', 120.0))
         return goal
@@ -190,8 +213,8 @@ class OffboardBehavior(BaseActionBehavior):
     def create_goal(self):
         autopilot, drone_type = os.getenv('AUTOPILOT', ''), os.getenv('DRONE_TYPE', '')
         if autopilot == 'ardupilot' and drone_type != 'quad':
-            self.ros_node.get_logger().warn(f"[{self.name}] Offboard unsupported by ArduPilot VTOL. Skipping.")
-            return "SKIPPED"
+            self.ros_node.get_logger().warn(f"[{self.name}] Offboard (GUIDED MODE) in ArduPilot is only supported for 'DRONE_TYPE=quad'. Skipping.")
+            return None
         goal = Offboard.Goal()
         default_controller = 'traj-test' if autopilot == 'px4' else 'vel-test' # Pick a default controller is not specified in the YAML
         goal.controller_name = str(self.params.get('controller_name', default_controller))
@@ -267,12 +290,13 @@ class RepositionBehavior(py_trees.behaviour.Behaviour):
         self.req_sent = False
         self.service_future = None
         self.reposition_active = False
+        self.skipped = False
         if os.getenv('DRONE_TYPE', '') != 'quad':
-            self.ros_node.get_logger().warn(f"[{self.name}] Reposition is only supported for 'quad'. Skipping.")
-            self.req_sent = "SKIPPED"
+            self.ros_node.get_logger().warn(f"[{self.name}] Reposition is only supported for 'DRONE_TYPE=quad'. Skipping.")
+            self.skipped = True
 
     def update(self):
-        if self.req_sent == "SKIPPED": return py_trees.common.Status.SUCCESS
+        if self.skipped: return py_trees.common.Status.SUCCESS
         if self.service_client is None: return py_trees.common.Status.FAILURE
         # 1: Wait for service and send request
         if not self.req_sent:

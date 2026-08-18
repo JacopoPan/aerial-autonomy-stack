@@ -4,7 +4,6 @@
   <model name='standard_vtol'>
     <pose>0 0 0.246 0 0 0</pose>
     <link name='base_link'>
-      <!-- <enable_wind>true</enable_wind> --> <!-- Gazebo WindEffects are disabled for PX4 fixed-wing SITL -->
       <pose>0 0 0 0 0 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -201,6 +200,7 @@
           </pressure>
         </air_pressure>
       </sensor>
+      <!-- gz_bridge hardcodes base_link/navsat_sensor for the simulated GNSS -->
       <sensor name="navsat_sensor" type="navsat">
         <always_on>1</always_on>
         <update_rate>30</update_rate>
@@ -814,8 +814,8 @@
     <%
       # Compute the gimbal pose based on the desired camera pose
       cam_pose = camera_ext.split(' ').map(&:to_f)
-      gimbal_x = cam_pose[0] - 0.02 # Pull the gimbal base back by 2cm, see gimbal dimensions in sensor_gimbal/model.sdf
-      gimbal_z = cam_pose[2] + 0.05 # Pull the gimbal base up by 5cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_x = cam_pose[0] - 0.04 # Pull the gimbal base back by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
+      gimbal_z = cam_pose[2] + 0.04 # Pull the gimbal base up by 4cm, see gimbal dimensions in sensor_gimbal/model.sdf
       gimbal_ext = "#{gimbal_x} #{cam_pose[1]} #{gimbal_z} #{cam_pose[3]} #{cam_pose[4]} #{cam_pose[5]}"
     %>
     <include merge="true">
@@ -829,7 +829,7 @@
     <include>
       <uri>model://sensor_camera</uri>
       <name>simple_camera</name>
-      <pose degrees="true"><%= camera_ext %></pose>
+      <pose relative_to="pitch_link">0 0 0 0 0 0</pose>
     </include>
     <joint name="CameraJoint" type="fixed">
       <parent>pitch_link</parent>

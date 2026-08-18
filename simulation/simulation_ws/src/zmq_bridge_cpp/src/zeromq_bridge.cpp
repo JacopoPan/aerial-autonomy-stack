@@ -82,11 +82,12 @@ public:
 
     ~ZMQBridge() {
         running_ = false;
-        // Clean shutdown for ZMQ
-        context_.close(); 
+        clock_cv_.notify_all(); // Wake up the ZMQ thread if waiting for the clock
         if (zmq_thread_.joinable()) {
             zmq_thread_.join();
         }
+        // Clean shutdown for ZMQ
+        context_.close();
     }
 
 private:
@@ -165,12 +166,18 @@ private:
                         RCLCPP_INFO(this->get_logger(), "Received reset action (9999.0). Running unpaused...");
 
                         // A. Unpause simulation
+                        double reset_start;
+                        {
+                            std::lock_guard<std::mutex> lock(clock_mutex_);
+                            reset_start = current_sim_time_;
+                        }
                         set_gazebo_pause(false);
                         // B. Wait loop
                         while (rclcpp::ok() && running_) {
                             std::unique_lock<std::mutex> lock(clock_mutex_);
-                            clock_cv_.wait(lock); // Wait for clock update
-                            if (current_sim_time_ >= init_duration_) {
+                            if (clock_cv_.wait_for(lock, 200ms, [this, reset_start]{
+                                return current_sim_time_ >= (reset_start + init_duration_);
+                            })) {
                                 break;
                             }
                         }
@@ -201,14 +208,16 @@ private:
 
                     // 3. Send Reply
                     zmq::message_t reply(sizeof(ClockPayload));
-                    if (received) {
-                        // Copy struct directly into ZMQ message buffer
-                        std::memcpy(reply.data(), &current_clock_, sizeof(ClockPayload));
-                    } else {
-                        RCLCPP_WARN(this->get_logger(), "Update timeout!");
-                        ClockPayload empty = {0, 0};
-                        std::memcpy(reply.data(), &empty, sizeof(ClockPayload));
+                    ClockPayload snapshot;
+                    {
+                        std::lock_guard<std::mutex> lock(clock_mutex_);
+                        snapshot = current_clock_;
                     }
+                    if (!received) {
+                        RCLCPP_WARN(this->get_logger(), "Update timeout!");
+                        snapshot = {0, 0};
+                    }
+                    std::memcpy(reply.data(), &snapshot, sizeof(ClockPayload));
                     socket_.send(reply, zmq::send_flags::none);
 
                 } catch (const std::exception &e) {

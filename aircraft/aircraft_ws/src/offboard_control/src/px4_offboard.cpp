@@ -6,7 +6,7 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
     xy_valid_(false), z_valid_(false), v_xy_valid_(false), v_z_valid_(false), xy_global_(false), z_global_(false),
     x_(NAN), y_(NAN), z_(NAN), heading_(NAN), vx_(NAN), vy_(NAN), vz_(NAN), ref_lat_(NAN), ref_lon_(NAN), ref_alt_(NAN),
-    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1),
+    pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1), is_vtol_(false), is_vtol_tailsitter_(false),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     traj_ref_east_(NAN), traj_ref_north_(NAN), traj_ref_up_(NAN),
     target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
@@ -47,19 +47,20 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     trajectory_ref_pub_ = this->create_publisher<TrajectorySetpoint>("fmu/in/trajectory_setpoint", qos_profile_pub);
 
     // Create callback groups (Reentrant or MutuallyExclusive)
-    callback_group_timer_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); // Timed callbacks in parallel
+    callback_group_printout_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive); // Strictly sequential callbacks
+    callback_group_offboard_control_ = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive); // Strictly sequential callbacks
     callback_group_subscriber_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); // Listen to subscribers in parallel
 
     // Timers
     px4_interface_printout_timer_ = this->create_wall_timer( // Follow wall clock for printouts
         3s, // Timer period of 3 seconds
         std::bind(&PX4Offboard::px4_interface_printout_callback, this),
-        callback_group_timer_
+        callback_group_printout_
     );
     offboard_control_loop_timer_ = rclcpp::create_timer(this, this->get_clock(),
         std::chrono::nanoseconds(1000000000 / offboard_loop_frequency),
         std::bind(&PX4Offboard::offboard_loop_callback, this),
-        callback_group_timer_
+        callback_group_offboard_control_
     );
 
     // Subscribers configuration
@@ -89,11 +90,11 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     // Offboard flag subscriber
     offboard_flag_sub_ = this->create_subscription<autopilot_interface_msgs::msg::OffboardFlag>(
         "/offboard_flag", qos_profile_sub, // 10Hz
-        std::bind(&PX4Offboard::offboard_flag_callaback, this, std::placeholders::_1), subscriber_options);
+        std::bind(&PX4Offboard::offboard_flag_callback, this, std::placeholders::_1), subscriber_options);
 
     // Perception subscribers
     ground_tracks_sub_ = this->create_subscription<ground_system_msgs::msg::SwarmObs>(
-        "/tracks", qos_profile_sub, // 1Hz
+        "/tracks", qos_profile_sub, // 10Hz
         std::bind(&PX4Offboard::ground_tracks_callback, this, std::placeholders::_1), subscriber_options);
     yolo_detections_sub_ = this->create_subscription<vision_msgs::msg::Detection2DArray>(
         "/detections", qos_profile_sub, // 15Hz
@@ -163,13 +164,13 @@ void PX4Offboard::status_callback(const VehicleStatus::SharedPtr msg)
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     // arming_state_ = msg->arming_state; // DISARMED = 1, ARMED = 2
     vehicle_type_ = msg->vehicle_type; // ROTARY_WING = 1, FIXED_WING = 2 (ROVER = 3)
-    // is_vtol_ = msg->is_vtol; // bool
-    // is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
+    is_vtol_ = msg->is_vtol; // bool
+    is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
     // in_transition_mode_ = msg->in_transition_mode; // bool
     // in_transition_to_fw_ = msg->in_transition_to_fw; // bool
     // pre_flight_checks_pass_ = msg->pre_flight_checks_pass; // bool
 }
-void PX4Offboard::offboard_flag_callaback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg)
+void PX4Offboard::offboard_flag_callback(const autopilot_interface_msgs::msg::OffboardFlag::SharedPtr msg)
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     offboard_active_ = msg->is_active;
@@ -193,6 +194,10 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     ground_tracks_ = msg; // Save the smart pointer to the latest message
     last_track_time_ = this->get_clock()->now();
+
+    // Invalidate the pursuit references: they will only be valid if fully recomputed below
+    traj_ref_east_ = traj_ref_north_ = traj_ref_up_ = NAN;
+    target_vn_ = target_ve_ = target_vd_ = NAN;
 
     // Verify LLA position of own reference point (used in PX4 local position)
     double reference_lat = ref_lat_;
@@ -220,14 +225,24 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     }
     const auto& target_track = *target_it; // Bind a reference without copying
 
+    // Ignore track if stale
+    if (target_track.time_since_last_update_s > 2.0) { // TODO: parametrize
+        RCLCPP_WARN(get_logger(), "Target track is stale");
+        return;
+    }
+    // Also gate in any controller with a block like:
+    //      if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_) &&
+    //          !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+    //          (this->get_clock()->now() - last_track_time_).seconds() < 2.0) {
+    // In case topic /tracks goes silent an this callback does not run again
+
     // Save target velocities
     target_vn_ = target_track.velocity_n_m_s;
     target_ve_ = target_track.velocity_e_m_s;
     target_vd_ = target_track.velocity_d_m_s;
 
     // Predict LLA position of target
-    constexpr double PREDICTION_TIME_SEC = 0.0; // TODO: enable prediction
-    constexpr double ALT_SAFETY_MARGIN = 0.0; // TODO: add vertical separation to avoid collisions
+    const double PREDICTION_TIME_SEC = static_cast<double>(target_track.time_since_last_update_s); // Dead-reckon based on the (ground-side) telemetry age
 
     double target_ground_speed = std::hypot(target_track.velocity_n_m_s, target_track.velocity_e_m_s);
     double target_course_rad = std::atan2(target_track.velocity_e_m_s, target_track.velocity_n_m_s); // Azimuth from North
@@ -237,7 +252,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
     double future_lat = 0.0, future_lon = 0.0;
     geod.Direct(target_track.latitude_deg, target_track.longitude_deg, target_course_deg, distance_traveled,
                 future_lat, future_lon);
-    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC) + ALT_SAFETY_MARGIN;
+    double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC);
 
     // Compute GeographicLib ENU position of label48 w.r.t. PX4 vehicle (using NED)
     const GeographicLib::LocalCartesian proj(reference_lat, reference_lon, reference_alt);
@@ -360,17 +375,17 @@ void PX4Offboard::att_ref_test(OffboardControlMode& mode)
         double cp = cos(pitch_rad / 2.0);
         double sp = sin(pitch_rad / 2.0);
         // Quaternion reference: Q_yaw * Q_pitch (the reference is in PX4 NED world frame)
-        attitude_ref.q_d[0] = cy * cp;          // w
-        attitude_ref.q_d[1] = -sy * sp;         // x
-        attitude_ref.q_d[2] = cy * sp;          // y
-        attitude_ref.q_d[3] = sy * cp;          // z
+        attitude_ref.q_d[0] = static_cast<float>(cy * cp);          // w
+        attitude_ref.q_d[1] = static_cast<float>(-sy * sp);         // x
+        attitude_ref.q_d[2] = static_cast<float>(cy * sp);          // y
+        attitude_ref.q_d[3] = static_cast<float>(sy * cp);          // z
         attitude_ref.thrust_body = {0.0, 0.0, -0.72};
     } else if (vehicle_type_ == 2) { // FIXED_WING
         double pitch_rad = -30.0 * M_PI / 180.0; // Negative pitch to dive
-        attitude_ref.q_d[0] = cos(pitch_rad / 2.0); // w
-        attitude_ref.q_d[1] = 0;                    // x
-        attitude_ref.q_d[2] = sin(pitch_rad / 2.0); // y
-        attitude_ref.q_d[3] = 0;                    // z
+        attitude_ref.q_d[0] = static_cast<float>(cos(pitch_rad / 2.0)); // w
+        attitude_ref.q_d[1] = 0;                                        // x
+        attitude_ref.q_d[2] = static_cast<float>(sin(pitch_rad / 2.0)); // y
+        attitude_ref.q_d[3] = 0;                                        // z
         attitude_ref.thrust_body = {0.15, 0.0, 0.0};
     } else {
         RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
@@ -429,33 +444,34 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         return;
     }
     mode.position = true;
+
+    constexpr double PRED_HORIZON_S = 1.0;  // s, maximum time horizon for constant-velocity extrapolation/prediction
+
     TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
     trajectory_ref.timestamp = mode.timestamp;
     trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
     trajectory_ref.jerk = {NAN, NAN, NAN}; // Unused
-    if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_)) {
-        double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, 2.0);
+    if (!std::isnan(traj_ref_east_) && !std::isnan(traj_ref_north_) && !std::isnan(traj_ref_up_) &&
+        !std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_) &&
+        (this->get_clock()->now() - last_track_time_).seconds() < 2.0) { // TODO: parametrize
+
+        double dt = std::clamp((this->get_clock()->now() - last_track_time_).seconds(), 0.0, PRED_HORIZON_S);
         double current_north = traj_ref_north_ + (target_vn_ * dt);
         double current_east  = traj_ref_east_  + (target_ve_ * dt);
         double current_down  = -traj_ref_up_   + (target_vd_ * dt);
-        trajectory_ref.position = {current_north, current_east, current_down};
+        trajectory_ref.position = {static_cast<float>(current_north), static_cast<float>(current_east), static_cast<float>(current_down)};
         double d_north = current_north - x_;
         double d_east  = current_east - y_;
-        trajectory_ref.yaw = std::atan2(d_east, d_north); // [-PI:PI]
-        if (!std::isnan(target_vn_) && !std::isnan(target_ve_) && !std::isnan(target_vd_)) {
-            mode.velocity = true; // Enable velocity feedforward
-            trajectory_ref.velocity = {target_vn_, target_ve_, target_vd_};
-            double dist_sq = (d_north * d_north) + (d_east * d_east);
-            if (dist_sq > 1.0) {
-                double vrel_n = target_vn_ - vx_;
-                double vrel_e = target_ve_ - vy_;
-                trajectory_ref.yawspeed = (d_north * vrel_e - d_east * vrel_n) / dist_sq;
-            } else {
-                trajectory_ref.yawspeed = 0.0;
-            }
+        trajectory_ref.yaw = static_cast<float>(std::atan2(d_east, d_north)); // [-PI:PI]
+        mode.velocity = true; // Enable velocity feedforward
+        trajectory_ref.velocity = {static_cast<float>(target_vn_), static_cast<float>(target_ve_), static_cast<float>(target_vd_)};
+        double dist_sq = (d_north * d_north) + (d_east * d_east);
+        if (dist_sq > 1.0) {
+            double vrel_n = target_vn_ - vx_;
+            double vrel_e = target_ve_ - vy_;
+            trajectory_ref.yawspeed = static_cast<float>((d_north * vrel_e - d_east * vrel_n) / dist_sq);
         } else {
-            trajectory_ref.velocity = {NAN, NAN, NAN};
-            trajectory_ref.yawspeed = NAN;
+            trajectory_ref.yawspeed = 0.0;
         }
     } else { // Missing track, stay still
         mode.position = false;

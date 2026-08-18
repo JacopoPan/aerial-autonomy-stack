@@ -8,20 +8,22 @@ set -e
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
-# By default, skip building advanced odometry, SLAM packages
-BUILD_ADVANCED_ODOM=${EXTRAS:-false}
+# Set up the build
+BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
+CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
+CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY; do check_enum "$v" true false; done
+print_envvars
 
 BUILD_OPTS=""
-if [ "${CLEAN_BUILD:-false}" = "true" ]; then
+if [ "$CLEAN_BUILD" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
   BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi aircraft-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
-fi
-
-BUILD_DOCKER=true
-if [ "${CLONE_ONLY:-false}" = "true" ]; then
-  BUILD_DOCKER=false # If CLONE_ONLY is "true", disable the build steps
 fi
 
 # Create a folder (ignored by git) to clone GitHub repos
@@ -50,8 +52,9 @@ for repo_info in "${REPOS[@]}"; do
   if [ -d "$TARGET_DIR" ]; then
     cd "$TARGET_DIR"
     BRANCH=$(git branch --show-current)
-    TAGS=$(git tag --points-at HEAD)
-    echo "There is a clone of ${dir} on branch: ${BRANCH}, tags: [${TAGS}]"
+    TAGS=$(git tag --points-at HEAD | paste -sd, -)
+    HEAD_INFO=$(git log -1 --format='%h %cs (%cr)')
+    printf '%-30s %-20s %-20s %s\n' "$dir" "${BRANCH:-[detached]}" "$TAGS" "$HEAD_INFO"
     # The script does not automatically pull changes for already cloned repos (as they should be on fixed tags)
     # This avoids breaking the Docker cache but it requires manually deleting the _github_clones folder for branch/tag updates
     # git pull
@@ -59,14 +62,21 @@ for repo_info in "${REPOS[@]}"; do
     cd "$CLONE_DIR"
   else
     echo "Clone not found, cloning ${dir}..."
-    TEMP_DIR="${TARGET_DIR}_temp"     
-    rm -rf "$TEMP_DIR" # Clean up any failed clone from a previous run   
-    git clone --depth 1 --shallow-submodules --branch "$branch" --recursive "$url" "$TEMP_DIR" && mv "$TEMP_DIR" "$TARGET_DIR"
+    TEMP_DIR="${TARGET_DIR}_temp"
+    rm -rf "$TEMP_DIR" # Clean up any failed clone from a previous run
+    for attempt in 1 2 3; do # Up to 3 tries
+      git clone --depth 1 --shallow-submodules --branch "$branch" --recursive "$url" "$TEMP_DIR" && break
+      echo "Clone of ${dir} failed (attempt ${attempt}/3), retrying..."
+      rm -rf "$TEMP_DIR"
+      sleep 2
+    done
+    [ -d "$TEMP_DIR" ] || { echo "ERROR: could not clone ${dir}"; exit 1; }
+    mv "$TEMP_DIR" "$TARGET_DIR"
   fi
 done
 
-if [ "$BUILD_DOCKER" = "true" ]; then
-  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
-else
+if [ "$CLONE_ONLY" = "true" ]; then
   echo -e "Skipping Docker build"
+else
+  docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 fi

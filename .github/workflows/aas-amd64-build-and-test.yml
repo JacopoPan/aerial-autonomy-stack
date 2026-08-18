@@ -119,13 +119,6 @@ jobs:
           auto-activate: true
           use-only-tar-bz2: true 
 
-      - name: Remove GPU requests and env vars
-        run: |
-          sed -i 's/devices=device_binds,/devices=[],/' ./aas-gym/src/aas_gym/aas_env.py          
-          sed -i 's/device_requests=gpu_requests,/device_requests=[],/' ./aas-gym/src/aas_gym/aas_env.py          
-          sed -i '/"__NV_PRIME_RENDER_OFFLOAD": "1",/d' ./aas-gym/src/aas_gym/aas_env.py
-          sed -i '/"__GLX_VENDOR_LIBRARY_NAME": "nvidia",/d' ./aas-gym/src/aas_gym/aas_env.py
-
       - name: Install aas-gym package
         run: |
           cd ./aas-gym/
@@ -133,7 +126,7 @@ jobs:
 
       - name: Run aas-gym test 1
         run: |
-          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot px4
+          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot px4 --no-gpu
 
       - name: Safety cleanup between tests
         if: always()
@@ -145,4 +138,4 @@ jobs:
 
       - name: Run aas-gym test 2
         run: |
-          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot ardupilot
+          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot ardupilot --no-gpu

@@ -16,6 +16,9 @@ gymnasium = "^1.2"
 stable-baselines3 = "^2.8"
 docker = "^7.1"
 pyzmq = "^27.1"
+pymavlink = "^2.4"
+pyulog = "^1.2"
+pymap3d = "^3.2"
 
 [tool.poetry.dev-dependencies]
 

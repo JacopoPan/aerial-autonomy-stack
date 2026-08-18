@@ -21,50 +21,68 @@ ODOM="${ODOM:-none}" # Options: none (default), openvins, fastlio, superodom, mi
 SIM_SUBNET="${SIM_SUBNET:-10.42}" # Simulation subnet (default = 10.42)
 AIR_SUBNET="${AIR_SUBNET:-10.22}" # Inter-vehicle subnet (default = 10.22)
 SIM_ID="${SIM_ID:-100}" # Last byte of the simulation container IP (default = 100)
-GROUND_ID="${GROUND_ID:-101}" # Last byte of the simulation container IP (default = 101)
+GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 101)
 #
-DRONE_TYPE="${DRONE_TYPE:-quad}" # Options: quad (default), vtol
+DRONE_TYPE="${DRONE_TYPE:-quad}" # Options: quad (default), vtol, tail
 DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 #
-DEV="${DEV:false}" # Options: true, false (default)
+RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
+DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
-# Only used by ground-container
+
+# Only used by ground-container (i.e., if GROUND is true)
+GROUND="${GROUND:-false}" # Options: true, false (default)
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
+NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
 
-GROUND="${GROUND:-false}" # Options: true, false (default)
+# Find the script's path
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+# Check env variables
+source "${SCRIPT_DIR}/tests/check_env_vars.sh"
+check_enum AUTOPILOT px4 ardupilot
+check_enum ODOM none openvins fastlio superodom mimosa
+check_enum DRONE_TYPE quad vtol tail
+check_int DRONE_ID 1 99
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
+for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
+print_envvars
+
 if [[ "$GROUND" == "true" ]]; then
-  # This is a bit hacky, but allows to use the deploy_run.sh script for the ground container
+  # This is a bit hacky, but allows using the deploy_run.sh script for the ground container
   # Without GPU requirements: --device /dev/dri --gpus all --env NVIDIA_DRIVER_CAPABILITIES=all
   # Forcing HEADLESS to false, opening REMOTE_VIDEO_STREAMS and SSH_CONNECTIONS
+  # GND_TELEM_BAUD=230400 for use with point-to-multipoint Microhard telemetry
   xhost +local:docker # Grant access to the X server
   docker run -it --rm \
     --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
     --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
     --env HEADLESS=false \
-    --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS \
+    --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env NUM_TAILS=$NUM_TAILS \
     --env SIMULATED_TIME=$HITL \
     --env ROS_DOMAIN_ID=$GROUND_ID \
     --env AIR_SUBNET=$AIR_SUBNET \
-    --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
+    --env HOST_INPUT_GID="$(getent group input | cut -d: -f3)" \
     --env REMOTE_VIDEO_STREAMS=true \
     --env SSH_CONNECTIONS=true \
+    --env GND_TELEM_BAUD=230400 \
     --net=host \
     --privileged \
     --name ground-container \
-    --volume ~/Downloads/:/mounted_downloads_folder \
+    --volume ~/Downloads/:/aas/mounted_downloads_folder \
     ground-image
   exit 0
 fi
 
 # In dev mode, resources and workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
-  SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   DEV_OPTS="--entrypoint /bin/bash"
-  DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_resources/:/aas/aircraft_resources:cached"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_ws/src/ground_system_msgs:/aas/aircraft_ws/src/ground_system_msgs:cached"
+  DEV_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
 fi
 
 if [ "$HEADLESS" = "false" ]; then
@@ -84,7 +102,7 @@ else
     echo -e "\t docker exec -it aircraft-container_$DRONE_ID tmux attach\n"
   fi
   echo -e "To stop all containers and remove stopped containers:\n"
-  echo -e '\t docker stop $(docker ps -q) && docker container prune -f\n'
+  echo -e '\t docker ps -q | xargs -r docker stop && docker container prune -f\n'
 fi
 
 # Launch the aircraft container
@@ -100,10 +118,12 @@ docker run $DOCKER_RUN_FLAGS \
   --env GND_CONTAINER=$GND_CONTAINER \
   --env ROS_DOMAIN_ID=$DRONE_ID \
   --env REMOTE_VIDEO_STREAMS=true \
+  --env RECORD_ROSBAG=$RECORD_ROSBAG \
   --net=host \
   --privileged \
   --name aircraft-container_$DRONE_ID \
-  --volume ~/Downloads/:/mounted_downloads_folder \
+  --volume ~/Downloads/:/aas/mounted_downloads_folder \
+  --volume ~/Downloads/aas_rosbags:/aas/rosbags \
   ${DEV_OPTS} \
   ${AAS_SSH_OPTS} \
   aircraft-image

@@ -4,7 +4,7 @@ This project aims to speed up the ideation-development-simulation-deployment cyc
 
 ## The Many Facets of the Sim2real Gap
 
-The *sim2real gap* is an euphemism for robotic projects that work well on a developer's laptop but not so much in the field.
+The *sim2real gap* is a euphemism for robotic projects that work well on a developer's laptop but not so much in the field.
 Aerial sim2real research often focuses on modeling and simulation of complex aerodynamics effects.
 
 Nonetheless, at deployment time, an equally important component of *sim2real gap* arises from [system design](https://arxiv.org/abs/2510.20808)—in particular, software tooling and engineering, where the dynamic range between ["average and the best is 50-to-1, maybe 100-to-1"](https://www.youtube.com/watch?v=wTgQ2PBiz-g&t=35s).
@@ -39,9 +39,10 @@ A summary of existing multi-drone flight stacks can be found in [Table II of thi
 
 - *Universidad Politécnica de Madrid (UPM)*'s [`aerostack2`](https://github.com/aerostack2/aerostack2) (multicopter-only)
 - *Czech Technical University in Prague (CTU)*'s [`mrs_uav_system`](https://github.com/ctu-mrs/mrs_uav_system) (multicopter-only)
-- *Norwegian University of Science and Technology (NTNU)*'s [`unified_autonomy_stack`](https://github.com/ntnu-arl/unified_autonomy_stack) (GNSS-denied, multi-frame)
+- *Norwegian University of Science and Technology (NTNU)*'s [`unified_autonomy_stack`](https://github.com/ntnu-arl/unified_autonomy_stack) (multi-frame, high-level control-only)
 - *Technische Universität (TU) Berlin*'s [`crazyswarm2`](https://github.com/IMRCLab/crazyswarm2) (indoor, crazyflie-only)
 - *Peking University*'s [`XTDrone`](https://github.com/robin-shaun/XTDrone) (PX4-only)
+- *Carnegie Mellon University (CMU)*'s [`AirStack`](https://github.com/castacks/AirStack) (marked "only for internal usage")
 
 A summary of aerial robotics simulators can be found in [Table IV of this paper](https://arxiv.org/pdf/2311.02296), these include:
 

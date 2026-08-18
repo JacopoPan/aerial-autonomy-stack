@@ -9,7 +9,6 @@ from rosidl_runtime_py import set_message_fields
 import argparse
 import shlex
 import yaml
-import importlib
 from threading import Thread
 
 from autopilot_interface_msgs.action import Land, Offboard, Takeoff, Orbit

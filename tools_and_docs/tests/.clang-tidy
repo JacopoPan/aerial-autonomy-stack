@@ -1,0 +1,11 @@
+Checks: >
+  -*,
+  bugprone-*,
+  concurrency-*,
+  clang-analyzer-*,
+  cppcoreguidelines-init-variables,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  -bugprone-reserved-identifier
+HeaderFilterRegex: '.*/src/.*'
+WarningsAsErrors: '*'

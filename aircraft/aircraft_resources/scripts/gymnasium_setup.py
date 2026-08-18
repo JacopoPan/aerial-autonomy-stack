@@ -1,4 +1,3 @@
-import time
 import argparse
 
 import rclpy
@@ -29,7 +28,7 @@ class GymnasiumSetup(Node):
         goal_msg = Takeoff.Goal()
         goal_msg.takeoff_altitude = 40.0
         goal_msg.vtol_transition_heading = 330.0
-        goal_msg.vtol_loiter_nord = 100.0
+        goal_msg.vtol_loiter_north = 100.0
         goal_msg.vtol_loiter_east = 100.0
         goal_msg.vtol_loiter_alt = 60.0
 

@@ -2,7 +2,7 @@
 
 > These instructions are tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB on an [X650](https://holybro.com/collections/multicopter-kit/products/x650-development-kit)
 >
-> Alternative hardware options include: [ARK's Jetson PAB Orin NX NDAA](https://arkelectron.com/product/ark-jetson-orin-nx-ndaa-bundle/) and [Holybro's 6X Pro](https://holybro.com/collections/flight-controllers/products/pixhawk-6x-pro) paired with [Seeed Studio's A603/A608](https://www.seeedstudio.com/Jetson-A608-Carrier-Board-for-Orin-NX-Orin-Nano-Series-p-5853.html)
+> Alternative hardware options include: [ARK's Jetson PAB Orin NX NDAA Bundle](https://arkelectron.com/product/ark-jetson-orin-nx-ndaa-bundle/),  [ARK's Jetson PAB V3 Orin NX NDAA Bundle](https://arkelectron.com/product/ark-jetson-pab-v3-orin-nx-ndaa-bundle/), and a [Holybro's 6X Pro](https://holybro.com/collections/flight-controllers/products/pixhawk-6x-pro) or [CubePilot Cube Orange+](https://www.cubepilot.org/#/cube/features) paired with a [Seeed Studio's A603](https://www.seeedstudio.com/A603-Carrier-Board-for-Jetson-Orin-NX-Nano-p-5635.html) or [A608](https://www.seeedstudio.com/Jetson-A608-Carrier-Board-for-Orin-NX-Orin-Nano-Series-p-5853.html) Jetson carrier
 >
 > For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/tools_and_docs/docs/BOM.md)
 
@@ -15,7 +15,7 @@ To upgrade to JetPack 6, download NVIDIA SDK Manager on an Ubuntu 22 (see [compa
 ```sh
 cd ~/Downloads
 sudo apt install ./sdkmanager_[version]-[build#]_amd64.deb # Currently version 2.4.0, build 13235
-sdkmanager                          # Log in with your https://developer.nvidia.com account 
+sdkmanager                          # Log in with your https://developer.nvidia.com account
 ```
 
 - Put the Holybro Jetson baseboard in recovery mode with the dedicated switch
@@ -51,7 +51,7 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 ```sh
 sudo /opt/nvidia/jetson-io/jetson-io.py
 
-# Follow these steps: 
+# Follow these steps:
 #   "Configure Jetson 24pin CSI Connector"
 #   -> "Configure for compatible hardware"
 #   -> "Camera IMX219 Dual" (even if only using one)
@@ -63,7 +63,7 @@ sudo dmesg | grep -i imx219         # After reboot, this will show at least one 
 
 # Inspect device (e.g. /dev/video0) resolution and frame rate
 sudo apt update && sudo apt install -y v4l-utils
-v4l2-ctl --list-formats-ext -d /dev/video0 
+v4l2-ctl --list-formats-ext -d /dev/video0
 ```
 
 ## Install Docker Engine on Jetson Orin
@@ -162,7 +162,7 @@ docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/ardupilot && ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
-To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.0/en/qgc-user-guide/setup_view/firmware.html) 
+To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.0/en/qgc-user-guide/setup_view/firmware.html)
 
 ## PX4: Configure 6X's Network and DDS Client
 
@@ -172,7 +172,7 @@ Connect the Pixhawk 6X to the ground station with the USB-C port next to the RJ-
 
 - Access QGroundControl -> "Analyze Tools" -> "MAVLink console"
 - Copy-and-paste the following commands (these will assign an IP to the PX4 autopilot (e.g., 10.10.1.33) and let the `uxrce_dds_client` connect to the Orin NX (e.g., on IP 10.10.1.44) using namespace `Drone1`)
-- Re-start the autopilot 
+- Re-start the autopilot
 
 ```sh
 # Configure DDS Client connection to the NX
@@ -260,24 +260,34 @@ SR2_RC_CHAN      1
 
 TELEM1 is the [bottom-right 6-pin port on the Jetson Baseboard](https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout#tel1-tel3-ports)
 
-To use it to connect a ground station (e.g. QGC) with a telemetry radio (e.g., [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w) for point-to-point or [Holybro P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-radio) for point-to-multipoint), use the following parameters
-
-<!--
-- [Sik NET ID configuration](https://docs.px4.io/main/en/data_links/sik_radio#configuration-instructions)
-- [P900 Point-to-Multipoint](https://docs.holybro.com/radio/microhard-radio/point-to-multipoint-setup-with-microhard-radio)
--->
+To use it to connect a ground station (e.g. QGC) with a telemetry radio (e.g., [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w) for point-to-point or [Holybro Microhard telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2) for point-to-multipoint), use the following parameters
 
 ### PX4 Configuration
+
+- Access QGroundControl -> "Analyze Tools" -> "MAVLink console"
+- Copy-and-paste the following commands to set the GLOBAL_POSITION_INT stream rate to 10Hz on TELEM1
+- Re-start the autopilot
+
+```sh
+mkdir /fs/microsd/etc
+cd /fs/microsd/etc
+echo "mavlink stream -r 10 -s GLOBAL_POSITION_INT -d /dev/ttyS6" >> extras.txt
+# Verify serial port name: https://docs.px4.io/main/en/flight_controller/pixhawk6x#serial-port-mapping
+
+# Check the content of the file
+cat /fs/microsd/etc/extras.txt
+```
 
 ```sh
 MAV_0_CONFIG        TELEM 1
 MAV_0_FLOW_CTRL     Auto-detected
 MAV_0_FORWARD       Enabled
-MAV_0_RADIO_CTL     Normal
-MAV_0_RATE          1200B/s
+MAV_0_MODE          Normal
+MAV_0_RATE          2400B/s
 
 SER_TEL1_BAUD       57600 8N1
 # All these are default values and tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
+# Note: on a point-to-multipoint configuration with multiple drones the serial baud rate between the ground radio and GCS computer should be greater than SER_TEL1_BAUD, scaling with the number of drones yet capped by the air link (e.g., GND_TELEM_BAUD=230400 in ./deploy_run.sh)
 ```
 
 ### ArduPilot Configuration
@@ -289,22 +299,149 @@ SERIAL1_BAUD        57600
 SERIAL1_OPTIONS     0
 SERIAL1_PROTOCOL    MAVLink2
 
-# Stream rates for the telemetry radio (potentially modified by QGC)
-SR1_ADSB         5
-SR1_EXTRA1       10
+# Stream rates for the telemetry radio
+# Note: for the values below to be authoritative, one MUST change QGroundControl default settings
+# In QGroundControl -> Application Settings -> Telemetry
+# Make sure the "ArduPilot Only Stream Rates" are "set by the vehicle", NOT "requested"
+# This is enforced by "apmStartMavlinkStreams=false" in QGroundControl.ini
+SR1_ADSB         0
+SR1_EXTRA1       4
 SR1_EXTRA2       4
 SR1_EXTRA3       2
 SR1_EXT_STAT     2
 SR1_PARAMS       10
-SR1_POSITION     5
-SR1_RAW_CTRL     2
-SR1_RAW_SENS     2
-SR1_RC_CHAN      2
+SR1_POSITION     10
+SR1_RAW_CTRL     0
+SR1_RAW_SENS     0
+SR1_RC_CHAN      1
 # Tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
+# Note: on a point-to-multipoint configuration with multiple drones the serial baud rate between the ground radio and GCS computer should be greater than SERIAL1_BAUD, scaling with the number of drones yet capped by the air link (e.g., GND_TELEM_BAUD=230400 in ./deploy_run.sh)
 ```
+
+### SiK (point-to-point) and Microhard (point-to-multipoint) Radio Configuration
+
+```sh
+groups                              # Check 'dialout' is in the list otherwise run 'sudo usermod -aG dialout $USER' and reboot
+sudo apt install -y picocom         # Install picocom
+```
+
+For the [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w), set `NETID` to use multiple pairs in point-to-point configuration simultaneously
+
+```sh
+ls /dev/ttyUSB*                     # List devices
+# If necessary, close QGroundControl or anything else using the serial ports on which the radios are connected
+
+# To review the configuration of a connected point-to-point pair of Sik radios
+picocom -b 57600 /dev/ttyUSB0       # Connect to one of the devices listed above (in this case, ttyUSB0)
+# If the '+++' command below never returns "OK", the radio's SERIAL_SPEED may differ, retry, e.g., with '-b 115200'
+# If the radio is paired and connected to an autopilot, it will print gibberish, just ignore it
++++                                 # Do NOT press Enter, wait for OK, it will enter Command Mode
+ATI5                                # Press Enter, to list the local radio parameters
+RTI5                                # Press Enter, to list the paired drone radio parameters, over the air, retry if necessary
+ATI7                                # Press Enter, shows link info, RSSI, etc
+ATI                                 # Press Enter, shows firmware info
+ATO                                 # Press Enter, exits Command Mode/returns to Data Mode ('O' not zero)
+# Ctrl+a, Ctrl+x to finally exit picocom
+
+# Similarly, to edit the NETID of a Sik radio (do this on each of the two radios in a pair, do not update NETID over the air)
+picocom -b 57600 /dev/ttyUSB0
++++                                 # Do NOT press Enter, wait for OK, it will enter Command Mode
+ATS3=31                             # Press Enter, set the NETID of the radio connected via USB-C to, e.g., 31 (radios in the same pair must use the same NETID, choose a different value for each pair)
+AT&W                                # Press Enter, write the change
+ATZ                                 # Press Enter, reboot and apply (also exits Command Mode)
+# Wait a few seconds for the reboot
++++                                 # Do NOT press Enter, wait for OK, it will enter Command Mode
+ATI5                                # Press Enter, to list the local radio parameters, verify the change
+ATO                                 # Press Enter, exits Command Mode/returns to Data Mode ('O' not zero)
+# Ctrl+a, Ctrl+x to finally exit picocom
+
+# Note, the following parameters MUST match on the two ends of each pair (factory defaults are ok):
+# - S2:AIR_SPEED - over-the-air data rate in kbps
+# - S3:NETID - network ID, isolates a pair from other SiK radios nearby
+# - S8:MIN_FREQ/S9:MAX_FREQ - frequency band edges in kHz
+# - S10:NUM_CHANNELS - channels in the frequency band
+# - S13:MANCHESTER - encoding (off by default)
+# Optional:
+# - S4:TXPOWER - set to 30 for 1W if supported/allowed
+```
+
+For the [Holybro Microhard V2 P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2), use the point-to-multipoint configuration
+
+```sh
+ls /dev/ttyUSB*                     # List devices
+# If necessary, close QGroundControl or anything else using the serial ports on which the radios are connected
+
+# To review the configuration of a Microhard V2 P900 radio
+picocom -b 9600 /dev/ttyUSB0        # Connect to one of the devices listed above (in this case, ttyUSB0), Command Mode on Microhard runs at 9600
+# With picocom open, enter Command Mode:
+#   1. Remove power from the XT30 port
+#   2. Press and HOLD the CONFIG button
+#   3. Re-apply power to the XT30 port, wait for boot and release the CONFIG button
+# Session prints "NO CARRIER / OK" to confirm entering Command Mode
+AT&V                                # Press Enter, to list the local radio parameters
+ATA                                 # Press Enter, exits Command Mode/returns to Data Mode
+# Ctrl+a, Ctrl+x to exit picocom
+
+# Holybro Microhard V2 telemetries factory settings are point-to-point configurations
+# The following instructions apply the point-to-multipoint configuration
+
+# Master radio (GCS)
+# Connect picocom and restart the radio holding the CONFIG button as above
+AT&F7                               # Press Enter, set PMP Master profile: S133=0 (PMP), S101=0 (Master), S140=65535 (broadcast to all remotes), S105=1 (master unit address, do not change)
+ATS102=0                            # Press Enter, increase the serial baud to 230400 to receive multiple drone telemetries (this is the data baud rate, not the 9600 Command Mode nor the air link baud rate)
+ATS103=2                            # Press Enter, increase the air link rate to 276480bps
+ATS104=1337                         # Press Enter, set Network ID, e.g., 1337 (radios in the point-to-multipoint network must use the same Network ID)
+ATS108=27                           # Press Enter, optional: 20dBm=100mW, 27dBm=500mW, 30dBm=1W
+AT&V                                # Press Enter, verify: S133=0, S101=0, S140=65535, S102=0, S103=2, S104=1337, S105=1
+AT&W                                # Press Enter, write the changes
+ATA                                 # Press Enter, return to data mode
+
+# Remote radio #1 (Drone 1)
+# Connect picocom and restart the radio holding the CONFIG button as above
+AT&F8                               # Press Enter, set PMP Slave profile: S133=0 (PMP), S101=2 (Remote), S140=1 (send data to master, do not change)
+ATS102=2                            # Press Enter, set a 57600 serial baud for each drone radio (this is the data baud rate, not the 9600 Command Mode nor the air link baud rate)
+ATS103=2                            # Press Enter, increase the air link rate to 276480bps
+ATS104=1337                         # Press Enter, set Network ID, e.g., 1337 (radios in the point-to-multipoint network must use the same Network ID)
+ATS108=27                           # Press Enter, optional: 20dBm=100mW, 27dBm=500mW, 30dBm=1W
+ATS105=2                            # Press Enter, set the unit address, MUST be unique per remote
+AT&K3                               # Press Enter, enable RTS/CTS handshaking towards the FCU
+AT&V                                # Press Enter, verify: S133=0, S101=2, S140=1, S102=2, S103=2, S104=1337, S105=2, and "Handshaking &K3" in the header line
+AT&W                                # Press Enter, write the changes
+ATA                                 # Press Enter, return to data mode
+
+# Remote radio #2 (Drone 2)
+# Connect picocom and restart the radio holding the CONFIG button as above
+# Follow the same steps as for Remote 1, except ATS105
+...
+ATS105=3                            # Press Enter, set the unit address, MUST be unique per remote
+...
+
+# Verify the PMP network formed:
+#   1. Power on the master and all remotes
+#   2. On each remote: the orange RX LED lights tells the radio is synchronized and receiving valid packets from the master
+#   3. The 3 blue RSSI LEDs show link strength
+```
+
+<!--
+- [Sik NET ID configuration](https://docs.px4.io/main/en/data_links/sik_radio#configuration-instructions)
+- [Microhard Point-to-Multipoint](https://docs.holybro.com/radio/microhard-radio/point-to-multipoint-setup-with-microhard-radio)
+-->
 
 ## RC Input
 
 RC IN is the [bottom-left 5-pin port on the Jetson Baseboard](https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout#rc-in-port)
 
-Use it to connect an RC receiver (e.g., [Radiomaster R81 V2](https://radiomasterrc.com/products/r81-receiver), [[user manual](https://cdn.shopify.com/s/files/1/0609/8324/7079/files/R81_Manual.pdf)]) and bind it to an RC (e.g., [Radiomaster Boxer 4in1](https://radiomasterrc.com/products/boxer-radio-controller-m2?variant=46486352232640), [[user manual](https://cdn.shopify.com/s/files/1/0701/8066/7584/files/BOXER_A1.9.pdf)])
+Use it to connect an RC receiver (e.g., [Radiomaster R86C V2](https://radiomasterrc.com/products/r86c-receiver), [[user manual](https://cdn.shopify.com/s/files/1/0609/8324/7079/files/R86C.pdf)]) and bind it to an RC (e.g., [Radiomaster Boxer 4in1](https://radiomasterrc.com/products/boxer-radio-controller-m2?variant=46486352232640), [[user manual](https://cdn.shopify.com/s/files/1/0701/8066/7584/files/BOXER_A1.9.pdf)])
+
+On the Radiomaster Boxer, press `MDL`, then `PAGE>`, on the `SETUP` page scroll to the `Internal RF` configuration:
+
+```sh
+Mode        MULTI
+Type        FrSky X
+Subtype     D16
+Ch. Range   CH1-16
+...
+Failsafe    No pulses
+```
+
+Power on R86C receiver in [bind mode](https://cdn.shopify.com/s/files/1/0609/8324/7079/files/R86C.pdf) by holding the KEY button, on the RC, select `Receiver   [Bnd]` on the `SETUP` page

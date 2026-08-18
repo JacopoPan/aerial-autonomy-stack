@@ -1,4 +1,6 @@
 """
+Inspect all topics' message type, publisher node(s), and subscriber nodes
+
 Use as:
     python3 /aas/aircraft_resources/scripts/inspect_topics.py
 """
