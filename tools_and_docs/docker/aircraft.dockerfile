@@ -249,6 +249,10 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
+# Fix for ROS 2 Jazzy compatibility: image_transport and cv_bridge dropped their .h headers in favour of .hpp
+RUN sed -i -e 's|\(image_transport/image_transport\)\.h>|\1.hpp>|' \
+    -e 's|\(cv_bridge/cv_bridge\)\.h>|\1.hpp>|' \
+    /aas/github_ws/src/open_vins/ov_msckf/src/ros/ROS2Visualizer.h
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 # Limiting resource usage to avoid freezes on resource-constrained hosts
