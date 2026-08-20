@@ -40,7 +40,7 @@ FROM ros2-qgc-image AS ros2-qgc-gst-mavlink-image
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
     && apt install -y --no-install-recommends \
-        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
         python3-gi gir1.2-gst-plugins-base-1.0 gir1.2-gstreamer-1.0 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
