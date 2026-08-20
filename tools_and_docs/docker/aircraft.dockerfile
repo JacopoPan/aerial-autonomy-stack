@@ -178,8 +178,8 @@ RUN apt update && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
     pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
-    make install && \
-    ldconfig && \
+    sudo make install && \
+    sudo ldconfig && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release

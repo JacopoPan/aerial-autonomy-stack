@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Based on: https://github.com/ros2/examples/blob/humble/rclpy/actions/minimal_cancellable_client/examples_rclpy_minimal_cancellable_client/client_cancel.py
+# Based on: https://github.com/ros2/examples/tree/jazzy/rclpy/actions/minimal_action_client
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node

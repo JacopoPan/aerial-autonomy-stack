@@ -81,7 +81,7 @@ jobs:
         run: |
           docker run --rm --entrypoint bash ground-image:lint -lc '
             apt-get update && apt-get install -y clang-tidy || { echo "clang-tidy install failed"; exit 1; }
-            . /opt/ros/humble/setup.sh
+            . /opt/ros/jazzy/setup.sh
             cd /aas/ground_ws
             colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || { echo "db build failed"; exit 1; }
             returncode=0
