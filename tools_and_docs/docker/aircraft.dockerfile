@@ -3,13 +3,16 @@ ARG BUILD_ADVANCED_ODOM=true
 ################################################################################
 # Pick amd64 (for simulation) or arm64 (on Jetson) image from the NGC Catalog ##
 ################################################################################
-FROM nvcr.io/nvidia/cuda:12.9.2-cudnn-runtime-ubuntu24.04 AS base_amd64
-FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
+FROM nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04 AS base_amd64
+FROM nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 AS base_arm64
 
 ################################################################################
 # Add tools and ROS2 ###########################################################
 ################################################################################
 FROM base_${TARGETARCH} AS ros2-image
+
+# See: https://forums.developer.nvidia.com/t/cuda-13-2-1-runtime-image-cant-run-on-r39-2-sample-rootfs-for-orin-nano/372683
+ENV NVIDIA_DISABLE_REQUIRE=1
 
 # Tell apt (and other Debian tools) not to prompt for user input during package installs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -161,7 +164,7 @@ COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
         build-essential software-properties-common libopenblas-dev \
-        libpython3.10-dev python3-pip python3-dev python3-setuptools python3-wheel && \
+        libpython3.12-dev python3-pip python3-dev python3-setuptools python3-wheel && \
     pip3 install --no-cache-dir --upgrade "cmake>=3.28" && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
@@ -173,38 +176,27 @@ RUN apt update && \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
-    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl && \
+    pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
-    sudo make install && \
-    sudo ldconfig && \
+    make install && \
+    ldconfig && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
-# Also install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
-# Based on https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
+# Also install DeepStream 9.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+# Based on https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html
 WORKDIR /
 RUN apt update \
     && apt install -y --no-install-recommends \
         libssl3 libssl-dev \
         libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
         gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
-        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --retries 5 meson ninja \
-    && wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
-    && tar -xf glib-2.76.6.tar.xz \
-    && cd glib-2.76.6 \
-    && meson build --prefix=/usr \
-    && ninja -C build \
-    && ninja -C build install \
-    && cd .. \
-    && curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb' \
-    && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb \
-    && rm -rf deepstream-7.1_7.1.0-1_arm64.deb glib-2.76.6.tar.xz glib-2.76.6 \
+        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev libmosquitto1 \
+    && curl -LO 'https://github.com/NVIDIA/DeepStream/releases/download/v9.1.0/deepstream-9.1_9.1.0-1_arm64.deb' \
+    && apt-get install -y ./deepstream-9.1_9.1.0-1_arm64.deb \
+    && rm -f deepstream-9.1_9.1.0-1_arm64.deb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -253,20 +245,20 @@ FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-true
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libeigen3-dev libboost-all-dev libceres-dev \
+    apt-get install -y --no-install-recommends libeigen3-dev libboost-all-dev libceres-dev libopencv-contrib-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-# Limiting resource usage to avoid freezes on resource-constrained hosts and using flag --cmake-args -DENABLE_ARUCO_TAGS=OFF (the Jetson base image lacks libopencv-contrib-dev)
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DENABLE_ARUCO_TAGS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+# Limiting resource usage to avoid freezes on resource-constrained hosts
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
 COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom dependencies, based on https://github.com/superxslam/SuperOdom#-3-installation
 # Sophus on 2021's commit https://github.com/strasdat/Sophus/commit/97e7161
@@ -309,23 +301,23 @@ RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
     echo "rviz_2d_overlay_plugins main ${SHA} $(find /aas/github_ws/src/rviz_2d_overlay_plugins -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom, based on https://github.com/superxslam/SuperOdom#-3-installation
 COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install KISS-Matcher, based on https://github.com/MIT-SPARK/KISS-Matcher/tree/main/ros#gear-how-to-build--run
 COPY /_github_clones/KISS-Matcher /aas/github_ws/src/KISS-Matcher
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace, pass CMAKE_POLICY_VERSION_MINIMUM as env var for nested builds
-RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-humble-pcl-ros \
+    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-jazzy-pcl-ros \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /aas/mimosa_custom_gtsam_ws/src
@@ -342,19 +334,14 @@ RUN mkdir -p config_utilities \
     && wget -qO- https://github.com/ntnu-arl/gtsam_points/archive/${SHA}.tar.gz | tar -xz -C gtsam_points --strip-components=1 \
     && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/mimosa_custom_gtsam_ws
-# Fix ROS 2 Humble compatibility:
-# 1. mimosa expects cv_bridge.hpp (Iron/Jazzy), but Humble uses cv_bridge.h
-# 2. mimosa uses recv_timestamp (Iron/Jazzy), but Humble uses time_stamp
-RUN grep -rl "cv_bridge/cv_bridge.hpp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's|cv_bridge/cv_bridge\.hpp|cv_bridge/cv_bridge.h|g' \
-    && grep -rl "recv_timestamp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's/recv_timestamp/time_stamp/g'
 # Explicitly use bash, not sh, to source and build the workspace
 # Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTAM used by SuperOdom, KISS-Matcher
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && \
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && \
     colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release \
     -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_USE_QUATERNIONS=ON -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_WITH_TBB=OFF \
     -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF"
 # Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
     colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
 
 # Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
@@ -374,7 +361,7 @@ RUN apt-get update && \
 COPY /_github_clones/rovio /aas/github_ws/src/rovio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
     colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
 
 ################################################################################
