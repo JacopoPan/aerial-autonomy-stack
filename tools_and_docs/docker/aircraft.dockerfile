@@ -187,15 +187,17 @@ ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Also install DeepStream 9.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
 # Based on https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html
 WORKDIR /
-RUN apt update \
+RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o /usr/share/keyrings/nvidia-l4t.asc \
+    && printf 'deb [signed-by=/usr/share/keyrings/nvidia-l4t.asc] https://repo.download.nvidia.com/jetson/%s r39.2 main\n' common som > /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
+    && apt update \
     && apt install -y --no-install-recommends \
-        libssl3 libssl-dev \
+        libssl3 libssl-dev libcurl4-openssl-dev \
         libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
         gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
         libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev libmosquitto1 \
     && curl -LO 'https://github.com/NVIDIA/DeepStream/releases/download/v9.1.0/deepstream-9.1_9.1.0-1_arm64.deb' \
     && apt-get install -y ./deepstream-9.1_9.1.0-1_arm64.deb \
-    && rm -f deepstream-9.1_9.1.0-1_arm64.deb \
+    && rm -f deepstream-9.1_9.1.0-1_arm64.deb /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -299,8 +301,7 @@ RUN apt-get update && \
     && cmake .. -DCXSPARSE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF \
     && make -j$(nproc) \
     && make install
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
+RUN pip3 install --no-cache-dir --retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
 RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
     SHA=$(git ls-remote https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git refs/heads/main | cut -f1) && [ -n "$SHA" ] && \
