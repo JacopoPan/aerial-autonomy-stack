@@ -248,11 +248,14 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
-# Fix for ROS 2 Jazzy compatibility: drop .h headers in favour of .hpp
-RUN sed -i -e 's|\(image_transport/image_transport\)\.h>|\1.hpp>|' \
-           -e 's|\(cv_bridge/cv_bridge\)\.h>|\1.hpp>|' \
-           -e 's|\(tf2_geometry_msgs/tf2_geometry_msgs\)\.h>|\1.hpp>|' \
-    /aas/github_ws/src/open_vins/ov_msckf/src/ros/ROS2Visualizer.h
+# Fix ROS 2 Jazzy compatibility: these headers dropped the .h form for .hpp
+RUN grep -rlZ -e 'image_transport/image_transport\.h>' -e 'cv_bridge/cv_bridge\.h>' \
+              -e 'tf2_geometry_msgs/tf2_geometry_msgs\.h>' -e 'sensor_msgs/point_cloud2_iterator\.h>' \
+              /aas/github_ws/src/open_vins \
+    | xargs -0 sed -i -e 's|\(image_transport/image_transport\)\.h>|\1.hpp>|' \
+                      -e 's|\(cv_bridge/cv_bridge\)\.h>|\1.hpp>|' \
+                      -e 's|\(tf2_geometry_msgs/tf2_geometry_msgs\)\.h>|\1.hpp>|' \
+                      -e 's|\(sensor_msgs/point_cloud2_iterator\)\.h>|\1.hpp>|'
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 # Limiting resource usage to avoid freezes on resource-constrained hosts
