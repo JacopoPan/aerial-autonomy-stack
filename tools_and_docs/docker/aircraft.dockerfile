@@ -157,7 +157,7 @@ RUN pip3 install --no-cache-dir --retries 5 onnxruntime-gpu
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
-# CMAKE_CUDA_ARCHITECTURES=87 based on: https://developer.nvidia.com/cuda-gpus
+# CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
 # WARNING: this step takes up to 45'
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
@@ -172,7 +172,6 @@ RUN apt update && \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' 'onnxruntime_USE_FLASH_ATTENTION=OFF' \
-        'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
