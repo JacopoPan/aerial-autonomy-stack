@@ -31,7 +31,12 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 - With a screen, mouse, and keyboard connected to the Jetson basedboad, log in, finish the configuration
 - Select an appropriate "Power Mode" (e.g. MAXN or 25W)
 - Under "Settings" -> "System" -> "Users", unlock and enable "Automatic Login"
-- Firefox can be installed from the "Software" application
+- If connected to the internet, e.g. with a USB Ethernet adapter, Firefox can be installed from the "Software" application
+- Prioritize SSD over Network Boot
+```sh
+sudo efibootmgr -v                  # Check what Boot000x entry is the SSD, e.g. 0001
+sudo efibootmgr -o 0001,000B, etc.  # Copy line BootOrder from the previous command, moving the desired entry to the front
+```
 
 <!--
 - [PX4 documentation](https://github.com/PX4/PX4-Autopilot/blob/main/docs/en/companion_computer/holybro_pixhawk_jetson_baseboard.md#flashing-the-jetson-board)
