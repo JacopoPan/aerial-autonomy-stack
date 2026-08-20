@@ -498,11 +498,11 @@ aerial-autonomy-stack
 
 - [x] Host OS: [Ubuntu 22.04/24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
 - [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
-  - **TODO: upgrade to JetPack 7.2 [L4T 39.2, Ubuntu 24-based]**
+  - **TODO: upgrade to JetPack 7.2.1 [L4T 39.2, Ubuntu 24-based]**
 - [ ] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)
   - **TODO: upgrade to `nvidia-driver-610` once all base images are Ubuntu 24-based**
 - [x] [Docker Engine v29](https://docs.docker.com/engine/release-notes/)
-- [x] [NVIDIA Container Toolkit 1.19](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
+- [x] [NVIDIA Container Toolkit 1.20](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
 - [x] `amd64` base image: [`cuda:12.9.2-cudnn-runtime-ubuntu22.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags)
 - [x] `arm64`/Jetson base image: [`l4t-jetpack:r36.4.0`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-jetpack/tags)
 - [ ] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
@@ -514,7 +514,7 @@ aerial-autonomy-stack
   - **TODO: upgrade to 4.7.0**
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [ ] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
-  - **TODO: upgrade to 1.28.0 with system Python 3.12 on Ubuntu 24**
+  - **TODO: upgrade to 1.29.0 with system Python 3.12 on Ubuntu 24**
 
 Transitive constraints (as of May 2026):
 
