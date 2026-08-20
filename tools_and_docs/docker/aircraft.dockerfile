@@ -171,7 +171,7 @@ RUN apt update && \
         --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
-        'onnxruntime_BUILD_UNIT_TESTS=OFF' 'onnxruntime_USE_FLASH_ATTENTION=OFF' \
+        'onnxruntime_BUILD_UNIT_TESTS=OFF' \
         'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
