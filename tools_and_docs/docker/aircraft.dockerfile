@@ -296,7 +296,7 @@ RUN apt-get update && \
     && wget -qO- https://github.com/ceres-solver/ceres-solver/archive/f68321e.tar.gz | tar -xz -C ceres-solver --strip-components=1 \
     && cd ceres-solver \
     && mkdir build && cd build \
-    && cmake .. \
+    && cmake .. -DCXSPARSE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF \
     && make -j$(nproc) \
     && make install
 RUN pip3 install --no-cache-dir --upgrade pip && \
