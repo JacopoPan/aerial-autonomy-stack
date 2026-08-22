@@ -273,7 +273,8 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to s
 # Sophus on 2021's commit https://github.com/strasdat/Sophus/commit/97e7161
 WORKDIR /aas/github_apps/
 RUN mkdir Sophus \
-    && wget -qO- https://github.com/strasdat/Sophus/archive/97e7161.tar.gz | tar -xz -C Sophus --strip-components=1 \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/strasdat/Sophus/archive/97e7161.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C Sophus --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd Sophus \
     && mkdir build && cd build \
     && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -282,7 +283,8 @@ RUN mkdir Sophus \
 # gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92, also required by KISS-Matcher
 WORKDIR /aas/github_apps/
 RUN mkdir gtsam \
-    && wget -qO- https://github.com/borglab/gtsam/archive/4abef92.tar.gz | tar -xz -C gtsam --strip-components=1 \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/borglab/gtsam/archive/4abef92.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd gtsam \
     && mkdir build && cd build \
     && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. \
@@ -295,7 +297,8 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir ceres-solver \
-    && wget -qO- https://github.com/ceres-solver/ceres-solver/archive/f68321e.tar.gz | tar -xz -C ceres-solver --strip-components=1 \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ceres-solver/ceres-solver/archive/f68321e.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C ceres-solver --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd ceres-solver \
     && mkdir build && cd build \
     && cmake .. -DCXSPARSE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF \
@@ -305,7 +308,8 @@ RUN pip3 install --no-cache-dir --retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
 RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
     SHA=$(git ls-remote https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git refs/heads/main | cut -f1) && [ -n "$SHA" ] && \
-    wget -qO- https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/${SHA}.tar.gz | tar -xz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1 && \
+    wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/${SHA}.tar.gz && \
+    tar -xzf /tmp/repo_archive.tar.gz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1 && rm /tmp/repo_archive.tar.gz && \
     echo "rviz_2d_overlay_plugins main ${SHA} $(find /aas/github_ws/src/rviz_2d_overlay_plugins -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
@@ -333,13 +337,16 @@ COPY /_github_clones/mimosa /aas/mimosa_custom_gtsam_ws/src/mimosa
 # Download config_utilities (branch: dev/mimosa), gtsam (commit c952ef9, see issue: https://github.com/ntnu-arl/mimosa/issues/19), and gtsam_points (branch: minimal_updated)
 RUN mkdir -p config_utilities \
     && SHA=$(git ls-remote https://github.com/ntnu-arl/config_utilities.git refs/heads/dev/mimosa | cut -f1) && [ -n "$SHA" ] \
-    && wget -qO- https://github.com/ntnu-arl/config_utilities/archive/${SHA}.tar.gz | tar -xz -C config_utilities --strip-components=1 \
-    && echo "config_utilities dev/mimosa ${SHA} $(find config_utilities -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
-    && mkdir -p gtsam \
-    && wget -qO- https://github.com/ntnu-arl/gtsam/archive/c952ef9.tar.gz | tar -xz -C gtsam --strip-components=1 \
-    && mkdir -p gtsam_points \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/config_utilities/archive/${SHA}.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C config_utilities --strip-components=1 && rm /tmp/repo_archive.tar.gz \
+    && echo "config_utilities dev/mimosa ${SHA} $(find config_utilities -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
+RUN mkdir -p gtsam \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/gtsam/archive/c952ef9.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz
+RUN mkdir -p gtsam_points \
     && SHA=$(git ls-remote https://github.com/ntnu-arl/gtsam_points.git refs/heads/minimal_updated | cut -f1) && [ -n "$SHA" ] \
-    && wget -qO- https://github.com/ntnu-arl/gtsam_points/archive/${SHA}.tar.gz | tar -xz -C gtsam_points --strip-components=1 \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/gtsam_points/archive/${SHA}.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C gtsam_points --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/mimosa_custom_gtsam_ws
 # Explicitly use bash, not sh, to source and build the workspace
@@ -361,7 +368,8 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir kindr \
     && SHA=$(git ls-remote https://github.com/ethz-asl/kindr.git refs/heads/master | cut -f1) && [ -n "$SHA" ] \
-    && wget -qO- https://github.com/ethz-asl/kindr/archive/${SHA}.tar.gz | tar -xz -C kindr --strip-components=1 \
+    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ethz-asl/kindr/archive/${SHA}.tar.gz \
+    && tar -xzf /tmp/repo_archive.tar.gz -C kindr --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
     && cd kindr \
     && mkdir build && cd build \
