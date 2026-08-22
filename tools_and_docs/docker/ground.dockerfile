@@ -10,7 +10,7 @@ FROM ros2-image AS ros2-qgc-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
-# Pinned to 5.0.8 on Ubuntu 22/jammy because >=5.1 pre-built versions require glibc >= 2.38 and jammy only has 2.35
+# Pinned to 5.1.3, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
 RUN useradd -m -s /bin/bash qgcuser \
     && usermod -aG dialout qgcuser
@@ -21,7 +21,7 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /QGroundControl-x86_64.AppImage \
-        https://github.com/mavlink/qgroundcontrol/releases/download/v5.0.8/QGroundControl-x86_64.AppImage \
+        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.3/QGroundControl-x86_64.AppImage \
     && chmod +x /QGroundControl-x86_64.AppImage \
     && /QGroundControl-x86_64.AppImage --appimage-extract \
     && rm /QGroundControl-x86_64.AppImage
