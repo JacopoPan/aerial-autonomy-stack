@@ -12,7 +12,7 @@ FROM ros2-image AS ros2-qgc-image
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
 # Pinned to 5.1.3, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
-RUN useradd -m -s /bin/bash qgcuser \
+RUN useradd -m -s /bin/bash -u 1000 -o qgcuser \
     && usermod -aG dialout qgcuser
 # RUN apt-get remove modemmanager -y
 RUN apt update \
