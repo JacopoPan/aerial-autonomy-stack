@@ -165,14 +165,12 @@ RUN apt update && \
     apt install -y --no-install-recommends \
         build-essential software-properties-common libopenblas-dev \
         libpython3.12-dev python3-pip python3-dev python3-setuptools python3-wheel && \
-    pip3 install --no-cache-dir --upgrade "cmake>=3.28" && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
         --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
-        'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
     pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \
@@ -210,7 +208,7 @@ FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-y
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
 RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local && \
     make -j$(nproc) && \
     make install && \
     ldconfig
@@ -225,7 +223,6 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=jazzy -DCMAKE_BUILD_TYPE=Release"
 
 # Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
-RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
 COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
@@ -261,7 +258,7 @@ RUN grep -rlZ -e 'image_transport/image_transport\.h>' -e 'cv_bridge/cv_bridge\.
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 # Limiting resource usage to avoid freezes on resource-constrained hosts
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
 COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
@@ -277,7 +274,7 @@ RUN mkdir Sophus \
     && tar -xzf /tmp/repo_archive.tar.gz -C Sophus --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd Sophus \
     && mkdir build && cd build \
-    && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    && cmake .. -DBUILD_TESTS=OFF \
     && make -j$(nproc) \
     && make install
 # gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92, also required by KISS-Matcher
@@ -287,7 +284,7 @@ RUN mkdir gtsam \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd gtsam \
     && mkdir build && cd build \
-    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. \
+    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF .. \
     && make -j$(nproc) \
     && make install
 # f68321e tag is release 2.1.0 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
@@ -324,8 +321,8 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 # Install KISS-Matcher, based on https://github.com/MIT-SPARK/KISS-Matcher/tree/main/ros#gear-how-to-build--run
 COPY /_github_clones/KISS-Matcher /aas/github_ws/src/KISS-Matcher
 WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace, pass CMAKE_POLICY_VERSION_MINIMUM as env var for nested builds
-RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup
 RUN apt-get update && \
@@ -352,13 +349,13 @@ WORKDIR /aas/mimosa_custom_gtsam_ws
 # Explicitly use bash, not sh, to source and build the workspace
 # Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTAM used by SuperOdom, KISS-Matcher
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && \
-    colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release \
+    colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release \
     -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_USE_QUATERNIONS=ON -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_WITH_TBB=OFF \
     -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF \
     -DCMAKE_CXX_FLAGS=-Wno-error=overloaded-virtual"
 # Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
 RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
 RUN apt-get update && \
@@ -373,13 +370,13 @@ RUN apt-get update && \
     && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
     && cd kindr \
     && mkdir build && cd build \
-    && cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    && cmake .. \
     && make install
 COPY /_github_clones/rovio /aas/github_ws/src/rovio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
+    colcon build --packages-up-to rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
