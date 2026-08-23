@@ -12,6 +12,7 @@
 - Update the OS
   - Run "Software Updater" and restart
   - "Update All" in "Ubuntu Software"/"App Center"
+    - If failing to refresh, run: `killall snap-store; sudo snap refresh snap-store` 
   - Update and restart for "Device Firmware", if necessary
 - On Ubuntu 24, in "Software & Updates"'s "Ubuntu Software" panel, check box "Proprietary drivers for devices (restricted)"
   - Restart "Software & Updates", then, in the "Additional Drivers" panel, select "Using NVIDIA driver metapackage from `nvidia-driver-610` (proprietary)"
@@ -26,6 +27,20 @@ nvidia-smi                          # Should report something like "Driver Versi
 sudo apt install -y mesa-utils
 glxinfo -B                          # (optional) Check OpenGL renderer, to force GPU rendering, use $ sudo prime-select nvidia
 ```
+
+> [!WARNING]
+> On a multi-boot machine, the GRUB menu at power-on belongs to the (primary) OS at the top of the list: a kernel update in another (secondary) OS makes the GRUB menu become stale; if `nvidia-smi` fails while `ubuntu-drivers` reports the driver already installed, check the running kernel against the modules on disk:
+>
+> ```sh
+> # In the secondary GRUB OS
+> uname -r                          # Running kernel
+> modinfo -n nvidia                 # Driver kernel module (none for this kernel = error)
+> 
+> # Reboot to the the primary OS at the top of the GRUB menu
+> sudo update-grub
+> 
+> # Then, reboot back into the secondary OS
+> ```
 
 ## Install Docker Engine
 
