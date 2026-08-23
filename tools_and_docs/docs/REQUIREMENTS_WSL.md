@@ -56,7 +56,7 @@ free -h                                               # (optional) Check the mem
 
 ## Install the NVIDIA Driver on Windows 11
 
-Download and install the **NVIDIA driver 580 on Windows** using the [NVIDIA App](https://www.nvidia.com/en-us/software/nvidia-app/)
+Download and install the **NVIDIA driver 610 on Windows** using the [NVIDIA App](https://www.nvidia.com/en-us/software/nvidia-app/)
 
 > [!WARNING] 
 > The latest NVIDIA Windows drivers fully support WSL2, enabling existing CUDA applications compiled on Linux to run unmodified in WSL, once the Windows NVIDIA driver is installed, CUDA is available in WSL2 *via* a stubbed `libcuda.so`
@@ -66,7 +66,7 @@ Download and install the **NVIDIA driver 580 on Windows** using the [NVIDIA App]
 ```sh
 wsl ~                               # Access WSL from Windows PowerShell
 
-nvidia-smi                          # From WSL, check NVIDIA driver (these instructions are tested on Driver Version: 581.80, CUDA Version:13.0)
+nvidia-smi                          # From WSL, check NVIDIA driver
 
 sudo apt update && sudo apt install -y mesa-utils
 glxinfo -B                          # (optional) Check OpenGL renderer, to force GPU rendering, use $ echo 'export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA' >> ~/.bashrc && source ~/.bashrc
@@ -135,7 +135,7 @@ sudo systemctl restart docker
 
 docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
-docker run --rm --gpus all nvcr.io/nvidia/cuda:12.9.2-cudnn-runtime-ubuntu22.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
+docker run --rm --gpus all nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
 ```
 
 > [!TIP]

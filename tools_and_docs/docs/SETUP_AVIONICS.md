@@ -10,7 +10,7 @@
 
 Holybro Jetson baseboards normally ship with JetPack 5
 
-To upgrade to JetPack 7, download NVIDIA SDK Manager on an Ubuntu 22/24 (see [compatibility matrix](https://developer.nvidia.com/sdk-manager#host_os_comp_matrix)) host computer from [here](https://developer.nvidia.com/sdk-manager#installation_get_started)
+To upgrade to JetPack 7, download NVIDIA SDK Manager on an Ubuntu 24 (see [compatibility matrix](https://developer.nvidia.com/sdk-manager#host_os_comp_matrix)) host computer from [here](https://developer.nvidia.com/sdk-manager#installation_get_started)
 
 ```sh
 cd ~/Downloads
@@ -121,7 +121,7 @@ sudo systemctl restart docker
 
 docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
-docker run --rm --runtime=nvidia nvcr.io/nvidia/l4t-jetpack:r36.4.0 nvidia-smi # Test nvidia-smi works in a container with Linux4Tegra
+docker run --rm --runtime=nvidia -e NVIDIA_DISABLE_REQUIRE=true nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 nvidia-smi # Test nvidia-smi works in a container with CUDA and TensorRT
 ```
 
 ## Build and Flash PX4 or ArduPilot Firmware

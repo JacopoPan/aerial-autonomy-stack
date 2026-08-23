@@ -1,27 +1,27 @@
 # Pre-installation Steps for AAS on Ubuntu
 
-> These instructions are tested using Ubuntu 22.04.5 LTS, Ubuntu 24.04.4 LTS, Ubuntu 26.04 LTS
+> These instructions are tested using Ubuntu 24.04.4 LTS, Ubuntu 26.04 LTS
 
 > [!TIP]
 > Run [`check_requirements.sh`](/tools_and_docs/tests/check_requirements.sh) to verify whether you need to follow the steps below
 
 ## Install Ubuntu with NVIDIA Driver
 
-- Install Ubuntu 22 or newer (e.g. from a drive created with `usb-creator-gtk`)
+- Install Ubuntu 24 or newer (e.g. from a drive created with `usb-creator-gtk`)
   - Choose "Normal installation", "Download updates while installing Ubuntu", no "Install third-party software"
 - Update the OS
   - Run "Software Updater" and restart
-  - "Update All" in "Ubuntu Software"/"App Center" <!-- On Ubuntu 22, run `killall snap-store && sudo snap refresh snap-store`  -->
+  - "Update All" in "Ubuntu Software"/"App Center"
   - Update and restart for "Device Firmware", if necessary
-- On Ubuntu 22/24, in "Software & Updates"'s "Ubuntu Software" panel, check box "Proprietary drivers for devices (restricted)"
-  - Restart "Software & Updates", then, in the "Additional Drivers" panel, select "Using NVIDIA driver metapackage from `nvidia-driver-580` (proprietary)"
-- On Ubuntu 26, use `sudo ubuntu-drivers install nvidia-driver-580`
+- On Ubuntu 24, in "Software & Updates"'s "Ubuntu Software" panel, check box "Proprietary drivers for devices (restricted)"
+  - Restart "Software & Updates", then, in the "Additional Drivers" panel, select "Using NVIDIA driver metapackage from `nvidia-driver-610` (proprietary)"
+- On Ubuntu 26, use `sudo ubuntu-drivers install nvidia-driver-610`
 - (optional) Go to "Settings" -> "Power", select the "Performance" "Power Mode" and disable all "Power Saving Options"
 
 ```sh
 sudo apt update && sudo apt upgrade
 
-nvidia-smi                          # Should report something like "Driver Version: 580.65.06, CUDA Version: 13.0"
+nvidia-smi                          # Should report something like "Driver Version: XXX.YY.ZZ, CUDA Version: XX.Y"
 
 sudo apt install -y mesa-utils
 glxinfo -B                          # (optional) Check OpenGL renderer, to force GPU rendering, use $ sudo prime-select nvidia
@@ -86,7 +86,7 @@ sudo systemctl restart docker
 
 docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
-docker run --rm --gpus all nvcr.io/nvidia/cuda:12.9.2-cudnn-runtime-ubuntu22.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
+docker run --rm --gpus all nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04 nvidia-smi # Test nvidia-smi works in a container with CUDA
 ```
 
 > [!TIP]
