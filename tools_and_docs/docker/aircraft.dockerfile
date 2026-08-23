@@ -53,11 +53,11 @@ RUN apt update \
     && echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc \
     && rosdep init
 
-# Install Zenoh ROS2 bridge (pinned to 1.9.0 on Ubuntu 22/jammy because 1.10.0's amd64 build requires glibc >= 2.38 and jammy only has 2.35)
+# Install Zenoh ROS2 bridge
 RUN curl -L https://download.eclipse.org/zenoh/debian-repo/zenoh-public-key | gpg --dearmor --yes --output /etc/apt/keyrings/zenoh-public-key.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/zenoh-public-key.gpg] https://download.eclipse.org/zenoh/debian-repo/ /" | tee -a /etc/apt/sources.list > /dev/null \
     && apt-get update \
-    && apt-get install -y --no-install-recommends zenoh-bridge-ros2dds$(. /etc/os-release && [ "$UBUNTU_CODENAME" = jammy ] && echo "=1.9.0" || echo "") \
+    && apt-get install -y --no-install-recommends zenoh-bridge-ros2dds \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 

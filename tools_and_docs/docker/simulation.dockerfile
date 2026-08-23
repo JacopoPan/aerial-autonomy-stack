@@ -81,7 +81,7 @@ RUN /aas/github_apps/ardupilot/Tools/autotest/sim_vehicle.py -v ArduCopter \
 ################################################################################
 # Ephemeral stage to grab AAS PX4 custom airframes #############################
 ################################################################################
-FROM ubuntu:22.04 AS airframe_filter_stage
+FROM ubuntu:24.04 AS airframe_filter_stage
 COPY simulation/simulation_resources/aircraft_models/ /temp_folder
 RUN mkdir /airframes
 RUN find /temp_folder -type f -regex '.*/[0-9]+_.*' -exec cp {} /airframes/ \;
