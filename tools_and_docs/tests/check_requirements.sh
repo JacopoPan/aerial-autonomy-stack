@@ -25,10 +25,15 @@ fi
 if command -v nvidia-smi &> /dev/null; then
     DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader)
     DRIVER_MAJOR=${DRIVER_VER%%.*}
-    if [ "$DRIVER_MAJOR" -eq 610 ]; then
+    if [ -f /etc/nv_tegra_release ]; then
+        EXPECTED=595 # Version that ships with JetPack 7.2 for Jetson Orin
+    else
+        EXPECTED=610 # Version tested on amd64
+    fi
+    if [ "$DRIVER_MAJOR" -eq "$EXPECTED" ]; then
         echo "[PASS] NVIDIA Driver: tested with AAS (version: $DRIVER_VER)"
     else
-        echo "[WARN] NVIDIA Driver: available but not tested with AAS (version: $DRIVER_VER; recommended: 610)"
+        echo "[WARN] NVIDIA Driver: available but not tested with AAS (version: $DRIVER_VER; recommended: $EXPECTED)"
     fi
 else
     echo "[FAIL] NVIDIA Driver: not found"
