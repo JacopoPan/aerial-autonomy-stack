@@ -37,6 +37,7 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 sudo efibootmgr -v                  # Check what Boot000x entry is the SSD, e.g. 0001
 sudo efibootmgr -o 0001,000B, etc.  # Copy line BootOrder from the previous command, moving the desired entry to the front
 ```
+- Run "Software Updater" and restart
 
 <!--
 - [PX4 documentation](https://github.com/PX4/PX4-Autopilot/blob/main/docs/en/companion_computer/holybro_pixhawk_jetson_baseboard.md#flashing-the-jetson-board)
