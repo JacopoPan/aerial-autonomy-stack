@@ -247,15 +247,15 @@ GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 <summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
 
 > **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
-> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
+> Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board)
 
-Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
+Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`, gateway `172.30.1.1`, using a GL.iNet Flint 2 router) between:
 
 - One simulation computer, with IP `[SIM_SUBNET].90.100`
 - One ground computer, with IP `[SIM_SUBNET].90.101`
 - `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
 
-> **Optionally**, set up a second LAN `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
+> **Optionally**, set up the real-world `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`, if using Doodle Labs Mesh Rider Nano radios) between:
 > 
 > - One ground computer, with IP `[AIR_SUBNET].90.101`
 > - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 

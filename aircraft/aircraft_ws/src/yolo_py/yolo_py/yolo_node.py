@@ -205,7 +205,7 @@ class YoloInferenceNode(Node):
             elif self.architecture == 'aarch64':
                 model_path = "/aas/yolo/yolo26n_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLO (this is slightly wasteful when self.hitl = True)
                 self.input_size = 640 # YOLO input size
-                print("Loading TensorrtExecutionProvider on ARM64 (Jetson) architecture (building the .engine file for the first time can take several minutes).") # ~10'
+                print("Loading TensorrtExecutionProvider on ARM64 (Jetson) architecture (building the .engine file for the first time can take several minutes, re-try if it encounters memory access errors).") # ~10'
                 cache_path = "/tensorrt_cache" # Mounted as volume by main_deploy.sh
                 os.makedirs(cache_path, exist_ok=True)
                 provider_options = {

@@ -159,7 +159,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm6
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
 # CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
-# WARNING: this step takes up to 45'
+# WARNING: this step takes over 1h, increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
@@ -184,6 +184,8 @@ ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 
 # Also install DeepStream 9.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
 # Based on https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html
+# The L4T GStreamer plugins (nvarguscamerasrc, nvvidconv, ...) came bundled in l4t-jetpack and must now be added explicitly
+# They are unpacked with dpkg -x, not apt: nvidia-l4t-gstreamer depends on nvidia-l4t-core, whose preinst reads /proc/device-tree and fails in a container
 WORKDIR /
 RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o /usr/share/keyrings/nvidia-l4t.asc \
     && printf 'deb [signed-by=/usr/share/keyrings/nvidia-l4t.asc] https://repo.download.nvidia.com/jetson/%s r39.2 main\n' common som > /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
@@ -193,9 +195,12 @@ RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o 
         libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
         gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
         libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev libmosquitto1 \
+    && apt-get download nvidia-l4t-gstreamer \
+    && dpkg -x nvidia-l4t-gstreamer_*.deb / \
     && curl -LO 'https://github.com/NVIDIA/DeepStream/releases/download/v9.1.0/deepstream-9.1_9.1.0-1_arm64.deb' \
     && apt-get install -y ./deepstream-9.1_9.1.0-1_arm64.deb \
-    && rm -f deepstream-9.1_9.1.0-1_arm64.deb /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
+    && ldconfig \
+    && rm -f deepstream-9.1_9.1.0-1_arm64.deb nvidia-l4t-gstreamer_*.deb /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
