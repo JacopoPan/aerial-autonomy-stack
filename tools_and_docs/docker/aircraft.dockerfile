@@ -400,8 +400,8 @@ RUN apt-get update && \
 # Save the YOLO model weights (ONNX, Opset 12) and class names
 WORKDIR /aas/yolo
 # Model options (from fastest to most accurate, <10MB to >100MB): yolo26n, yolo26s, yolo26m, yolo26l, yolo26x
-# Export standard 640 static as yolo26n_640.onnx and smaller 320 static as yolo26n_320.onnx
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640)" && \
+# Export standard 640 static as yolo26n_640.onnx (with half precision) and smaller 320 static as yolo26n_320.onnx
+RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640, half=True)" && \
     mv yolo26n.onnx yolo26n_640.onnx && \
     /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320)" && \
     mv yolo26n.onnx yolo26n_320.onnx && \
