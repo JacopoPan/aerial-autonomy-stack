@@ -508,7 +508,9 @@ aerial-autonomy-stack
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
 - [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
-  - **TODO: upgrade to 4.7.0**
+  - **TODO: upgrade to 4.7.0** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.0/ArduCopter/ReleaseNotes.txt), [discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650)
+    - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
+    - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.29.0](https://github.com/microsoft/onnxruntime/releases)
 
