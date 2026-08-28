@@ -562,12 +562,13 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 
 - ArduPilot SITL for Iris uses option -f that also sets "external": True, this is not the case for the Alti Transition from ArduPilot/SITL_Models
 - ArduPilot SITL throws a floating point exception when the swan_k1_hwing tailsitter model lands (ignored with SIM_FLOAT_EXCEPT 0)
+- Several parameters used in the swan_k1_hwing/quadtailsitter SDF files for the main wing AdvancedLiftDrag plugin seem absent from the actual plugin implementation: https://github.com/gazebosim/gz-sim/blob/gz-sim8_8.15.0/src/systems/advanced_lift_drag/AdvancedLiftDrag.cc
 - Gazebo WindEffects reach all vehicles aerodynamically, but no airspeed sensor (PX4 SENS_EN_ARSPDSIM, ArduPlane SIM_ARSPD_*, gz AirSpeed)
 - QGC will only connect to the first 10 ArduPilot vehicles when GND_CONTAINER=false because of settings in QGroundControl.ini
 - Command 178 MAV_CMD_DO_CHANGE_SPEED is accepted but not effective in changing speed for ArduPilot VTOL
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
-- On Jetson, if yolo_py crashes, run `sudo systemctl restart nvargus-daemon` on the host
+- On Jetson, if yolo_py crashes, try run `sudo systemctl restart nvargus-daemon` on the host
 
 ## Docker Basics
 
