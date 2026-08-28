@@ -88,14 +88,17 @@ windows:
         autostart = 5140
         model_name = "x500_#{sitl_instance}"
         y_offset = x_offset
+        z_offset = 0.5
       when 'vtol'
         autostart = 5141
         model_name = "standard_vtol_#{sitl_instance}"
         y_offset = x_offset + 2
+        z_offset = 0.5
       when 'tail'
         autostart = 5142
         model_name = "quadtailsitter_#{sitl_instance}"
         y_offset = x_offset + 4
+        z_offset = 0.25
       end
       # Env var parameter injection (using prefix PX4_PARAM_*) of https://docs.px4.io/v1.17/en/advanced_config/parameter_reference#UXRCE_DDS_AG_IP
       signed_32bit_ip = "#{sim_subnet}.90.#{drone_id}".split('.').map(&:to_i).pack('C*').unpack1('l>')
@@ -119,7 +122,7 @@ windows:
       panes:
         - >
           sleep <%= sitl_instance * 1.5 %> &&
-          PX4_GZ_MODEL_POSE=<%= "#{x_offset},#{y_offset},0.75,0,0,0" %>
+          PX4_GZ_MODEL_POSE=<%= "#{x_offset},#{y_offset},#{z_offset},0,0,0" %>
           PX4_SYS_AUTOSTART=<%= autostart %> ROS_DOMAIN_ID=<%= drone_id %> <%= gnd_container ? "AAS_GROUND_IP=#{sim_subnet}.90.#{ground_id}" : "" %>
           PX4_UXRCE_DDS_NS="Drone<%= drone_id %>" PX4_PARAM_UXRCE_DDS_AG_IP=<%= signed_32bit_ip %> PX4_UXRCE_DDS_PORT=8888
           /aas/github_apps/PX4-Autopilot/build/px4_sitl_default/bin/px4 -i <%= sitl_instance %>
