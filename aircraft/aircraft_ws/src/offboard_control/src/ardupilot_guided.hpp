@@ -151,6 +151,10 @@ private:
     void vel_ref_stalk();
     void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
+    void vel_ref_lemniscate(double north_min_m, double north_max_m, double east_min_m, double east_max_m, double alt_min_m, double alt_max_m);
+
+    // Controller variables
+    double lemniscate_phase_rad_;
 };
 
 #endif // OFFBOARD_CONTROL__ARDUPILOT_GUIDED_HPP_
