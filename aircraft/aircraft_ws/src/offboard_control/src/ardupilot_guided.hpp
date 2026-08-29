@@ -151,7 +151,14 @@ private:
     void vel_ref_stalk();
     void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
-    void vel_ref_lemniscate(double north_min_m, double north_max_m, double east_min_m, double east_max_m, double alt_min_m, double alt_max_m);
+    struct Lemniscate
+    {
+        std::array<double, 2> east_m; // {min, max}
+        std::array<double, 2> north_m; // {min, max}
+        std::array<double, 2> alt_m; // {min, max}
+        double v_max_ms;
+    };
+    void vel_ref_lemniscate(const Lemniscate &loop);
 
     // Controller variables
     double lemniscate_phase_rad_;
