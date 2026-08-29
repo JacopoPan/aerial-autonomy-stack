@@ -30,7 +30,7 @@ windows:
       layout: even-horizontal
       panes:
         - clear && echo "So nice to have you with us, this is the ground container."
-        - ros2 run ground_system ground_system --ros-args -p num_drones:=<%= num_drones %> -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-0']"
+        - ros2 run ground_system ground_system --ros-args -p num_drones:=<%= num_drones %> -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-1']"
 
   - mavlink-router:
       layout: tiled

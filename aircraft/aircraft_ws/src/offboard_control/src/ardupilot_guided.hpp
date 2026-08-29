@@ -151,6 +151,17 @@ private:
     void vel_ref_stalk();
     void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
+    struct Lemniscate
+    {
+        std::array<double, 2> east_m; // {min, max}
+        std::array<double, 2> north_m; // {min, max}
+        std::array<double, 2> alt_m; // {min, max}
+        double v_max_ms;
+    };
+    void vel_ref_lemniscate(const Lemniscate &loop);
+
+    // Controller variables
+    double lemniscate_phase_rad_;
 };
 
 #endif // OFFBOARD_CONTROL__ARDUPILOT_GUIDED_HPP_

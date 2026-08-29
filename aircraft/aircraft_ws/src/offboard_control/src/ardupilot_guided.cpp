@@ -9,7 +9,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     true_airspeed_m_s_(NAN), heading_(NAN),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     desired_bearing_rad_(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN),
-    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
+    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN),
+    lemniscate_phase_rad_(0.0)
 {
     RCLCPP_INFO(this->get_logger(), "ArduPilot guided referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -112,6 +113,9 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-sk"] = std::bind(&ArdupilotGuided::vel_ref_stalk, this);
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
+    // Lemniscate trajectories
+    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-25.0, 0.0}, {20.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-50.0, -15.0}, {20.0, 200.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -425,7 +429,7 @@ void ArdupilotGuided::vel_ref_stalk()
     constexpr double DEADBAND_M = 2.0;    // m, ignore range errors below this (absorbs link delay/jitter)
     constexpr double KP_RANGE = 0.3;      // 1/s, range error to correction speed gain
     constexpr double MAX_CORR = 3.0;      // m/s, maximum correction speed (catch-up speed = target speed + correction)
-    constexpr double V_MAX = 10.0;        // m/s, horizontal speed limit
+    constexpr double V_MAX = 12.0;        // m/s, horizontal speed limit
     constexpr double KP_ALT = 0.4;        // 1/s, altitude error to climb rate gain
     constexpr double MAX_VZ = 1.5;        // m/s, climb/descent limit
     constexpr double KP_YAW = 0.8;        // 1/s, heading error to yaw rate gain
@@ -608,6 +612,80 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
         accel_msg.vector.z = std::clamp(accel_msg.vector.z, -1.0, 1.0); // Limit vertical deceleration
     }
     setpoint_accel_pub_->publish(accel_msg);
+}
+void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
+{
+    constexpr double SPEED_RATIO = 1.6;   // Speed ceiling ratio, as a multiple of what the tightest turn allows
+    constexpr double A_LAT_MAX_MS2 = 3.0; // m/s^2, lateral acceleration limit
+    constexpr double MAX_VZ_MS = 2.0;     // m/s, climb/descent limit
+    constexpr double LOOKAHEAD_S = 0.6;   // s, lookahead in seconds (at the current speed)
+    constexpr double SCAN_RAD = 0.5;      // rad, forward-only search window
+    constexpr int SCAN_STEPS = 60;        // Samples in the window
+    constexpr double KP_YAW = 0.8;        // 1/s, heading error to yaw rate gain
+    constexpr double MAX_YAW_RATE = 0.5;  // rad/s, maximum yaw rate
+
+    const double east_center_m = 0.5 * (loop.east_m[1] + loop.east_m[0]);
+    const double east_amplitude_m = 0.5 * (loop.east_m[1] - loop.east_m[0]);
+    const double north_center_m = 0.5 * (loop.north_m[1] + loop.north_m[0]);
+    const double north_amplitude_m = 0.5 * (loop.north_m[1] - loop.north_m[0]);
+    const double alt_center_m = 0.5 * (loop.alt_m[1] + loop.alt_m[0]);
+    const double alt_amplitude_m = 0.5 * (loop.alt_m[1] - loop.alt_m[0]);
+
+    // Scale the speed ceiling with the sharper between the radius at the lobe tips or at the lobe sides (not the true minimum)
+    const double r_min_m = std::min(north_amplitude_m * north_amplitude_m / (8.0 * east_amplitude_m),
+                                    4.0 * east_amplitude_m * east_amplitude_m / north_amplitude_m);
+    const double v_ceiling_ms = std::min(loop.v_max_ms, SPEED_RATIO * std::sqrt(A_LAT_MAX_MS2 * r_min_m));
+    // The path: phase 0 is the south tip, east cycles twice per lap and that is the crossing
+    auto path_point = [&](double phase_rad) {
+        return std::array<double, 3>{east_center_m + east_amplitude_m * std::sin(2.0 * phase_rad),
+                                     north_center_m - north_amplitude_m * std::cos(phase_rad),
+                                     alt_center_m + alt_amplitude_m * std::sin(phase_rad)};
+    };
+
+    auto vel_msg = geometry_msgs::msg::TwistStamped();
+    vel_msg.header.stamp = this->get_clock()->now();
+    vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
+    if (!std::isnan(position_[0]) && !std::isnan(position_[1]) && !std::isnan(position_[2])) {
+
+        // Slide the phase onto the nearest path point ahead of the last one
+        double best_phase = lemniscate_phase_rad_, best_dist_sq = -1.0;
+        for (int i = 0; i <= SCAN_STEPS; ++i) {
+            double phase = lemniscate_phase_rad_ + (SCAN_RAD * i / SCAN_STEPS);
+            auto p = path_point(phase);
+            double dx = p[0] - position_[0], dy = p[1] - position_[1]; // Horizontal only
+            double dist_sq = (dx * dx) + (dy * dy);
+            if (best_dist_sq < 0.0 || dist_sq < best_dist_sq) { best_dist_sq = dist_sq; best_phase = phase; }
+        }
+        lemniscate_phase_rad_ = std::fmod(best_phase, 2.0 * M_PI); // Keep the phase bounded over long flights
+
+        double s = std::sin(lemniscate_phase_rad_);
+        double c = std::cos(lemniscate_phase_rad_);
+        // Tangent to the path
+        double dE = 2.0 * east_amplitude_m * std::cos(2.0 * lemniscate_phase_rad_);
+        double dN = north_amplitude_m * s;
+        double dU = alt_amplitude_m * c;
+        double dpath = std::max(1e-3, std::sqrt(dE*dE + dN*dN + dU*dU)); // Path length per radian of phase, floored to prevent divide-by-zero
+        double turn_rate = 2.0 * east_amplitude_m * north_amplitude_m * std::abs(c) * (1.0 + 2.0 * s * s); // |E'N'' - N'E''|: denominator of the curvature formula
+        double r_curv = std::pow(dE*dE + dN*dN, 1.5) / std::max(1e-3, turn_rate); // Horizontal radius, the crossing is an inflection point where turn_rate is zero: prevent divide-by-zero
+        double v_ref = std::min(std::sqrt(A_LAT_MAX_MS2 * r_curv), v_ceiling_ms); // Speed set by the local turn: slow in the lobes, fast through the crossing
+
+        // Fly at a lookahead point further along the path
+        auto lookahead_point = path_point(lemniscate_phase_rad_ + (LOOKAHEAD_S * v_ref / dpath));
+        double to_E = lookahead_point[0] - position_[0];
+        double to_N = lookahead_point[1] - position_[1];
+        double to_U = lookahead_point[2] - position_[2];
+        double to_norm = std::max(1e-3, std::sqrt(to_E*to_E + to_N*to_N + to_U*to_U)); // Floored to prevent divide-by-zero
+        vel_msg.twist.linear.x = v_ref * to_E / to_norm; // m/s East
+        vel_msg.twist.linear.y = v_ref * to_N / to_norm; // m/s North
+        vel_msg.twist.linear.z = std::clamp(v_ref * to_U / to_norm, -MAX_VZ_MS, MAX_VZ_MS); // m/s Up
+
+        // Yaw rate to point along the commanded horizontal velocity
+        double heading_error = normalize_heading(std::atan2(vel_msg.twist.linear.y, vel_msg.twist.linear.x) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
+        vel_msg.twist.angular.z = std::isnan(heading_error) ? 0.0 : std::clamp(KP_YAW * heading_error, -MAX_YAW_RATE, MAX_YAW_RATE); // rad/s
+    } else { // No local position; zero-initialized vel_msg stops the vehicle
+        RCLCPP_WARN(get_logger(), "No valid local position, entering vel_ref_lemniscate else branch");
+    }
+    setpoint_vel_pub_->publish(vel_msg);
 }
 
 int main(int argc, char *argv[])
