@@ -3,16 +3,22 @@ ARG BUILD_ADVANCED_ODOM=true
 ################################################################################
 # Pick amd64 (for simulation) or arm64 (on Jetson) image from the NGC Catalog ##
 ################################################################################
-FROM nvcr.io/nvidia/cuda:12.9.2-cudnn-runtime-ubuntu22.04 AS base_amd64
-FROM nvcr.io/nvidia/l4t-jetpack:r36.4.0 AS base_arm64
+FROM nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04 AS base_amd64
+FROM nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 AS base_arm64
 
 ################################################################################
 # Add tools and ROS2 ###########################################################
 ################################################################################
 FROM base_${TARGETARCH} AS ros2-image
 
+# See: https://forums.developer.nvidia.com/t/cuda-13-2-1-runtime-image-cant-run-on-r39-2-sample-rootfs-for-orin-nano/372683
+ENV NVIDIA_DISABLE_REQUIRE=1
+
 # Tell apt (and other Debian tools) not to prompt for user input during package installs
 ENV DEBIAN_FRONTEND=noninteractive
+
+# Ubuntu 24 blocks system-wide pip installs by default, --break-system-packages allows global pip installs
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 # Install general use tools
 RUN apt update \
@@ -24,8 +30,8 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ROS2 Humble
-# Based on https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html
+# Install ROS2 Jazzy
+# Based on https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html
 ENV LANG=en_US.UTF-8
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -39,19 +45,19 @@ RUN apt update \
         $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null \
     && apt update \
     && apt install -y --no-install-recommends \
-        ros-humble-desktop ros-dev-tools \
-        ros-humble-bondcpp ros-humble-ament-cmake-clang-format \
-        ros-humble-vision-msgs \
+        ros-jazzy-desktop ros-dev-tools \
+        ros-jazzy-bondcpp ros-jazzy-ament-cmake-clang-format \
+        ros-jazzy-vision-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
-    && echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc \
+    && echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc \
     && rosdep init
 
-# Install Zenoh ROS2 bridge (pinned to 1.9.0 on Ubuntu 22/jammy because 1.10.0's amd64 build requires glibc >= 2.38 and jammy only has 2.35)
+# Install Zenoh ROS2 bridge
 RUN curl -L https://download.eclipse.org/zenoh/debian-repo/zenoh-public-key | gpg --dearmor --yes --output /etc/apt/keyrings/zenoh-public-key.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/zenoh-public-key.gpg] https://download.eclipse.org/zenoh/debian-repo/ /" | tee -a /etc/apt/sources.list > /dev/null \
     && apt-get update \
-    && apt-get install -y --no-install-recommends zenoh-bridge-ros2dds$(. /etc/os-release && [ "$UBUNTU_CODENAME" = jammy ] && echo "=1.9.0" || echo "") \
+    && apt-get install -y --no-install-recommends zenoh-bridge-ros2dds \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -64,9 +70,9 @@ FROM ros2-image AS ros2-px4msgs-image
 COPY /_github_clones/px4_msgs /aas/github_ws/src/px4_msgs
 WORKDIR /aas/github_ws
 RUN rosdep update
-RUN rosdep install --from-paths src --ignore-src --rosdistro humble -y && apt clean && rm -rf /var/lib/apt/lists/*
+RUN rosdep install --from-paths src --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install"
 
 ################################################################################
 # Add uXRCE-DDS agent ##########################################################
@@ -92,13 +98,13 @@ FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 # MAVROS
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
+    ros-jazzy-mavros ros-jazzy-mavros-extras ros-jazzy-mavros-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 # Re-try install_geographiclib_datasets.sh if egm96-5.pgm was not downloaded (timeout is ~10x the time needed on a healthy link)
 RUN for i in 1 2 3; do \
         rm -f /usr/share/GeographicLib/geoids/egm96-5*; \
-        timeout 180 /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh; \
+        timeout 180 /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh; \
         test -r /usr/share/GeographicLib/geoids/egm96-5.pgm && break; \
         sleep 5; \
     done && test -r /usr/share/GeographicLib/geoids/egm96-5.pgm
@@ -109,13 +115,13 @@ RUN for i in 1 2 3; do \
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-image AS ros2-px4msgs-dds-mavros-yolo-image
 
-# In Ubuntu 22, package python3-numpy is on version 1.21.5, check with $ dpkg -l | grep python3-numpy
-# ONNX will pip install >=1.21.6 but we constraint it to <2.0.0 for system Python's OpenCV ABI compatibility
+# In Ubuntu 24, package python3-numpy is on version 1.26.4, check with $ dpkg -l | grep python3-numpy
+# We constrain pip install to <2.0.0 for system Python's OpenCV ABI compatibility
 # Check with $ python3 -c "import numpy; print(numpy.__version__)"
 RUN echo "numpy<2.0.0" > /etc/pip_constraints.txt
 ENV PIP_CONSTRAINT=/etc/pip_constraints.txt
 # Point the GCC compiler to the new pip NumPy headers (instead of the apt ones) to prevent ROS2 colcon from crashing
-ENV CPATH=/usr/local/lib/python3.10/dist-packages/numpy/core/include
+ENV CPATH=/usr/local/lib/python3.12/dist-packages/numpy/core/include
 
 # Add GStreamer, Python OpenCV packages
 RUN apt update \
@@ -129,7 +135,7 @@ RUN apt update \
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
 RUN python3 -m venv /yolo-env \
     && /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
+    /yolo-env/bin/pip3 install --no-cache-dir --retries 5 ultralytics onnx
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 # NOTE: the venv avoids shadowing the system Python's OpenCV (with GStreamer support) with a newer one without GStreamer support
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
@@ -141,8 +147,7 @@ RUN python3 -m venv /yolo-env \
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
+RUN pip3 install --no-cache-dir --retries 5 onnxruntime-gpu
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 ################################################################################
@@ -152,26 +157,23 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
-# CMAKE_CUDA_ARCHITECTURES=87 based on: https://developer.nvidia.com/cuda-gpus
+# CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
-# WARNING: this step takes up to 45'
+# WARNING: this step takes over 1h, increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
         build-essential software-properties-common libopenblas-dev \
-        libpython3.10-dev python3-pip python3-dev python3-setuptools python3-wheel && \
-    pip3 install --no-cache-dir --upgrade "cmake>=3.28" && \
+        libpython3.12-dev python3-pip python3-dev python3-setuptools python3-wheel && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
         --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
-        'onnxruntime_BUILD_UNIT_TESTS=OFF' 'onnxruntime_USE_FLASH_ATTENTION=OFF' \
-        'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
-        'CMAKE_POLICY_VERSION_MINIMUM=3.5' \
+        'onnxruntime_BUILD_UNIT_TESTS=OFF' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
-    pip3 install onnxruntime_gpu-1.23.2-cp310-cp310-linux_aarch64.whl && \
+    pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release && \
     sudo make install && \
     sudo ldconfig && \
@@ -180,29 +182,25 @@ RUN apt update && \
 ENV PYTHONPATH=/aas/github_apps/onnxruntime/build/Linux/Release
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
-# Also install DeepStream 7.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
-# Based on https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_Installation.html
+# Also install DeepStream 9.1 on Orin to use NVIDIA accelerated GStreamer preprocessing (e.g. nvdewarper)
+# Based on https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html
+# The L4T GStreamer plugins (nvarguscamerasrc, nvvidconv, ...) came bundled in l4t-jetpack and must now be added explicitly
+# They are unpacked with dpkg -x, not apt: nvidia-l4t-gstreamer depends on nvidia-l4t-core, whose preinst reads /proc/device-tree and fails in a container
 WORKDIR /
-RUN apt update \
+RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o /usr/share/keyrings/nvidia-l4t.asc \
+    && printf 'deb [signed-by=/usr/share/keyrings/nvidia-l4t.asc] https://repo.download.nvidia.com/jetson/%s r39.2 main\n' common som > /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
+    && apt update \
     && apt install -y --no-install-recommends \
-        libssl3 libssl-dev \
+        libssl3 libssl-dev libcurl4-openssl-dev \
         libgstreamer1.0-0 libgstreamer-plugins-base1.0-dev \
         gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
-        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 meson ninja \
-    && wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
-    && tar -xf glib-2.76.6.tar.xz \
-    && cd glib-2.76.6 \
-    && meson build --prefix=/usr \
-    && ninja -C build \
-    && ninja -C build install \
-    && cd .. \
-    && curl -LO 'https://api.ngc.nvidia.com/v2/resources/nvidia/deepstream/versions/7.1/files/deepstream-7.1_7.1.0-1_arm64.deb' \
-    && apt-get install -y ./deepstream-7.1_7.1.0-1_arm64.deb \
-    && rm -rf deepstream-7.1_7.1.0-1_arm64.deb glib-2.76.6.tar.xz glib-2.76.6 \
+        libgstrtspserver-1.0-0 libjansson4 libyaml-cpp-dev libmosquitto1 \
+    && apt-get download nvidia-l4t-gstreamer \
+    && dpkg -x nvidia-l4t-gstreamer_*.deb / \
+    && curl -LO 'https://github.com/NVIDIA/DeepStream/releases/download/v9.1.0/deepstream-9.1_9.1.0-1_arm64.deb' \
+    && apt-get install -y ./deepstream-9.1_9.1.0-1_arm64.deb \
+    && ldconfig \
+    && rm -f deepstream-9.1_9.1.0-1_arm64.deb nvidia-l4t-gstreamer_*.deb /etc/apt/sources.list.d/nvidia-l4t-apt-source.list \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -215,7 +213,7 @@ FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-y
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
 RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_POLICY_VERSION_MINIMUM=3.5 && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local && \
     make -j$(nproc) && \
     make install && \
     ldconfig
@@ -227,14 +225,13 @@ WORKDIR /aas/github_ws/
 RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.xml \
     && cp -rf src/livox_ros_driver2/launch_ROS2 src/livox_ros_driver2/launch
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=jazzy -DCMAKE_BUILD_TYPE=Release"
 
 # Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
-RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
 COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 ################################################################################
 # Empty branch to skip the build of advanced odometry, SLAM packages ###########
@@ -251,20 +248,28 @@ FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-true
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libeigen3-dev libboost-all-dev libceres-dev \
+    apt-get install -y --no-install-recommends libeigen3-dev libboost-all-dev libceres-dev libopencv-contrib-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/open_vins /aas/github_ws/src/open_vins
+# Fix ROS 2 Jazzy compatibility: these headers dropped the .h form for .hpp
+RUN grep -rlZ -e 'image_transport/image_transport\.h>' -e 'cv_bridge/cv_bridge\.h>' \
+              -e 'tf2_geometry_msgs/tf2_geometry_msgs\.h>' -e 'sensor_msgs/point_cloud2_iterator\.h>' \
+              /aas/github_ws/src/open_vins \
+    | xargs -0 sed -i -e 's|\(image_transport/image_transport\)\.h>|\1.hpp>|' \
+                      -e 's|\(cv_bridge/cv_bridge\)\.h>|\1.hpp>|' \
+                      -e 's|\(tf2_geometry_msgs/tf2_geometry_msgs\)\.h>|\1.hpp>|' \
+                      -e 's|\(sensor_msgs/point_cloud2_iterator\)\.h>|\1.hpp>|'
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-# Limiting resource usage to avoid freezes on resource-constrained hosts and using flag --cmake-args -DENABLE_ARUCO_TAGS=OFF (the Jetson base image lacks libopencv-contrib-dev)
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DENABLE_ARUCO_TAGS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+# Limiting resource usage to avoid freezes on resource-constrained hosts
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && colcon build --event-handlers console_cohesion+ --packages-select ov_core ov_init ov_msckf ov_eval --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
 COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom dependencies, based on https://github.com/superxslam/SuperOdom#-3-installation
 # Sophus on 2021's commit https://github.com/strasdat/Sophus/commit/97e7161
@@ -274,7 +279,7 @@ RUN mkdir Sophus \
     && tar -xzf /tmp/repo_archive.tar.gz -C Sophus --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd Sophus \
     && mkdir build && cd build \
-    && cmake .. -DBUILD_TESTS=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    && cmake .. -DBUILD_TESTS=OFF \
     && make -j$(nproc) \
     && make install
 # gtsam on 2024's commit https://github.com/borglab/gtsam/commit/4abef92, also required by KISS-Matcher
@@ -284,7 +289,7 @@ RUN mkdir gtsam \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd gtsam \
     && mkdir build && cd build \
-    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. \
+    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF .. \
     && make -j$(nproc) \
     && make install
 # f68321e tag is release 2.1.0 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
@@ -298,11 +303,10 @@ RUN apt-get update && \
     && tar -xzf /tmp/repo_archive.tar.gz -C ceres-solver --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd ceres-solver \
     && mkdir build && cd build \
-    && cmake .. \
+    && cmake .. -DCXSPARSE=OFF -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF \
     && make -j$(nproc) \
     && make install
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
+RUN pip3 install --no-cache-dir --retries 5 rerun-sdk
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
 RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
     SHA=$(git ls-remote https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git refs/heads/main | cut -f1) && [ -n "$SHA" ] && \
@@ -311,23 +315,23 @@ RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
     echo "rviz_2d_overlay_plugins main ${SHA} $(find /aas/github_ws/src/rviz_2d_overlay_plugins -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom, based on https://github.com/superxslam/SuperOdom#-3-installation
 COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install KISS-Matcher, based on https://github.com/MIT-SPARK/KISS-Matcher/tree/main/ros#gear-how-to-build--run
 COPY /_github_clones/KISS-Matcher /aas/github_ws/src/KISS-Matcher
 WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace, pass CMAKE_POLICY_VERSION_MINIMUM as env var for nested builds
-RUN CMAKE_POLICY_VERSION_MINIMUM=3.5 bash -c "source /opt/ros/humble/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-humble-pcl-ros \
+    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-jazzy-pcl-ros \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /aas/mimosa_custom_gtsam_ws/src
@@ -347,20 +351,16 @@ RUN mkdir -p gtsam_points \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam_points --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/mimosa_custom_gtsam_ws
-# Fix ROS 2 Humble compatibility:
-# 1. mimosa expects cv_bridge.hpp (Iron/Jazzy), but Humble uses cv_bridge.h
-# 2. mimosa uses recv_timestamp (Iron/Jazzy), but Humble uses time_stamp
-RUN grep -rl "cv_bridge/cv_bridge.hpp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's|cv_bridge/cv_bridge\.hpp|cv_bridge/cv_bridge.h|g' \
-    && grep -rl "recv_timestamp" /aas/mimosa_custom_gtsam_ws/src/mimosa | xargs sed -i 's/recv_timestamp/time_stamp/g'
 # Explicitly use bash, not sh, to source and build the workspace
 # Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTAM used by SuperOdom, KISS-Matcher
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && \
-    colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release \
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && \
+    colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release \
     -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_USE_QUATERNIONS=ON -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_WITH_TBB=OFF \
-    -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF"
+    -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF \
+    -DCMAKE_CXX_FLAGS=-Wno-error=overloaded-virtual"
 # Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
-RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release"
+RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
+    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
 RUN apt-get update && \
@@ -375,13 +375,13 @@ RUN apt-get update && \
     && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
     && cd kindr \
     && mkdir build && cd build \
-    && cmake .. -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    && cmake .. \
     && make install
 COPY /_github_clones/rovio /aas/github_ws/src/rovio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to rovio --cmake-args -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
+    colcon build --packages-up-to rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
@@ -389,22 +389,21 @@ RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/
 FROM advanced-odom-${BUILD_ADVANCED_ODOM} AS ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image
 
 # Add pymavlink and PlotJuggler for debugging, testing, and analysis
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ros-humble-plotjuggler \
-    ros-humble-plotjuggler-ros ros-humble-rosbag2-storage-mcap \
+    apt-get install -y --no-install-recommends ros-jazzy-plotjuggler \
+    ros-jazzy-plotjuggler-ros ros-jazzy-rosbag2-storage-mcap \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Save the YOLO model weights (ONNX, Opset 12) and class names
 WORKDIR /aas/yolo
 # Model options (from fastest to most accurate, <10MB to >100MB): yolo26n, yolo26s, yolo26m, yolo26l, yolo26x
-# Export standard 640 static as yolo26n_640.onnx and smaller 320 static as yolo26n_320.onnx
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640)" && \
+# Export standard 640 static as yolo26n_640.onnx and smaller 320 static as yolo26n_320.onnx (with half precision)
+RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640, half=True)" && \
     mv yolo26n.onnx yolo26n_640.onnx && \
-    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320)" && \
+    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320, half=True)" && \
     mv yolo26n.onnx yolo26n_320.onnx && \
     /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolo26n.pt').names))" | grep '{' > coco.json && \
     rm yolo26n.pt
@@ -420,14 +419,14 @@ COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
 COPY tools_and_docs/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
 WORKDIR /aas/aircraft_ws
 RUN rosdep update
-RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "px4_msgs" && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY aircraft/aircraft_resources/ /aas/aircraft_resources
 COPY aircraft/aircraft_resources/patches/kiss_icp.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz
-COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/humble/share/mavros/launch/apm_pluginlists.yaml
+COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
 RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/cancellable_action \
     && chmod +x /aas/aircraft_resources/patches/cancellable_action.py
 
@@ -438,7 +437,7 @@ COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/air
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \
     && echo "source /aas/mimosa_custom_gtsam_ws/install/setup.bash" >> /root/.bashrc \
     && echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

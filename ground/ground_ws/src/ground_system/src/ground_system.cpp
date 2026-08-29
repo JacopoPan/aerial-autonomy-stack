@@ -93,7 +93,8 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
     int sockfd = -1;
     struct sockaddr_in servaddr;
 
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
         RCLCPP_ERROR(this->get_logger(), "Socket creation failed for drone %d", drone_id);
         return;
     }

@@ -10,20 +10,18 @@ FROM ros2-image AS ros2-qgc-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
-# Pinned to 5.0.8 on Ubuntu 22/jammy because >=5.1 pre-built versions require glibc >= 2.38 and jammy only has 2.35
+# Pinned to 5.1.3, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
-RUN useradd -m -s /bin/bash qgcuser \
+RUN useradd -m -s /bin/bash -u 1000 -o qgcuser \
     && usermod -aG dialout qgcuser
 # RUN apt-get remove modemmanager -y
 RUN apt update \
     && apt install -y --no-install-recommends \
-        gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-gl \
-        libfuse2 \
-        libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor-dev \
+        libfuse2 libxcb-xinerama0 libxkbcommon-x11-0 libxcb-cursor0 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /QGroundControl-x86_64.AppImage \
-        https://github.com/mavlink/qgroundcontrol/releases/download/v5.0.8/QGroundControl-x86_64.AppImage \
+        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.3/QGroundControl-x86_64.AppImage \
     && chmod +x /QGroundControl-x86_64.AppImage \
     && /QGroundControl-x86_64.AppImage --appimage-extract \
     && rm /QGroundControl-x86_64.AppImage
@@ -44,14 +42,13 @@ FROM ros2-qgc-image AS ros2-qgc-gst-mavlink-image
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
     && apt install -y --no-install-recommends \
-        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-libav \
+        gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \
         python3-gi gir1.2-gst-plugins-base-1.0 gir1.2-gstreamer-1.0 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial mavproxy future
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install mavlink-router
@@ -80,9 +77,9 @@ COPY ground/ground_ws/src /aas/ground_ws/src
 COPY tools_and_docs/tests/.clang-tidy /aas/ground_ws/src/.clang-tidy
 WORKDIR /aas/ground_ws
 RUN rosdep update
-RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY ground/ground_resources/ /aas/ground_resources
@@ -93,7 +90,7 @@ COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/gro
 
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/ground_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/ground_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

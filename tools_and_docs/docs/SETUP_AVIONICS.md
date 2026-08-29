@@ -6,22 +6,23 @@
 >
 > For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/tools_and_docs/docs/BOM.md)
 
-## Flash JetPack 6 to Jetson Orin
+## Flash JetPack 7 to Jetson Orin
 
 Holybro Jetson baseboards normally ship with JetPack 5
 
-To upgrade to JetPack 6, download NVIDIA SDK Manager on an Ubuntu 22 (see [compatibility matrix](https://developer.nvidia.com/sdk-manager#host_os_comp_matrix)) host computer from [here](https://developer.nvidia.com/sdk-manager#installation_get_started)
+To upgrade to JetPack 7, download NVIDIA SDK Manager on an Ubuntu 24 (see [compatibility matrix](https://developer.nvidia.com/sdk-manager#host_os_comp_matrix)) host computer from [here](https://developer.nvidia.com/sdk-manager#installation_get_started)
 
 ```sh
 cd ~/Downloads
-sudo apt install ./sdkmanager_[version]-[build#]_amd64.deb # Currently version 2.4.0, build 13235
+sudo apt install ./sdkmanager_[version]-[build#]_amd64.deb # Currently version 2.4.1, build 13536
 sdkmanager                          # Log in with your https://developer.nvidia.com account
 ```
 
 - Put the Holybro Jetson baseboard in recovery mode with the dedicated switch
-- Connect the USB-C port closes to the fan to the computer running `sdkmanager` and power on the board
-- On Step 1, fields "Jetson", "Host Machine Ubuntu 2x x86_64", "Target Hardware Jetson Orin NX" are auto-detected, "SDK Version JetPack 6.2.1 (rev. 1)"
-- On Step 2, under "Target Components", select all "Jetson Linux" (uncheck all others: Runtime, SDK, Services)
+- Connect the REC-USB-C port to the computer running `sdkmanager` and power on the board
+- On Step 1, fields "Jetson", "Host Machine Ubuntu 2x x86_64", "Target Hardware Jetson Orin NX" are auto-detected
+  - Select "SDK Version JetPack 7.2.1" and "Direct Flash", no additional SDKs
+- On Step 2, under "Target Components", select all "Jetson Linux" (uncheck all others: Host Components, Jetons Runtime, SDK Components)
 - Accept the "terms and conditions" and click "CONTINUE" (if prompted, click "Create" folder and/or input the password to `sudo`)
 - Wait for `sdkmanager` to download the necessary software
 - On the flash dialog after the download, choose "OEM Pre-config", username, password, and "Storage NVMe", click "Flash"
@@ -29,41 +30,56 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 - Power-off, put the board out of recovery mode, disconnect the USB-C cable, and power-on again
 - With a screen, mouse, and keyboard connected to the Jetson basedboad, log in, finish the configuration
 - Select an appropriate "Power Mode" (e.g. MAXN or 25W)
-- Under "Settings" -> "Users", enable "Automatic Login"
+- Increase the existing `/swapfile` size from 2G to 16G
+```sh
+swapon --show                      # Check /swapfile existence, size (2G), and TYPE (file)
+sudo swapoff /swapfile
+sudo fallocate -l 16G /swapfile    # Avoids out-of-memory process kills during the build
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+swapon --show                      # Now 16G (/etc/fstab enables /swapfile at boot)
+```
+- Under "Settings" -> "System" -> "Users", unlock and enable "Automatic Login"
+- If connected to the internet, e.g. with a USB Ethernet adapter, Firefox can be installed from the "Software" application
+- Prioritize SSD over Network Boot
+```sh
+sudo efibootmgr -v                  # Check what Boot000x entry is the SSD, e.g. 0001
+sudo efibootmgr -o 0001,000B, etc.  # Copy line BootOrder from the previous command, moving the desired entry to the front
+```
+- Run "Software Updater" and restart
 
 <!--
 - [PX4 documentation](https://github.com/PX4/PX4-Autopilot/blob/main/docs/en/companion_computer/holybro_pixhawk_jetson_baseboard.md#flashing-the-jetson-board)
 -->
 
-> [!WARNING]
-> At the time of writing, **Snap is broken on JetPack 6**, a fix is suggested [here](https://forums.developer.nvidia.com/t/chromium-other-browsers-not-working-after-flashing-or-updating-heres-why-and-quick-fix/338891) and was **tested on JP 6.2.1 (rev. 1)**
-> ```sh
-> snap download snapd --revision=24724
-> sudo snap ack snapd_24724.assert
-> sudo snap install snapd_24724.snap
-> sudo snap refresh --hold snapd
-> 
-> snap install firefox
-> ```
-
-## Configure Jetson-IO for the CSI IMX219-200 Camera
+## Configure Jetson-IO for Mono/Stereo CSI IMX219-200 Camera
 
 ```sh
 sudo /opt/nvidia/jetson-io/jetson-io.py
 
 # Follow these steps:
-#   "Configure Jetson 24pin CSI Connector"
+#   "Configure Jetson 22pin CSI Connector"
 #   -> "Configure for compatible hardware"
-#   -> "Camera IMX219 Dual" (even if only using one)
+#   -> "Camera IMX219 Dual" (whether using one or two)
 #   -> "Save pin changes"
 #   -> "Save and reboot to reconfigure pins"
 #   -> Press any key to reboot
 
-sudo dmesg | grep -i imx219         # After reboot, this will show at least one imx219 successfully bound
+sudo dmesg | grep -i imx219         # After reboot, this will show one or two "subdev imx219 xx-0010 bound" (and also one "error -121" if only one camera is being used)
 
-# Inspect device (e.g. /dev/video0) resolution and frame rate
+# Inspect devices resolution and frame rate
 sudo apt update && sudo apt install -y v4l-utils
 v4l2-ctl --list-formats-ext -d /dev/video0
+v4l2-ctl --list-formats-ext -d /dev/video1 # If using two cameras
+
+# With a monitor connected to the Orin, display sensor-id=0 or sensor-id=1 video stream with
+xhost +local:
+docker run --rm --runtime nvidia \
+  -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /tmp/argus_socket:/tmp/argus_socket \
+  --entrypoint bash aircraft-image -c \
+  'gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! "video/x-raw(memory:NVMM),width=1920,height=1080,framerate=30/1" ! nvvidconv ! nv3dsink sync=false'
+xhost -local:
 ```
 
 ## Install Docker Engine on Jetson Orin
@@ -125,7 +141,25 @@ sudo systemctl restart docker
 
 docker info | grep -i runtime       # Check the `nvidia` runtime is available
 
-docker run --rm --runtime=nvidia nvcr.io/nvidia/l4t-jetpack:r36.4.0 nvidia-smi # Test nvidia-smi works in a container with Linux4Tegra
+docker run --rm --runtime=nvidia -e NVIDIA_DISABLE_REQUIRE=true nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 nvidia-smi # Test nvidia-smi works in a container with CUDA and TensorRT
+```
+
+## Setup `AIR_SUBNET` and `SIM_SUBNET`
+
+Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board)
+
+```sh
+SIM_SUBNET                          # For hardware-in-the-loop simulation only
+  address  [SIM_SUBNET].90.DRONE_ID # E.g. 172.30.90.DRONE_ID, using a GL.iNet Flint 2 router
+  netmask  255.255.0.0
+  gateway  [SIM_SUBNET].1.1         # E.g. 172.30.1.1, using a GL.iNet Flint 2 router
+  dns      8.8.8.8
+```
+
+```sh
+AIR_SUBNET                          # Deployment as well as (optionally) for hardware-in-the-loop simulation
+  address  [AIR_SUBNET].90.DRONE_ID # E.g. 10.223.90.DRONE_ID, if using Doodle Labs Mesh Rider Nano radios
+  netmask  255.255.0.0
 ```
 
 ## Build and Flash PX4 or ArduPilot Firmware
@@ -162,7 +196,7 @@ docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/ardupilot && ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
-To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.0/en/qgc-user-guide/setup_view/firmware.html)
+To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.1/en/qgc-user-guide/setup_view/firmware.html)
 
 ## PX4: Configure 6X's Network and DDS Client
 

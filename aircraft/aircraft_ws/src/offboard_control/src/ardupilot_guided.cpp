@@ -19,7 +19,9 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     size_t pos = ns.find("Drone");
     if (pos != std::string::npos) {
         try { own_id_ = std::stoi(ns.substr(pos + 5)); }
-        catch (const std::exception&) {}
+        catch (const std::exception & e) {
+            RCLCPP_WARN(this->get_logger(), "stoi failed: %s", e.what());
+        }
     }
     if (own_id_ == -1) {
         RCLCPP_ERROR(this->get_logger(), "CRITICAL: Could not parse drone ID from namespace '%s'.", ns.c_str());

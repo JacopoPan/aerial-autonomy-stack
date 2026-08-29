@@ -19,20 +19,20 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - 3D worlds for perception-based simulation
 - **Steppable** [Gymnasium environment](https://gymnasium.farama.org/index.html) and **faster-than-real-time**, **multi-instance** simulation
 - Gazebo's wind effects and [waves](https://github.com/srmainwaring/asv_wave_sim) plugins
-- **Dockerized simulation** based on [Ubuntu with CUDA and cuDNN](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags)
-- **Dockerized deployment** based on [NVIDIA JetPack](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-jetpack/tags) with [DeepStream](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
+- **Dockerized simulation** based on [Ubuntu with CUDA and cuDNN](https://catalog.ngc.nvidia.com/orgs/nvidia/-/containers/cuda/-)
+- **Dockerized deployment** based on [Ubuntu with CUDA, cuDNN, TensorRT](https://catalog.ngc.nvidia.com/orgs/nvidia/-/containers/cuda/-) and [DeepStream](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
 - **Windows 11** compatibility *via* WSL
 - Multi-**Jetson-in-the-loop (HITL) simulation** to test NVIDIA- and ARM-based on-board compute
 - Dual network to separate simulated sensors (`SIM_SUBNET`) and inter-vehicle comms (`AIR_SUBNET`)
 - [Zenoh](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds) inter-vehicle ROS2 bridge
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
-- Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (`rosbag`)
+- Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
 </details>
 
 ## 1. Installation
 
-> AAS is developed on Ubuntu 24.04 with `nvidia-driver-580` using an i7-11 with 16GB RAM and RTX 3060
+> AAS is developed on Ubuntu 24.04 with `nvidia-driver-610` using an i7-11 with 16GB RAM and RTX 3060
 >
 > Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
 
@@ -42,7 +42,7 @@ sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
-./tests/check_requirements.sh                         # AAS requires nvidia-driver-580, docker, and nvidia-container-toolkit
+./tests/check_requirements.sh                         # AAS requires nvidia-driver, docker, and nvidia-container-toolkit
 ./sim_build.sh                                        # The 1st build takes ~45' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
 ```
 
@@ -225,7 +225,7 @@ On a Jetson Orin, start the `aircraft-image`:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~10' to build the FP16 TensorRT cache
+DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~3' to build the TensorRT cache
 
 # Deployment options:
 #  DRONE_TYPE=quad, vtol, tail
@@ -247,15 +247,15 @@ GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 <summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
 
 > **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
-> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
+> Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board)
 
-Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
+Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`, gateway `172.30.1.1`, using a GL.iNet Flint 2 router) between:
 
 - One simulation computer, with IP `[SIM_SUBNET].90.100`
 - One ground computer, with IP `[SIM_SUBNET].90.101`
 - `N` Jetson Baseboards with IPs `[SIM_SUBNET].90.1`, ..., `[SIM_SUBNET].90.N`
 
-> **Optionally**, set up a second LAN `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`) between:
+> **Optionally**, set up the real-world `AIR_SUBNET` with netmask `255.255.0.0` (e.g. `10.223.x.x`, if using Doodle Labs Mesh Rider Nano radios) between:
 > 
 > - One ground computer, with IP `[AIR_SUBNET].90.101`
 > - `N` Jetson Baseboards with IPs `[AIR_SUBNET].90.1`, ..., `[AIR_SUBNET].90.N` 
@@ -496,37 +496,23 @@ aerial-autonomy-stack
 <details>
 <summary><b>Dependencies</b> management <i>(click to expand)</i></summary>
 
-- [x] Host OS: [Ubuntu 22.04/24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
-- [ ] Jetpack: [6.2.1 (rev. 1) [L4T 36.4.4, Ubuntu 22-based]](https://developer.nvidia.com/embedded/jetpack-archive)
-  - **TODO: upgrade to JetPack 7.2.1 [L4T 39.2, Ubuntu 24-based]**
-- [ ] [`nvidia-driver-580`](https://developer.nvidia.com/datacenter-driver-archive)
-  - **TODO: upgrade to `nvidia-driver-610` once all base images are Ubuntu 24-based**
+- [x] Host OS: [Ubuntu 24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
+- [x] JetPack: [7.2.1 [L4T 39.2.1, Ubuntu 24-based]](https://developer.nvidia.com/embedded/jetpack-archive)
+- [x] [`nvidia-driver-610`](https://developer.nvidia.com/datacenter-driver-archive)
 - [x] [Docker Engine v29](https://docs.docker.com/engine/release-notes/)
 - [x] [NVIDIA Container Toolkit 1.20](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
-- [x] `amd64` base image: [`cuda:12.9.2-cudnn-runtime-ubuntu22.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags)
-- [x] `arm64`/Jetson base image: [`l4t-jetpack:r36.4.0`](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/l4t-jetpack/tags)
-- [ ] [DeepStream 7.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
-  - **TODO: upgrade to DeepStream 9.1 on JetPack 7.2**
-- [x] [ROS2 Humble (LTS, EOL 5/2027)](https://docs.ros.org/en/rolling/Releases.html)
+- [x] `amd64` base image: [`nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/-/containers/cuda/-)
+- [x] `arm64`/Jetson base image: [`nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/-/containers/cuda/-)
+- [x] [DeepStream 9.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
+- [x] [ROS2 Jazzy (LTS, EOL 5/2029)](https://docs.ros.org/en/lyrical/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
 - [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
-  - **TODO: upgrade to 4.7.0**
+  - **TODO: upgrade to 4.7.0** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.0/ArduCopter/ReleaseNotes.txt), [discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650)
+    - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
+    - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
-- [ ] [ONNX Runtime 1.23.2](https://github.com/microsoft/onnxruntime/releases)
-  - **TODO: upgrade to 1.29.0 with system Python 3.12 on Ubuntu 24**
-
-Transitive constraints (as of May 2026):
-
-- Jetson Orin supports [JetPack only up to version 6](https://developer.nvidia.com/embedded/jetpack-archive)
-  - JetPack 6/Orin latest supported DeepStream version is 7.1 (DS 8.0, 9.0 are on JetPack 7/Thor)
-  - JetPack 6 is based on L4T 36 (Ubuntu 22)
-    - Ubuntu 22's system Python is version 3.10
-      - The last available ONNX Runtime GPU wheel for Python 3.10 is version 1.23.2 ([ORT >=1.24 is available on Python >=3.11](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
-        - ONNX Runtime GPU 1.23.2 only supports CUDA 12 ([CUDA 13 added in ORT 1.24.1](https://github.com/microsoft/onnxruntime/releases/tag/v1.24.1))
-          - The latest CUDA 12 on the [NVIDIA NGC Catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/cuda/tags) is 12.9.2 (e.g., `cuda:12.9.2-cudnn-runtime-ubuntu22.04`)
-    - Ubuntu 22's GStreamer `apt` package is version 1.20
-      - [GStreamer 1.20's `nvh264enc preset`s are no longer supported](https://docs.nvidia.com/video-technologies/video-codec-sdk/13.0/deprecation-notices/index.html) beyond `nvidia-driver-580`; `nvidia-driver-595` requires [GStreamer 1.24](https://discourse.gstreamer.org/t/nvcodec-nvenc-nvidia-deprecates-support-for-old-videocodec-sdk-h-264-hevc-encoder-presets-with-driver-r550-in-q124/182), which is the default on Ubuntu 24 (see [PR #84](https://github.com/JacopoPan/aerial-autonomy-stack/pull/84))
+- [x] [ONNX Runtime 1.29.0](https://github.com/microsoft/onnxruntime/releases)
 
 External repositories:
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
@@ -539,7 +525,7 @@ External repositories:
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
 - [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
-- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.23.2`
+- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.29.0`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>

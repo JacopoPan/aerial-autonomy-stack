@@ -17,7 +17,8 @@ RUN apt update \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
     && apt update \
     && apt install -y --no-install-recommends \
-        gz-harmonic ros-humble-ros-gzharmonic \
+        gz-harmonic ros-jazzy-ros-gz \
+        ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-sim \
         libgz-transport13-* libgz-msgs10-dev \
         python3-gz-transport13 python3-gz-msgs10 \
     && apt clean \
@@ -67,8 +68,7 @@ RUN apt update \
         libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" mavproxy
+RUN pip3 install --no-cache-dir --retries 5 "numpy<2" mavproxy
 ENV GZ_VERSION=harmonic
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -81,7 +81,7 @@ RUN /aas/github_apps/ardupilot/Tools/autotest/sim_vehicle.py -v ArduCopter \
 ################################################################################
 # Ephemeral stage to grab AAS PX4 custom airframes #############################
 ################################################################################
-FROM ubuntu:22.04 AS airframe_filter_stage
+FROM ubuntu:24.04 AS airframe_filter_stage
 COPY simulation/simulation_resources/aircraft_models/ /temp_folder
 RUN mkdir /airframes
 RUN find /temp_folder -type f -regex '.*/[0-9]+_.*' -exec cp {} /airframes/ \;
@@ -127,8 +127,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial mavproxy future
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install https://github.com/PX4/flight_review to inspect PX4 SITL logs
@@ -140,7 +139,7 @@ COPY /_github_clones/flight_review /aas/github_apps/flight_review
 WORKDIR /aas/github_apps/flight_review/app
 RUN python3 -m venv /px4fr-env \
     && /px4fr-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /px4fr-env/bin/pip3 install --no-cache-dir --resume-retries 5 -r requirements.txt
+    /px4fr-env/bin/pip3 install --no-cache-dir --retries 5 -r requirements.txt
 
 # Build the Gazebo wave plugin in github_ws/
 # Based on https://github.com/srmainwaring/asv_wave_sim/blob/master/README.md
@@ -153,7 +152,7 @@ COPY /_github_clones/asv_wave_sim /aas/github_ws/src/asv_wave_sim
 RUN sed -i 's|>materials/|>models://waves/materials/|g' /aas/github_ws/src/asv_wave_sim/gz-waves-models/world_models/waves/model.sdf
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install \
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install \
     --merge-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=17"
 # Build the GUI plugin
 WORKDIR /aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control
@@ -164,8 +163,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends libzmq3-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pyzmq
+RUN pip3 install --no-cache-dir --retries 5 pyzmq
 
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
@@ -176,9 +174,9 @@ FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
 RUN rosdep update
-RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro humble -y && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/humble/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
@@ -196,7 +194,7 @@ RUN mkdir build && cd build \
 # Source the workspaces
 RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \
     && echo "source /aas/simulation_ws/install/setup.bash" >> /root/.bashrc
-# If needed (but already in .bashrc) $ source /opt/ros/humble/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/simulation_ws/install/setup.bash
+# If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/simulation_ws/install/setup.bash
 
 # Final config
 WORKDIR /aas

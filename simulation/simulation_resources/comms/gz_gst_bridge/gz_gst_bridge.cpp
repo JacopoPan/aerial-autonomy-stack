@@ -59,7 +59,7 @@ void on_frame(const gz::msgs::Image &msg) {
 }
 
 bool check_nvidia_encoder() {
-    GstElementFactory *factory = gst_element_factory_find("nvh264enc");
+    GstElementFactory *factory = gst_element_factory_find("nvcudah264enc");
     if (factory) {
         gst_object_unref(factory);
         return true;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
         std::cout << "Using NVIDIA GPU Encoder (nvh264enc)\n";
         pipeline_str = "appsrc name=gz_source ! queue max-size-buffers=1 leaky=downstream ! "
                         "videoconvert ! "
-                        "nvh264enc preset=low-latency-hq zerolatency=true rc-mode=cbr bitrate=2048 qp-min=15 qp-max=35 gop-size=30 ! "
+                        "nvcudah264enc preset=p3 tune=low-latency rate-control=cbr bitrate=2048 gop-size=30 ! "
                         "rtph264pay config-interval=1 mtu=1400 ! udpsink sync=false " + ip_port;
     } else {
         std::cout << "Using CPU Encoder (x264enc)\n";
