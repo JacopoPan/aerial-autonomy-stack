@@ -114,8 +114,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
-    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-25.0, 0.0}, {20.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
-    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-50.0, -15.0}, {20.0, 200.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, 0.0}, {30.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
 }
 
 // Callbacks for subscribers (reentrant group)
