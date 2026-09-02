@@ -247,7 +247,8 @@ GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 <summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
 
 > **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
-> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards
+> Use USB2.0 ASIX Ethernet adapters to add multiple network interfaces to the Jetson baseboards.
+> Lock each interface's "MAC Address" under "Network Options" -> "Identity".
 
 Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.30.x.x`) between:
 
