@@ -52,7 +52,14 @@ sudo chronyc makestep
 
 On Jetson, check with:
 ```sh
-chronyc -n sources # Note it might take some time for the Jetson to switch source
+timedatectl # Check the system clock, the hardware clock (RTC), the time zone, and whether NTP synchronization is active
+chronyc tracking | grep -E "Reference ID|Stratum|System time" # Check what it is synced to and how far off it is
+chronyc -n sources # List every candidate source (^* synced, ^+ candidate, ^- excluded, ^? unreachable, note it might take some time for the Jetson to switch sourc)e
+```
+
+On the Ground Station Computer, check with:
+```sh
+sudo chronyc clients # Check who is actually querying for time
 ```
 
 If `[AIR_SUBNET].90.101` has a `^*` next to it, the Jetson is syncing to the ground computer
