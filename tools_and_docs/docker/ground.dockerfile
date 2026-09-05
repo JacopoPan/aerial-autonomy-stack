@@ -21,7 +21,7 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /QGroundControl-x86_64.AppImage \
-        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.3/QGroundControl-x86_64.AppImage \
+        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.4/QGroundControl-x86_64.AppImage \
     && chmod +x /QGroundControl-x86_64.AppImage \
     && /QGroundControl-x86_64.AppImage --appimage-extract \
     && rm /QGroundControl-x86_64.AppImage
