@@ -114,7 +114,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
-    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, 0.0}, {30.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
     controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
 }
 
@@ -616,7 +616,7 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
 void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
 {
     constexpr double SPEED_RATIO = 1.6;   // Speed ceiling ratio, as a multiple of what the tightest turn allows
-    constexpr double A_LAT_MAX_MS2 = 3.0; // m/s^2, lateral acceleration limit
+    constexpr double A_LAT_MAX_MS2 = 1.75; // m/s^2, lateral acceleration limit
     constexpr double MAX_VZ_MS = 2.0;     // m/s, climb/descent limit
     constexpr double LOOKAHEAD_S = 0.6;   // s, lookahead in seconds (at the current speed)
     constexpr double SCAN_RAD = 0.5;      // rad, forward-only search window
