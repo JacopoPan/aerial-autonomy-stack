@@ -427,6 +427,34 @@ ATS105=3                            # Press Enter, set the unit address, MUST be
 - [Microhard Point-to-Multipoint](https://docs.holybro.com/radio/microhard-radio/point-to-multipoint-setup-with-microhard-radio)
 -->
 
+## Doodle Labs Configuration
+
+- Connect and login to the radio's address: https://10.223.xx.xx
+- On the "Simple Configuration" page:
+```sh
+# Note that option names often vary across firmware versions
+
+Select Profiles                        General
+Active Frequency Band                  [pick]
+Select Scenario                        Mesh on radio0
+Mesh ID                                [pick]
+...
+Channel                                [pick]
+Bandwidth                              [pick]
+...
+Optimize for Latency                   [uncheck]
+TCP                                    [check]
+Aggressive TCP                         [uncheck]
+Use VLAN for internal messaging        [uncheck]
+Add ETH1 to br-wan                     [check]
+...
+Enable Automatic C&C Queue Detection   [uncheck]
+```
+
+<!--
+- [Doodle Labs Knowledge Base](https://kb.doodlelabs.com/product-index)
+-->
+
 ## RC Input
 
 RC IN is the [bottom-left 5-pin port on the Jetson Baseboard](https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout#rc-in-port)
