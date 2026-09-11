@@ -3,7 +3,7 @@
 GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
 {
     // Declare Parameters
-    this->declare_parameter("num_drones", 1);
+    this->declare_parameter<std::vector<int64_t>>("drone_ids", std::vector<int64_t>{1});
     this->declare_parameter("ip", "0.0.0.0");
     this->declare_parameter("base_port", 18540);
     this->declare_parameter("rate", 10.0);
@@ -19,7 +19,7 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     this->declare_parameter("simulated_link_outage_duration", 4.5); // s: max outage duration (uniform in [0, max])
 
     // Get Parameters
-    num_drones_ = static_cast<int>(this->get_parameter("num_drones").as_int());
+    drone_ids_ = this->get_parameter("drone_ids").as_integer_array();
     ip_ = this->get_parameter("ip").as_string();
     base_port_ = static_cast<int>(this->get_parameter("base_port").as_int());
     publish_rate_ = this->get_parameter("rate").as_double();
@@ -62,7 +62,7 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
 
     // Single listener thread, use base_port_ and pass drone_id = -1 to signal "auto-detect ID from message"
     listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, -1, base_port_, 0);
-    RCLCPP_INFO(this->get_logger(), "Listening to the streams from %d drones on single port %d", num_drones_, base_port_);
+    RCLCPP_INFO(this->get_logger(), "Listening to the streams from %zu drones on single port %d", drone_ids_.size(), base_port_);
     // To listen to separate UDP streams on separate ports, create multiple threads using:
     // listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, drone_id, port, thread_idx);
     // Make sure thread_idx < MAVLINK_COMM_NUM_BUFFERS
@@ -136,8 +136,8 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
                     int current_id = drone_id;
                     if (current_id == -1) {
                         current_id = msg.sysid;
-                        if (current_id < 1 || current_id > num_drones_) {
-                            continue; // Ignore out-of-bounds IDs
+                        if (std::find(drone_ids_.begin(), drone_ids_.end(), current_id) == drone_ids_.end()) {
+                            continue; // Ignore IDs not in drone_ids
                         }
                     }
                     

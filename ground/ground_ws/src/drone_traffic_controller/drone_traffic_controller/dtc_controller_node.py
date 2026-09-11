@@ -32,12 +32,10 @@ class DTCController(Node):
         self.sub = self.create_subscription(SwarmObs, '/tracks', self.track_cb, 10)
         self.timer = self.create_timer(1.0, self.loop)
 
-        self.nq = int(os.environ.get('num_quads', os.environ.get('NUM_QUADS', '1')))
-        self.nv = int(os.environ.get('num_vtols', os.environ.get('NUM_VTOLS', '0')))
-        self.nt = int(os.environ.get('num_tails', os.environ.get('NUM_TAILS', '0')))
-        self.quad_ids = list(range(1, self.nq + 1))
-        self.vtol_ids = list(range(self.nq + 1, self.nq + self.nv + 1))
-        self.tail_ids = list(range(self.nq + self.nv + 1, self.nq + self.nv + self.nt + 1))
+        self.quad_ids = [int(i) for i in os.environ.get('QUAD_IDS', '1').split(',') if i]
+        self.vtol_ids = [int(i) for i in os.environ.get('VTOL_IDS', '').split(',') if i]
+        self.tail_ids = [int(i) for i in os.environ.get('TAIL_IDS', '').split(',') if i]
+        self.nq, self.nv, self.nt = len(self.quad_ids), len(self.vtol_ids), len(self.tail_ids)
         self.expected_ids = self.quad_ids + self.vtol_ids + self.tail_ids
         self.drones = {i: {'home': None, 'curr': None, 'alt': 0.0, 'target_enu': None, 'track_age': math.inf} for i in self.expected_ids}
         self.MAX_TRACK_AGE_SEC = 2.0 # Maximum acceptable age (in seconds) of track information to trigger an advance in the state machine

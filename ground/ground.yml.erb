@@ -3,10 +3,12 @@
 
   air_subnet = ENV.fetch('AIR_SUBNET', '10.22')
 
-  num_quads = ENV.fetch('NUM_QUADS', 1).to_i
-  num_vtols = ENV.fetch('NUM_VTOLS', 0).to_i
-  num_tails = ENV.fetch('NUM_TAILS', 0).to_i
-  num_drones = num_quads + num_vtols + num_tails
+  quad_ids = ENV.fetch('QUAD_IDS', '1').split(',').map(&:to_i)
+  vtol_ids = ENV.fetch('VTOL_IDS', '').split(',').map(&:to_i)
+  tail_ids = ENV.fetch('TAIL_IDS', '').split(',').map(&:to_i)
+  drone_ids = quad_ids + vtol_ids + tail_ids
+  num_drones = drone_ids.size
+  num_quads = quad_ids.size # Only used to auto-center QGC's virtual joystick in SITL/HITL with a single quad
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
@@ -30,7 +32,7 @@ windows:
       layout: even-horizontal
       panes:
         - clear && echo "So nice to have you with us, this is the ground container."
-        - ros2 run ground_system ground_system --ros-args -p num_drones:=<%= num_drones %> -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-1']"
+        - ros2 run ground_system ground_system --ros-args -p drone_ids:="<%= drone_ids %>" -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-1']"
 
   - mavlink-router:
       layout: tiled
@@ -97,7 +99,7 @@ windows:
   - video_streams:
       layout: tiled
       panes:
-        <% (1..num_drones).each do |drone_id| %>
+        <% drone_ids.each do |drone_id| %>
         <% camera_ids.each do |cam_id| %>
         - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"; do sleep 2; done
         <% end %>
@@ -108,7 +110,7 @@ windows:
   - ssh_connections:
       layout: tiled
       panes:
-        <% (1..num_drones).each do |drone_id| %>
+        <% drone_ids.each do |drone_id| %>
         - |
           echo -e "\n\n Attach the AAS container with:\n\n\tdocker exec -it aircraft-container_<%= drone_id %> tmux attach\n\n"
           ssh -o ConnectTimeout=5 -o ServerAliveInterval=3 -o ServerAliveCountMax=3 orin@<%= "#{air_subnet}.90.#{drone_id}" %>
