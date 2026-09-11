@@ -42,6 +42,8 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     VTOL_LAND_LOITER_EXIT_ALT_THRESH = this->declare_parameter<double>("vtol_land_loiter_exit_alt_thresh", 10.0); // Threshold (m) in Z to exit the pre-landing loiter descent
     VTOL_LAND_LOITER_EXIT_HEADING_THRESH = this->declare_parameter<double>("vtol_land_loiter_exit_heading_thresh", 10.0); // Threshold (deg) in desired approach heading to exit the pre-landing loiter descent
     LAND_COMPLETED_ALT_THRESH = this->declare_parameter<double>("land_completed_alt_thresh", 2.0); // Altitude (m) from home, for a multicopter or VTOL, to consider the landing action complete
+    // Parameters - Offboard
+    OFFBOARD_GUIDED_CONFIRM_SEC = this->declare_parameter<double>("offboard_guided_confirm_sec", 10.0); // Time (s) given to the autopilot to report GUIDED before the offboard action gives up on the mode switch
     // Parameters - Orbit
     MC_ORBIT_SPEED_MS = this->declare_parameter<double>("mc_orbit_speed_ms", 5.0); // Tangential speed (m/s) of the orbit for quads, converted to CIRCLE_RATE (deg/s) based on the target radius
     // Parameters - Takeoff
@@ -670,15 +672,18 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
 
     offboard_flag_count_ = 0;
     bool offboarding = true;
+    bool guided_confirmed = false; // Latched when the autopilot reports GUIDED, see the mode check below
     uint64_t time_of_offboard_start_us = UNSET_TIME_US;
     rclcpp::Rate offboard_loop_rate(ACTION_LOOP_RATE_HZ);
     while (offboarding) {
         offboard_loop_rate.sleep();
 
         int mav_type = 0;
+        std::string ardupilot_mode;
         {
             std::shared_lock<std::shared_mutex> lock(node_data_mutex_);
             mav_type = mav_type_;
+            ardupilot_mode = ardupilot_mode_;
         }
 
         if (goal_handle->is_canceling()) { // Check if there is a cancel request
@@ -714,6 +719,30 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             time_of_offboard_start_us = current_time_us;
             feedback->message = "Starting offboard control at t=" + std::to_string(time_of_offboard_start_us) + " us";
             goal_handle->publish_feedback(feedback);
+        }
+        if (ardupilot_mode == "GUIDED") {
+            guided_confirmed = true; // The mode request went through, from here on another mode means someone else is flying
+        } else if (!ardupilot_mode.empty() && (guided_confirmed || (current_time_us >= (time_of_offboard_start_us + sec_to_us(OFFBOARD_GUIDED_CONFIRM_SEC))))) {
+            // Note: Do not call abort_action() here, its BRAKE/LOITER request would overwrite the mode the RC transmitter or the GCS just selected
+            {
+                std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
+                if (mav_type == 2) { // Multicopter
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // This lets the reposition service change mode when called after offboard
+                } else if (mav_type == 1) { // Fixed-wing/VTOL
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
+                }
+            }
+            feedback->message = "Exiting offboard (GUIDED mode) control at t=" + std::to_string(current_time_us) + "us, flight mode is " + ardupilot_mode;
+            goal_handle->publish_feedback(feedback);
+            result->success = false;
+            goal_handle->abort(result);
+            if (guided_confirmed) {
+                RCLCPP_WARN(this->get_logger(), "Offboard (GUIDED mode) aborted, flight mode changed to %s", ardupilot_mode.c_str());
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Offboard (GUIDED mode) aborted, the autopilot never reported GUIDED (flight mode is %s)", ardupilot_mode.c_str());
+            }
+            active_srv_or_act_flag_.store(false);
+            return;
         }
         if (current_time_us >= (time_of_offboard_start_us + sec_to_us(max_duration_sec))) {
             time_of_offboard_start_us = UNSET_TIME_US;
