@@ -12,16 +12,16 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
 CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
 CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
+BUILD_OPTS="${BUILD_OPTS:-}" # Extra options passed to every `docker build`, e.g. --add-host to point apt at a local mirror
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY; do check_enum "$v" true false; done
 print_envvars
 
-BUILD_OPTS=""
 if [ "$CLEAN_BUILD" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
-  BUILD_OPTS="--no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
+  BUILD_OPTS="$BUILD_OPTS --no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
   docker rmi aircraft-image:latest || true
   docker builder prune -f # Remove all dangling build cache to free up space
 fi
