@@ -58,6 +58,9 @@ public:
     ArdupilotGuided();
 
 private:
+    // Parameters - Offboard flag
+    double OFFBOARD_FLAG_STALE_SEC;
+
     std::shared_mutex node_data_mutex_;
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
 
@@ -68,6 +71,7 @@ private:
     std::atomic<int> offboard_loop_count_;
     std::atomic<int> last_offboard_loop_count_;
     rclcpp::Time last_offboard_rate_check_time_;
+    rclcpp::Time last_offboard_flag_time_;
     int own_id_;
 
     // Callback groups
