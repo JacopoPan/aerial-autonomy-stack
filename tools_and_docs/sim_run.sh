@@ -172,7 +172,9 @@ if [[ "$HITL" == "false" ]]; then
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
       --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
       --env HEADLESS=$HEADLESS \
-      --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env NUM_TAILS=$NUM_TAILS \
+      --env QUAD_IDS=$(seq -s, 1 $NUM_QUADS) \
+      --env VTOL_IDS=$(seq -s, $((NUM_QUADS + 1)) $((NUM_QUADS + NUM_VTOLS))) \
+      --env TAIL_IDS=$(seq -s, $((NUM_QUADS + NUM_VTOLS + 1)) $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))) \
       --env SIMULATED_TIME=true \
       --env ROS_DOMAIN_ID=$GROUND_ID \
       --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \

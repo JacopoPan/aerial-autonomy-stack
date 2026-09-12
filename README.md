@@ -240,7 +240,7 @@ On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
 cd aerial-autonomy-stack/tools_and_docs/
 
 ./sim_build.sh                                        # Build all images for amd64, including ground-image
-GROUND=true NUM_QUADS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
 
 <details>
@@ -264,7 +264,7 @@ Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.
 First, start the ground container:
 ```sh
 # On the computer with IPs ending in 90.101
-HITL=true GROUND=true NUM_QUADS=2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+HITL=true GROUND=true QUAD_IDS=1,2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
 
 Then, start all aircraft containers, one on each Jetson (e.g. *via* SSH from the ground container):

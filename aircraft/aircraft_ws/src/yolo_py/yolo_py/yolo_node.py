@@ -24,7 +24,7 @@ CONF_THRESH = 0.5
 
 class YoloInferenceNode(Node):
     def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher, no_inference):
-        super().__init__('yolo_inference_node')
+        super().__init__(f'yolo_inference_node_{camera_id}')
         self.camera_id = camera_id
         self.headless = headless
         self.hitl = hitl
@@ -64,7 +64,8 @@ class YoloInferenceNode(Node):
         self.bridge = CvBridge()
 
         # Create subscribers
-        self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
+        if self.remote_video_streams: # Only instances launched with --remote-video-streams (i.e. cam_id 0) subscribe to the stream toggle
+            self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
         
         self.get_logger().info("YOLO inference started.")
 
