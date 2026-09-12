@@ -14,14 +14,6 @@
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
   ssh_connections = ENV.fetch('SSH_CONNECTIONS', 'false') == 'true'
   gnd_telem_baud = ENV.fetch('GND_TELEM_BAUD', '57600') # 57600 for SiK point-to-point, 230400 for Microhard point-to-multipoint with two drones
-
-  # Load sensor information from the sensor_config.yaml file
-  require 'yaml'
-  sensor_config = YAML.load_file('/aas/ground_resources/sensor_config.yaml')
-  stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
-
-  stereo_cam = false unless simulated_time # Stereo camera is for simulation only
-  camera_ids = stereo_cam ? [0, 1] : [0]
 %>
 
 name: ground
@@ -100,9 +92,7 @@ windows:
       layout: tiled
       panes:
         <% drone_ids.each do |drone_id| %>
-        <% camera_ids.each do |cam_id| %>
-        - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id + (cam_id * 100) %> --name "Aircraft <%= drone_id %> (Cam <%= cam_id %>)"; do sleep 2; done
-        <% end %>
+        - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id %> --name "Aircraft <%= drone_id %> (Cam 0)"; do sleep 2; done
         <% end %>
   <% end %>
 
