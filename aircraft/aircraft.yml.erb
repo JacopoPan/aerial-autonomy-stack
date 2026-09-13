@@ -31,6 +31,11 @@
 
   stereo_cam = false unless simulated_time # Stereo camera is for simulation only
   camera_ids = stereo_cam ? [0, 1] : [0] # In simulation, these will be UDP ports 5600, 5601, etc.
+
+  sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tailsitter' => 'swan_k1_hwing'},
+                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tailsitter' => 'quadtailsitter' } }
+  sim_model = sim_models.fetch(autopilot, {})[drone_type]
+  camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 %>
 
 name: drone
@@ -53,7 +58,7 @@ windows:
         <% if autopilot == 'px4' %>
         - ros2 run offboard_control px4_offboard --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
-        - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
         <% end %>
         - ros2 run state_sharing state_sharing_node --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 run drone_traffic_client dtc_client <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>

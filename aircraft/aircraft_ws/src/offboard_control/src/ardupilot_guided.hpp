@@ -114,6 +114,14 @@ private:
     double target_vn_, target_ve_, target_vd_;
     rclcpp::Time last_track_time_;
 
+    // Vision guidance variables
+    std::vector<double> camera_extrinsics_;
+    std::vector<std::string> search_classes_;
+    double detect_az_rad_, detect_el_rad_;
+    std::array<double, 3> detect_fix_enu_;
+    int detect_fix_count_;
+    rclcpp::Time last_detect_time_;
+
     // MAVROS publishers
     rclcpp::Publisher<Vector3Stamped>::SharedPtr setpoint_accel_pub_;
     rclcpp::Publisher<TwistStamped>::SharedPtr setpoint_vel_pub_;
@@ -140,6 +148,8 @@ private:
 
     // Utility
     double normalize_heading(double angle_rad);
+    double steer_to_waypoint(TwistStamped &vel_msg, const std::array<double, 3> &waypoint_enu_m, const std::array<double, 3> &look_at_enu_m, double v_max_ms);
+    std::array<double, 3> camera_bearings_to_enu(double az_rad, double el_rad);
 
     // Controller map and controllers
     using ControllerFunction = std::function<void()>;
@@ -159,9 +169,18 @@ private:
         double v_max_ms;
     };
     void vel_ref_lemniscate(const Lemniscate &loop);
+    struct Lawnmower
+    {
+        std::array<double, 2> east_m; // {start, end of each East-West leg}
+        std::array<double, 2> north_m; // {min, max}
+        double alt_m, legs_separation_m, v_max_ms;
+        bool reattack;
+    };
+    void vel_ref_lawnmower_search(const Lawnmower &pattern);
 
     // Controller variables
     double lemniscate_phase_rad_;
+    int lawnmower_leg_;
 };
 
 #endif // OFFBOARD_CONTROL__ARDUPILOT_GUIDED_HPP_
