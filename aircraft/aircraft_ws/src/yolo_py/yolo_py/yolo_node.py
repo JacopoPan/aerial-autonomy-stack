@@ -399,9 +399,10 @@ class YoloInferenceNode(Node):
 
         dx = center_x - self.cx
         dy = self.cy - center_y
-        # Pinhole approximation
+        # Pinhole approximation (not true for a wideangle simulated sensor, or a real-life fisheye lens without rectilinear dewarping)
         azimuths = np.degrees(np.arctan(dx / self.fx))
         elevations = np.degrees(np.arctan(dy / self.fy))
+        angular_widths = np.degrees(np.arctan((dx + widths / 2) / self.fx) - np.arctan((dx - widths / 2) / self.fx))
 
         # Construct Message
         detection_array = Detection2DArray()
@@ -423,6 +424,7 @@ class YoloInferenceNode(Node):
             result.hypothesis = hypothesis
             result.pose.pose.position.x = float(azimuths[i]) # degrees
             result.pose.pose.position.y = float(elevations[i]) # degrees
+            result.pose.pose.position.z = float(angular_widths[i]) # degrees, horizontal angle subtended by the box (i.e. a camera resolution-agnostic range estimate)
 
             detection = Detection2D()
             detection.bbox = bbox
