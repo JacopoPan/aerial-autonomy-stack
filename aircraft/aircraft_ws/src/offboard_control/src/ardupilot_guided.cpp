@@ -125,7 +125,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
     // Vision-based guidance
     controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
-    controller_map_["vel-lr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
+    controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
 }
 
 // Callbacks for subscribers (reentrant group)
