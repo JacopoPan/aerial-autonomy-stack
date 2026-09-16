@@ -9,7 +9,9 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     pose_frame_(-1), velocity_frame_(-1), true_airspeed_m_s_(NAN), vehicle_type_(-1), is_vtol_(false), is_vtol_tailsitter_(false),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     traj_ref_east_(NAN), traj_ref_north_(NAN), traj_ref_up_(NAN),
-    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN)
+    target_vn_(NAN), target_ve_(NAN), target_vd_(NAN),
+    detect_az_rad_(NAN), detect_el_rad_(NAN), detect_fix_count_(0),
+    lawnmower_leg_(0)
 {
     RCLCPP_INFO(this->get_logger(), "PX4 offboard referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -39,6 +41,14 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     angular_velocity_.fill(NAN);
     kiss_position_.fill(NAN);
     kiss_q_.fill(NAN);
+    detect_fix_ned_.fill(NAN);
+
+    // Parameters
+    search_classes_ = this->declare_parameter<std::vector<std::string>>("search_classes", {"car", "truck"});
+    camera_extrinsics_ = this->declare_parameter<std::vector<double>>("camera_extrinsics", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    if (camera_extrinsics_.size() != 6) { camera_extrinsics_.assign(6, 0.0); RCLCPP_ERROR(this->get_logger(), "camera_extrinsics needs 6 values, falling back to a level camera"); }
+    RCLCPP_INFO(this->get_logger(), "Camera extrinsics: x %.2f y %.2f z %.2f - roll %.1f pitch %.1f yaw %.1f (deg)",
+                camera_extrinsics_[0], camera_extrinsics_[1], camera_extrinsics_[2], camera_extrinsics_[3], camera_extrinsics_[4], camera_extrinsics_[5]);
 
     // PX4 publishers
     rclcpp::QoS qos_profile_pub(10);  // Depth of 10
@@ -112,6 +122,9 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     controller_map_["traj-test"] = std::bind(&PX4Offboard::traj_ref_test, this, std::placeholders::_1);
     // Custom controllers
     controller_map_["traj-prv"] = std::bind(&PX4Offboard::traj_ref_predictive_rendezvous, this, std::placeholders::_1);
+    // Vision-based guidance
+    controller_map_["traj-lm"] = [this](OffboardControlMode& mode) { traj_ref_lawnmower_search(mode, {{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
+    controller_map_["traj-lmr"] = [this](OffboardControlMode& mode) { traj_ref_lawnmower_search(mode, {{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -266,6 +279,32 @@ void PX4Offboard::yolo_detections_callback(const vision_msgs::msg::Detection2DAr
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     if (msg->header.frame_id == "camera_frame_0") { // Only process the primary camera
         yolo_detections_ = msg; // Save the smart pointer to the latest message
+
+        // Track the most confident box in search_classes_ and fix it to the ground
+        constexpr double MIN_LOOK_DOWN_DEG = 10.0;  // deg, the shallowest look-down angle that still gives a usable range
+        constexpr double FIX_MATCH_RADIUS_M = 15.0; // m, a new fix within this radius is the same object, outside it is a different one
+        double best_score = 0.0;
+        for (const auto& detection : msg->detections) {
+            if (detection.results.empty()) { continue; }
+            const auto& detection_result = detection.results.front(); // YOLO26 is NMS-free and argmax'd, so there is exactly one hypothesis per box
+            if (detection_result.hypothesis.score <= best_score || std::find(search_classes_.begin(), search_classes_.end(), detection_result.hypothesis.class_id) == search_classes_.end()) { continue; }
+            best_score = detection_result.hypothesis.score;
+            detect_az_rad_ = detection_result.pose.pose.position.x * (M_PI / 180.0);
+            detect_el_rad_ = detection_result.pose.pose.position.y * (M_PI / 180.0);
+            std::array<double, 3> los = camera_bearings_to_ned(detect_az_rad_, detect_el_rad_);
+            last_detect_time_ = this->get_clock()->now(); // Stamped before the fix is attempted, so the angles stay usable when it is not
+            double look_down_rad = std::asin(los[2]); // Angle of the line of sight below the horizon, positive when it points at the ground, as NED Down is positive
+            if (!(look_down_rad > (MIN_LOOK_DOWN_DEG * M_PI / 180.0)) || !(z_ < 0.0)) { continue; } // Negated so a NAN, which compares false either way, is rejected rather than let through
+            double range_m = -z_ / std::sin(look_down_rad); // The ground is assumed flat at zero Down, where PX4 puts the local frame origin when it arms
+            double fix_N = x_ + (range_m * los[0]), fix_E = y_ + (range_m * los[1]);
+            if (std::isnan(detect_fix_ned_[0]) || std::hypot(fix_N - detect_fix_ned_[0], fix_E - detect_fix_ned_[1]) > FIX_MATCH_RADIUS_M) {
+                detect_fix_ned_ = {fix_N, fix_E, 0.0}; detect_fix_count_ = 1; // First sighting, or a different object: start a new hypothesis at ground level
+            } else {
+                detect_fix_count_++;
+                detect_fix_ned_[0] += (fix_N - detect_fix_ned_[0]) / detect_fix_count_;
+                detect_fix_ned_[1] += (fix_E - detect_fix_ned_[1]) / detect_fix_count_;
+            }
+        }
     }
 }
 
@@ -342,6 +381,9 @@ void PX4Offboard::px4_interface_printout_callback()
     } else {
         ss << "YOLO Detections: [No message received yet]\n";
     }
+    if (detect_fix_count_ > 0) {
+        ss << "Target fix: N " << std::fixed << std::setprecision(1) << detect_fix_ned_[0] << " E " << detect_fix_ned_[1] << " - sightings: " << detect_fix_count_ << " - age: " << (now - last_detect_time_).seconds() << "s\n";
+    }
     RCLCPP_INFO(get_logger(), "%s\n", ss.str().c_str());
 }
 void PX4Offboard::offboard_loop_callback()
@@ -361,6 +403,34 @@ void PX4Offboard::offboard_loop_callback()
     } else {
         RCLCPP_WARN(get_logger(), "Unknown controller requested: '%s', no reference will be published", active_controller_name_.c_str());
     }
+}
+
+// Utility
+double PX4Offboard::steer_to_waypoint(TrajectorySetpoint &trajectory_ref, const std::array<double, 3> &waypoint_ned_m, const std::array<double, 3> &look_at_ned_m, double v_max_ms)
+{
+    constexpr double KP_POS = 0.5;    // 1/s, position error to speed gain
+    constexpr double MAX_VZ_MS = 2.0; // m/s, climb and descent limit
+    double dN = waypoint_ned_m[0] - x_, dE = waypoint_ned_m[1] - y_;
+    double dist_m = std::hypot(dN, dE);
+    double gain = std::min(v_max_ms, KP_POS * dist_m) / std::max(1e-3, dist_m);
+    trajectory_ref.velocity = {static_cast<float>(gain * dN), // m/s North
+                               static_cast<float>(gain * dE), // m/s East
+                               static_cast<float>(std::clamp(KP_POS * (waypoint_ned_m[2] - z_), -MAX_VZ_MS, MAX_VZ_MS))}; // m/s Down
+    trajectory_ref.yaw = static_cast<float>(std::atan2(look_at_ned_m[1] - y_, look_at_ned_m[0] - x_)); // NED yaw of the look-at direction, already in [-PI:PI]
+    return dist_m;
+}
+std::array<double, 3> PX4Offboard::camera_bearings_to_ned(double az_rad, double el_rad)
+{
+    double pitch_rad = camera_extrinsics_[4] * (M_PI / 180.0); // Mount pitch, positive is boresight down
+    double cx = std::cos(el_rad) * std::cos(az_rad), cz = -std::sin(el_rad); // Elevation is positive up, FRD z is positive down
+    double bx = (cx * std::cos(pitch_rad)) - (cz * std::sin(pitch_rad)); // Pitch the boresight down onto the body frame
+    double by = std::cos(el_rad) * std::sin(az_rad); // Azimuth and FRD y are both positive right, and the mount pitch leaves it alone
+    double bz = (cx * std::sin(pitch_rad)) + (cz * std::cos(pitch_rad));
+    // Rotate body FRD into world NED with the attitude at detection time, which removes airframe pitch and bank
+    double tx = 2.0 * ((q_[2] * bz) - (q_[3] * by)), ty = 2.0 * ((q_[3] * bx) - (q_[1] * bz)), tz = 2.0 * ((q_[1] * by) - (q_[2] * bx));
+    return {bx + (q_[0] * tx) + ((q_[2] * tz) - (q_[3] * ty)),  // North
+            by + (q_[0] * ty) + ((q_[3] * tx) - (q_[1] * tz)),  // East
+            bz + (q_[0] * tz) + ((q_[1] * ty) - (q_[2] * tx))}; // Down
 }
 
 // Controllers (reference generators)
@@ -482,6 +552,59 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         mode.velocity = true;
         trajectory_ref.velocity = {0.0, 0.0, 0.0};
         trajectory_ref.yawspeed = 0.0;
+    }
+    trajectory_ref_pub_->publish(trajectory_ref);
+}
+void PX4Offboard::traj_ref_lawnmower_search(OffboardControlMode& mode, const Lawnmower &pattern)
+{
+    constexpr double ARRIVE_M = 5.0;         // m, leg endpoint acceptance radius
+    constexpr int FIX_CONFIRM_COUNT = 6;     // Number of agreeing sightings before the fix is acted on
+    constexpr double FIX_STALE_S = 10.0;     // s, timeout to drop a fix that has gone quiet
+    constexpr double APPROACH_RANGE_M = 3.0; // m, ground range held from the fix
+    constexpr double APPROACH_ALT_M = 2.5;   // m, stand-off altitude above the fix
+
+    if (vehicle_type_ != 1) { // Publish nothing if the vehicle is not ROTARY_WING
+        RCLCPP_WARN(get_logger(), "This controller is only for multicopters");
+        return;
+    }
+    mode.velocity = true;
+    rclcpp::Time now = this->get_clock()->now();
+    TrajectorySetpoint trajectory_ref; // https://github.com/PX4/px4_msgs/blob/release/1.17/msg/TrajectorySetpoint.msg
+    trajectory_ref.timestamp = mode.timestamp;
+    trajectory_ref.position = {NAN, NAN, NAN};     // Unused
+    trajectory_ref.acceleration = {NAN, NAN, NAN}; // Unused
+    trajectory_ref.jerk = {NAN, NAN, NAN};         // Unused
+    trajectory_ref.yawspeed = NAN;                 // Unused, the absolute yaw does the steering
+    trajectory_ref.velocity = {0.0, 0.0, 0.0};     // Stops the vehicle unless a branch below writes a reference
+    trajectory_ref.yaw = NAN;                      // Holds the current yaw unless a branch below writes one
+    if (!xy_valid_ || !z_valid_) {
+        RCLCPP_WARN(get_logger(), "No valid local position, holding still");
+        trajectory_ref_pub_->publish(trajectory_ref);
+        return;
+    }
+    if (detect_fix_count_ > 0 && (now - last_detect_time_).seconds() > FIX_STALE_S) { // Detection fix became stale
+        detect_fix_ned_.fill(NAN);
+        detect_fix_count_ = 0;
+    }
+    double leg_end_E = ((lawnmower_leg_ % 2) == 0) ? pattern.east_m[0] : pattern.east_m[1];
+    bool prosecuting = (detect_fix_count_ >= FIX_CONFIRM_COUNT);
+    std::array<double, 3> waypoint, look_at;
+    if (prosecuting) { // Stand off from the fix at a range and altitude that keep it framed, and stare at it
+        // Re-attack overflies and holds the leg direction, direct turns back down the current bearing
+        double away_N = pattern.reattack ? 0.0 : (x_ - detect_fix_ned_[0]);
+        double away_E = pattern.reattack ? std::copysign(1.0, leg_end_E - y_) : (y_ - detect_fix_ned_[1]);
+        double away_norm = std::max(1e-3, std::hypot(away_N, away_E));
+        waypoint = {detect_fix_ned_[0] + (APPROACH_RANGE_M * away_N / away_norm),
+                    detect_fix_ned_[1] + (APPROACH_RANGE_M * away_E / away_norm),
+                    detect_fix_ned_[2] - APPROACH_ALT_M}; // Down decreases as altitude increases
+        look_at = detect_fix_ned_;
+    } else { // Search: legs run East-West, stepping North between them
+        waypoint = {pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m), leg_end_E, -pattern.alt_m}; // NED, so the search altitude becomes a negative Down
+        look_at = waypoint;
+    }
+    if (steer_to_waypoint(trajectory_ref, waypoint, look_at, pattern.v_max_ms) < ARRIVE_M && !prosecuting) {
+        lawnmower_leg_++;
+        if ((pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m)) > pattern.north_m[1]) { lawnmower_leg_ = 0; }
     }
     trajectory_ref_pub_->publish(trajectory_ref);
 }

@@ -114,6 +114,14 @@ private:
     double target_vn_, target_ve_, target_vd_;
     rclcpp::Time last_track_time_;
 
+    // Vision guidance variables
+    std::vector<double> camera_extrinsics_;
+    std::vector<std::string> search_classes_;
+    double detect_az_rad_, detect_el_rad_;
+    std::array<double, 3> detect_fix_ned_;
+    int detect_fix_count_;
+    rclcpp::Time last_detect_time_;
+
     // PX4 publishers
     rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_mode_pub_;
     rclcpp::Publisher<VehicleAttitudeSetpoint>::SharedPtr attitude_ref_pub_;
@@ -139,6 +147,10 @@ private:
     void yolo_detections_callback(const vision_msgs::msg::Detection2DArray::SharedPtr msg);
     void kiss_odometry_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
+    // Utility
+    double steer_to_waypoint(TrajectorySetpoint &trajectory_ref, const std::array<double, 3> &waypoint_ned_m, const std::array<double, 3> &look_at_ned_m, double v_max_ms);
+    std::array<double, 3> camera_bearings_to_ned(double az_rad, double el_rad);
+
     // Controller map and controllers
     using ControllerFunction = std::function<void(OffboardControlMode&)>;
     std::unordered_map<std::string, ControllerFunction> controller_map_;
@@ -147,6 +159,17 @@ private:
     void ctbr_ref_test(OffboardControlMode& mode);
     void traj_ref_test(OffboardControlMode& mode);
     void traj_ref_predictive_rendezvous(OffboardControlMode& mode);
+    struct Lawnmower
+    {
+        std::array<double, 2> east_m; // {start, end of each East-West leg}
+        std::array<double, 2> north_m; // {min, max}
+        double alt_m, legs_separation_m, v_max_ms; // Altitude is positive up, converted to a negative Down for the PX4 setpoint
+        bool reattack;
+    };
+    void traj_ref_lawnmower_search(OffboardControlMode& mode, const Lawnmower &pattern);
+
+    // Controller variables
+    int lawnmower_leg_;
 };
 
 #endif // OFFBOARD_CONTROL__PX4_OFFBOARD_HPP_

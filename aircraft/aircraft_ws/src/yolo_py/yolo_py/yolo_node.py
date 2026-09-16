@@ -24,7 +24,7 @@ CONF_THRESH = 0.5
 
 class YoloInferenceNode(Node):
     def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher, no_inference):
-        super().__init__('yolo_inference_node')
+        super().__init__(f'yolo_inference_node_{camera_id}')
         self.camera_id = camera_id
         self.headless = headless
         self.hitl = hitl
@@ -64,7 +64,8 @@ class YoloInferenceNode(Node):
         self.bridge = CvBridge()
 
         # Create subscribers
-        self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
+        if self.remote_video_streams: # Only instances launched with --remote-video-streams (i.e. cam_id 0) subscribe to the stream toggle
+            self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
         
         self.get_logger().info("YOLO inference started.")
 
@@ -398,9 +399,10 @@ class YoloInferenceNode(Node):
 
         dx = center_x - self.cx
         dy = self.cy - center_y
-        # Pinhole approximation
+        # Pinhole approximation (not true for a wideangle simulated sensor, or a real-life fisheye lens without rectilinear dewarping)
         azimuths = np.degrees(np.arctan(dx / self.fx))
         elevations = np.degrees(np.arctan(dy / self.fy))
+        angular_widths = np.degrees(np.arctan((dx + widths / 2) / self.fx) - np.arctan((dx - widths / 2) / self.fx))
 
         # Construct Message
         detection_array = Detection2DArray()
@@ -422,6 +424,7 @@ class YoloInferenceNode(Node):
             result.hypothesis = hypothesis
             result.pose.pose.position.x = float(azimuths[i]) # degrees
             result.pose.pose.position.y = float(elevations[i]) # degrees
+            result.pose.pose.position.z = float(angular_widths[i]) # degrees, horizontal angle subtended by the box (i.e. a camera resolution-agnostic range estimate)
 
             detection = Detection2D()
             detection.bbox = bbox

@@ -10,7 +10,8 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     ground_tracks_(nullptr), yolo_detections_(nullptr),
     desired_bearing_rad_(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN),
     target_vn_(NAN), target_ve_(NAN), target_vd_(NAN),
-    lemniscate_phase_rad_(0.0)
+    detect_az_rad_(NAN), detect_el_rad_(NAN), detect_fix_count_(0),
+    lemniscate_phase_rad_(0.0), lawnmower_leg_(0)
 {
     RCLCPP_INFO(this->get_logger(), "ArduPilot guided referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -40,6 +41,14 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     angular_velocity_.fill(NAN);
     kiss_position_.fill(NAN);
     kiss_q_.fill(NAN);
+    detect_fix_enu_.fill(NAN);
+
+    // Parameters
+    search_classes_ = this->declare_parameter<std::vector<std::string>>("search_classes", {"car", "truck"});
+    camera_extrinsics_ = this->declare_parameter<std::vector<double>>("camera_extrinsics", {0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    if (camera_extrinsics_.size() != 6) { camera_extrinsics_.assign(6, 0.0); RCLCPP_ERROR(this->get_logger(), "camera_extrinsics needs 6 values, falling back to a level camera"); }
+    RCLCPP_INFO(this->get_logger(), "Camera extrinsics: x %.2f y %.2f z %.2f - roll %.1f pitch %.1f yaw %.1f (deg)",
+                camera_extrinsics_[0], camera_extrinsics_[1], camera_extrinsics_[2], camera_extrinsics_[3], camera_extrinsics_[4], camera_extrinsics_[5]);
 
     // MAVROS Publishers
     rclcpp::QoS qos_profile_pub = rclcpp::SensorDataQoS(); // Match MAVROS setpoint subscribers (BEST_EFFORT + VOLATILE)
@@ -116,6 +125,9 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     // Lemniscate trajectories
     controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
     controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
+    // Vision-based guidance
+    controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
+    controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -268,6 +280,32 @@ void ArdupilotGuided::yolo_detections_callback(const vision_msgs::msg::Detection
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     if (msg->header.frame_id == "camera_frame_0") { // Only process the primary camera
         yolo_detections_ = msg; // Save the smart pointer to the latest message
+
+        // Track the most confident box in search_classes_ and fix it to the ground
+        constexpr double MIN_LOOK_DOWN_DEG = 10.0;  // deg, the shallowest look-down angle that still gives a usable range
+        constexpr double FIX_MATCH_RADIUS_M = 15.0; // m, a new fix within this radius is the same object, outside it is a different one
+        double best_score = 0.0;
+        for (const auto& detection : msg->detections) {
+            if (detection.results.empty()) { continue; }
+            const auto& detection_result = detection.results.front(); // YOLO26 is NMS-free and argmax'd, so there is exactly one hypothesis per box
+            if (detection_result.hypothesis.score <= best_score || std::find(search_classes_.begin(), search_classes_.end(), detection_result.hypothesis.class_id) == search_classes_.end()) { continue; }
+            best_score = detection_result.hypothesis.score;
+            detect_az_rad_ = detection_result.pose.pose.position.x * (M_PI / 180.0);
+            detect_el_rad_ = detection_result.pose.pose.position.y * (M_PI / 180.0);
+            std::array<double, 3> los = camera_bearings_to_enu(detect_az_rad_, detect_el_rad_);
+            last_detect_time_ = this->get_clock()->now(); // Stamped before the fix is attempted, so the angles stay usable when it is not
+            double look_down_rad = -std::asin(los[2]); // Angle of the line of sight below the horizon, positive when it points at the ground
+            if (!(look_down_rad > (MIN_LOOK_DOWN_DEG * M_PI / 180.0)) || !(position_[2] > 0.0)) { continue; } // Negated so a NAN, which compares false either way, is rejected rather than let through
+            double range_m = position_[2] / std::sin(look_down_rad); // The ground is assumed flat at zero altitude, where ArduPilot puts the local frame origin when it arms
+            double fix_E = position_[0] + (range_m * los[0]), fix_N = position_[1] + (range_m * los[1]);
+            if (std::isnan(detect_fix_enu_[0]) || std::hypot(fix_E - detect_fix_enu_[0], fix_N - detect_fix_enu_[1]) > FIX_MATCH_RADIUS_M) {
+                detect_fix_enu_ = {fix_E, fix_N, 0.0}; detect_fix_count_ = 1; // First sighting, or a different object: start a new hypothesis at ground level
+            } else {
+                detect_fix_count_++;
+                detect_fix_enu_[0] += (fix_E - detect_fix_enu_[0]) / detect_fix_count_;
+                detect_fix_enu_[1] += (fix_N - detect_fix_enu_[1]) / detect_fix_count_;
+            }
+        }
     }
 }
 
@@ -344,6 +382,9 @@ void ArdupilotGuided::ardupilot_interface_printout_callback()
     } else {
         ss << "YOLO Detections: [No message received yet]\n";
     }
+    if (detect_fix_count_ > 0) {
+        ss << "Target fix: E " << std::fixed << std::setprecision(1) << detect_fix_enu_[0] << " N " << detect_fix_enu_[1] << " - sightings: " << detect_fix_count_ << " - age: " << (now - last_detect_time_).seconds() << "s\n";
+    }
     RCLCPP_INFO(get_logger(), "%s\n", ss.str().c_str());
 }
 void ArdupilotGuided::offboard_loop_callback()
@@ -369,6 +410,35 @@ double ArdupilotGuided::normalize_heading(double angle_rad) {
         angle_rad += 2.0 * M_PI;
     }
     return angle_rad;
+}
+double ArdupilotGuided::steer_to_waypoint(TwistStamped &vel_msg, const std::array<double, 3> &waypoint_enu_m, const std::array<double, 3> &look_at_enu_m, double v_max_ms)
+{
+    constexpr double KP_POS = 0.5;       // 1/s, position error to speed gain
+    constexpr double MAX_VZ_MS = 2.0;    // m/s, climb and descent limit
+    constexpr double KP_YAW = 0.8;       // 1/s, heading error to yaw rate gain
+    constexpr double MAX_YAW_RATE = 0.5; // rad/s, maximum yaw rate
+    double dE = waypoint_enu_m[0] - position_[0], dN = waypoint_enu_m[1] - position_[1];
+    double dist_m = std::hypot(dE, dN);
+    double gain = std::min(v_max_ms, KP_POS * dist_m) / std::max(1e-3, dist_m);
+    vel_msg.twist.linear.x = gain * dE; // m/s East
+    vel_msg.twist.linear.y = gain * dN; // m/s North
+    vel_msg.twist.linear.z = std::clamp(KP_POS * (waypoint_enu_m[2] - position_[2]), -MAX_VZ_MS, MAX_VZ_MS); // m/s Up
+    double heading_error = normalize_heading(std::atan2(look_at_enu_m[1] - position_[1], look_at_enu_m[0] - position_[0]) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
+    vel_msg.twist.angular.z = std::clamp(KP_YAW * heading_error, -MAX_YAW_RATE, MAX_YAW_RATE); // rad/s
+    return dist_m;
+}
+std::array<double, 3> ArdupilotGuided::camera_bearings_to_enu(double az_rad, double el_rad)
+{
+    double pitch_rad = camera_extrinsics_[4] * (M_PI / 180.0); // Mount pitch, positive is boresight down
+    double cx = std::cos(el_rad) * std::cos(az_rad), cz = std::sin(el_rad);
+    double bx = (cx * std::cos(pitch_rad)) + (cz * std::sin(pitch_rad)); // Pitch the boresight down onto the body frame
+    double by = -std::cos(el_rad) * std::sin(az_rad); // Azimuth is positive right, FLU y is positive left, and the mount pitch leaves it alone
+    double bz = (cz * std::cos(pitch_rad)) - (cx * std::sin(pitch_rad));
+    // Rotate body FLU into world ENU with the attitude at detection time, which removes airframe pitch and bank
+    double tx = 2.0 * ((q_[2] * bz) - (q_[3] * by)), ty = 2.0 * ((q_[3] * bx) - (q_[1] * bz)), tz = 2.0 * ((q_[1] * by) - (q_[2] * bx));
+    return {bx + (q_[0] * tx) + ((q_[2] * tz) - (q_[3] * ty)),  // East
+            by + (q_[0] * ty) + ((q_[3] * tx) - (q_[1] * tz)),  // North
+            bz + (q_[0] * tz) + ((q_[1] * ty) - (q_[2] * tx))}; // Up
 }
 
 // Controllers (reference generators)
@@ -684,6 +754,49 @@ void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
         vel_msg.twist.angular.z = std::isnan(heading_error) ? 0.0 : std::clamp(KP_YAW * heading_error, -MAX_YAW_RATE, MAX_YAW_RATE); // rad/s
     } else { // No local position; zero-initialized vel_msg stops the vehicle
         RCLCPP_WARN(get_logger(), "No valid local position, entering vel_ref_lemniscate else branch");
+    }
+    setpoint_vel_pub_->publish(vel_msg);
+}
+void ArdupilotGuided::vel_ref_lawnmower_search(const Lawnmower &pattern)
+{
+    constexpr double ARRIVE_M = 5.0;         // m, leg endpoint acceptance radius
+    constexpr int FIX_CONFIRM_COUNT = 6;     // Number of agreeing sightings before the fix is acted on
+    constexpr double FIX_STALE_S = 10.0;     // s, timeout to drop a fix that has gone quiet
+    constexpr double APPROACH_RANGE_M = 3.0; // m, ground range held from the fix
+    constexpr double APPROACH_ALT_M = 2.5;   // m, stand-off altitude above the fix
+
+    rclcpp::Time now = this->get_clock()->now();
+    auto vel_msg = geometry_msgs::msg::TwistStamped();
+    vel_msg.header.stamp = now;
+    vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
+    if (std::isnan(position_[0]) || std::isnan(position_[1]) || std::isnan(position_[2]) || std::isnan(heading_)) {
+        RCLCPP_WARN(get_logger(), "No valid local position or heading, holding still");
+        setpoint_vel_pub_->publish(vel_msg); // Zero-initialized, stops the vehicle
+        return;
+    }
+    if (detect_fix_count_ > 0 && (now - last_detect_time_).seconds() > FIX_STALE_S) { // Detection fix became stale
+        detect_fix_enu_.fill(NAN);
+        detect_fix_count_ = 0;
+    }
+    double leg_end_E = ((lawnmower_leg_ % 2) == 0) ? pattern.east_m[0] : pattern.east_m[1];
+    bool prosecuting = (detect_fix_count_ >= FIX_CONFIRM_COUNT);
+    std::array<double, 3> waypoint, look_at;
+    if (prosecuting) { // Stand off from the fix at a range and altitude that keep it framed, and stare at it
+        // Re-attack overflies and holds the leg direction, direct turns back down the current bearing
+        double away_E = pattern.reattack ? std::copysign(1.0, leg_end_E - position_[0]) : (position_[0] - detect_fix_enu_[0]);
+        double away_N = pattern.reattack ? 0.0 : (position_[1] - detect_fix_enu_[1]);
+        double away_norm = std::max(1e-3, std::hypot(away_E, away_N));
+        waypoint = {detect_fix_enu_[0] + (APPROACH_RANGE_M * away_E / away_norm),
+                    detect_fix_enu_[1] + (APPROACH_RANGE_M * away_N / away_norm),
+                    detect_fix_enu_[2] + APPROACH_ALT_M};
+        look_at = detect_fix_enu_;
+    } else { // Search: legs run East-West, stepping North between them
+        waypoint = {leg_end_E, pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m), pattern.alt_m};
+        look_at = waypoint;
+    }
+    if (steer_to_waypoint(vel_msg, waypoint, look_at, pattern.v_max_ms) < ARRIVE_M && !prosecuting) {
+        lawnmower_leg_++;
+        if ((pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m)) > pattern.north_m[1]) { lawnmower_leg_ = 0; }
     }
     setpoint_vel_pub_->publish(vel_msg);
 }

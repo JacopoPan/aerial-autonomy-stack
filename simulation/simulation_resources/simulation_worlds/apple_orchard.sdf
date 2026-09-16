@@ -490,11 +490,27 @@
         <static>true</static>
       </include>
 
-      <!-- <include>
-        <uri>model://skibidi</uri>
+      <include>
+        <uri>model://jeep</uri>
+        <!-- <uri>model://skibidi</uri> -->
+        <name>jeep_3</name>
         <pose degrees="true">-50 250 -3 0 0 80</pose>
         <static>true</static>
-      </include> -->
+      </include>
+
+      <include>
+        <uri>model://jeep</uri>
+        <name>jeep_4</name>
+        <pose degrees="true">-65 248 -3 0 0 -10</pose>
+        <static>true</static>
+      </include>
+
+      <include>
+        <uri>model://person_standing</uri>
+        <name>person_4</name>
+        <pose degrees="true">-57 245 -5 0 0 0</pose>
+        <static>true</static>
+      </include>
 
     </model>
 
