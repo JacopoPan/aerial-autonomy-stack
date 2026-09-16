@@ -45,7 +45,7 @@ public:
 
 private:
     // Parameters
-    int num_drones_;
+    std::vector<int64_t> drone_ids_;
     std::string ip_;
     int base_port_;
     double publish_rate_;

@@ -29,8 +29,7 @@
   hfov_deg = sensor_config['sensors']['camera_intrinsics']['horizontal_fov_deg'].to_f
   stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
 
-  stereo_cam = false unless simulated_time # Stereo camera is for simulation only
-  camera_ids = stereo_cam ? [0, 1] : [0] # In simulation, these will be UDP ports 5600, 5601, etc.
+  camera_ids = stereo_cam ? [0, 1] : [0] # In SITL/HITL simulation, these are the UDP streams on ports 5600, 5601; on real drones, these are CSI sensor-id 0, 1
 %>
 
 name: drone
@@ -63,7 +62,7 @@ windows:
       panes:
         <% if camera %>
         <% camera_ids.each do |cam_id| %>
-        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
+        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
         <% end %>
         <% end %>
         <% if lidar %>
