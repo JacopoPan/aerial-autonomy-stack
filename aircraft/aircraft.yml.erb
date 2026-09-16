@@ -32,8 +32,8 @@
   stereo_cam = false unless simulated_time # Stereo camera is for simulation only
   camera_ids = stereo_cam ? [0, 1] : [0] # In simulation, these will be UDP ports 5600, 5601, etc.
 
-  sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tailsitter' => 'swan_k1_hwing'},
-                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tailsitter' => 'quadtailsitter' } }
+  sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tail' => 'swan_k1_hwing'},
+                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' } }
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
   camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 %>
