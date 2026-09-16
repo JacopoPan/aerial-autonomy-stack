@@ -33,9 +33,9 @@ GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
 
 # Only used by ground-container (i.e., if GROUND is true)
 GROUND="${GROUND:-false}" # Options: true, false (default)
-NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
-NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
-NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
+QUAD_IDS="${QUAD_IDS:-}" # Comma-separated DRONE_IDs of the quadcopters, e.g. QUAD_IDS=2,3 (default = none)
+VTOL_IDS="${VTOL_IDS:-}" # Comma-separated DRONE_IDs of the VTOLs, e.g. VTOL_IDS=5 (default = none)
+TAIL_IDS="${TAIL_IDS:-}" # Comma-separated DRONE_IDs of the tailsitters, e.g. TAIL_IDS=7,8 (default = none)
 
 # Find the script's path
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -47,7 +47,10 @@ check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
-for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
+[[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"
+if [[ "$GROUND" == "true" && -z "$QUAD_IDS$VTOL_IDS$TAIL_IDS" ]]; then abort "GROUND=true requires at least one ID in QUAD_IDS, VTOL_IDS, or TAIL_IDS"; fi
+for id in ${QUAD_IDS//,/ } ${VTOL_IDS//,/ } ${TAIL_IDS//,/ } $DRONE_ID; do (( id <= 10 )) || echo "WARNING: ID $id > 10 is not in the Zenoh peers and rosbag topics of aircraft.yml.erb" >&2; done
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 print_envvars
 
@@ -61,7 +64,7 @@ if [[ "$GROUND" == "true" ]]; then
     --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
     --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
     --env HEADLESS=false \
-    --env NUM_QUADS=$NUM_QUADS --env NUM_VTOLS=$NUM_VTOLS --env NUM_TAILS=$NUM_TAILS \
+    --env QUAD_IDS=$QUAD_IDS --env VTOL_IDS=$VTOL_IDS --env TAIL_IDS=$TAIL_IDS \
     --env SIMULATED_TIME=$HITL \
     --env ROS_DOMAIN_ID=$GROUND_ID \
     --env AIR_SUBNET=$AIR_SUBNET \
