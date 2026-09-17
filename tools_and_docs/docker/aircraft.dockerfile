@@ -131,7 +131,7 @@ RUN apt update \
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
 RUN python3 -m venv /yolo-env \
     && /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics==8.4.153 torch==2.14.0 onnx==1.22.0 onnxslim==0.1.96
+    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics==8.4.138 torch==2.14.0 onnx==1.22.0 onnxslim==0.1.96
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 # NOTE: the venv avoids shadowing the system Python's OpenCV (with GStreamer support) with a newer one without GStreamer support
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
@@ -404,9 +404,9 @@ RUN apt-get update && \
 WORKDIR /aas/yolo
 # Model options (from fastest to most accurate, <10MB to >100MB): yolo26n, yolo26s, yolo26m, yolo26l, yolo26x
 # Export standard 640 static as yolo26n_640.onnx and smaller 320 static as yolo26n_320.onnx
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640, nms=True)" && \
+RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640)" && \
     mv yolo26n.onnx yolo26n_640.onnx && \
-    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320, nms=True)" && \
+    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320)" && \
     mv yolo26n.onnx yolo26n_320.onnx && \
     /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolo26n.pt').names))" | grep '{' > coco.json && \
     rm yolo26n.pt
