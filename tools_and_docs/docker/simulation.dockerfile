@@ -68,7 +68,7 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" mavproxy
+    && pip3 install --no-cache-dir --resume-retries 5 "numpy<2" mavproxy==1.8.74
 ENV GZ_VERSION=harmonic
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -128,7 +128,7 @@ RUN apt update \
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink==2.4.49 pyserial==3.5 mavproxy==1.8.74 future==1.0.0
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install https://github.com/PX4/flight_review to inspect PX4 SITL logs
@@ -165,7 +165,7 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pyzmq
+    && pip3 install --no-cache-dir --resume-retries 5 pyzmq==27.2.0
 
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################

@@ -90,9 +90,11 @@ RUN mkdir build && cd build && \
 FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
 # MAVROS
-RUN apt-get update && \
+RUN echo "deb [trusted=yes] http://snapshots.ros.org/humble/2026-08-07/ubuntu jammy main" > /etc/apt/sources.list.d/ros2-snap.list && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     ros-humble-mavros ros-humble-mavros-extras ros-humble-mavros-msgs \
+    && rm /etc/apt/sources.list.d/ros2-snap.list \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 # Re-try install_geographiclib_datasets.sh if egm96-5.pgm was not downloaded (timeout is ~10x the time needed on a healthy link)
@@ -129,7 +131,7 @@ RUN apt update \
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
 RUN python3 -m venv /yolo-env \
     && /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics onnx
+    /yolo-env/bin/pip3 install --no-cache-dir --resume-retries 5 ultralytics==8.4.153 torch==2.14.0 onnx==1.22.0 onnxslim==0.1.96
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 # NOTE: the venv avoids shadowing the system Python's OpenCV (with GStreamer support) with a newer one without GStreamer support
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
@@ -142,7 +144,7 @@ RUN python3 -m venv /yolo-env \
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_amd64
 # Add ONNX Runtime with GPU (CUDA) support for system Python
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu
+    pip3 install --no-cache-dir --resume-retries 5 onnxruntime-gpu==1.23.2
 # Check with $ python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 
 ################################################################################
@@ -230,7 +232,7 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=humble -DCMAKE_BUILD_TYPE=Release"
 
 # Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
-RUN pip3 install --no-cache-dir --upgrade "cmake>=3.24"
+RUN pip3 install --no-cache-dir --upgrade "cmake==4.4.3"
 COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
@@ -302,10 +304,10 @@ RUN apt-get update && \
     && make -j$(nproc) \
     && make install
 RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 rerun-sdk
+    pip3 install --no-cache-dir --resume-retries 5 rerun-sdk==0.23.1
 # Add rviz_2d_overlay_plugins, based on https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins#rviz_2d_overlay_plugins
 RUN mkdir -p /aas/github_ws/src/rviz_2d_overlay_plugins && \
-    SHA=$(git ls-remote https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git refs/heads/main | cut -f1) && [ -n "$SHA" ] && \
+    SHA=fdf21b036354b97bccf6a0aa9f8bf5f1b6fa0201 && [ -n "$SHA" ] && \
     wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins/archive/${SHA}.tar.gz && \
     tar -xzf /tmp/repo_archive.tar.gz -C /aas/github_ws/src/rviz_2d_overlay_plugins --strip-components=1 && rm /tmp/repo_archive.tar.gz && \
     echo "rviz_2d_overlay_plugins main ${SHA} $(find /aas/github_ws/src/rviz_2d_overlay_plugins -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
@@ -334,7 +336,7 @@ WORKDIR /aas/mimosa_custom_gtsam_ws/src
 COPY /_github_clones/mimosa /aas/mimosa_custom_gtsam_ws/src/mimosa
 # Download config_utilities (branch: dev/mimosa), gtsam (commit c952ef9, see issue: https://github.com/ntnu-arl/mimosa/issues/19), and gtsam_points (branch: minimal_updated)
 RUN mkdir -p config_utilities \
-    && SHA=$(git ls-remote https://github.com/ntnu-arl/config_utilities.git refs/heads/dev/mimosa | cut -f1) && [ -n "$SHA" ] \
+    && SHA=06a7f1627ce6f7bf2ad2670e3ef5e43a0b6046f7 && [ -n "$SHA" ] \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/config_utilities/archive/${SHA}.tar.gz \
     && tar -xzf /tmp/repo_archive.tar.gz -C config_utilities --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "config_utilities dev/mimosa ${SHA} $(find config_utilities -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
@@ -342,7 +344,7 @@ RUN mkdir -p gtsam \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/gtsam/archive/c952ef9.tar.gz \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz
 RUN mkdir -p gtsam_points \
-    && SHA=$(git ls-remote https://github.com/ntnu-arl/gtsam_points.git refs/heads/minimal_updated | cut -f1) && [ -n "$SHA" ] \
+    && SHA=7164869d32e7a102ce55875a0e17ccc7c0aa0b5f && [ -n "$SHA" ] \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ntnu-arl/gtsam_points/archive/${SHA}.tar.gz \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam_points --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
@@ -369,7 +371,7 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir kindr \
-    && SHA=$(git ls-remote https://github.com/ethz-asl/kindr.git refs/heads/master | cut -f1) && [ -n "$SHA" ] \
+    && SHA=22a19ddd30ccfeba72bb2c35361e090bca7d16ec && [ -n "$SHA" ] \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ethz-asl/kindr/archive/${SHA}.tar.gz \
     && tar -xzf /tmp/repo_archive.tar.gz -C kindr --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
@@ -390,7 +392,7 @@ FROM advanced-odom-${BUILD_ADVANCED_ODOM} AS ros2-px4msgs-dds-mavros-yolo-ort-od
 
 # Add pymavlink and PlotJuggler for debugging, testing, and analysis
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink==2.4.49 pyserial==3.5
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ros-humble-plotjuggler \
@@ -402,9 +404,9 @@ RUN apt-get update && \
 WORKDIR /aas/yolo
 # Model options (from fastest to most accurate, <10MB to >100MB): yolo26n, yolo26s, yolo26m, yolo26l, yolo26x
 # Export standard 640 static as yolo26n_640.onnx and smaller 320 static as yolo26n_320.onnx
-RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640)" && \
+RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=640, nms=True)" && \
     mv yolo26n.onnx yolo26n_640.onnx && \
-    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320)" && \
+    /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').export(format='onnx', opset=12, imgsz=320, nms=True)" && \
     mv yolo26n.onnx yolo26n_320.onnx && \
     /yolo-env/bin/python3 -c "import json; from ultralytics import YOLO; print(json.dumps(YOLO('yolo26n.pt').names))" | grep '{' > coco.json && \
     rm yolo26n.pt

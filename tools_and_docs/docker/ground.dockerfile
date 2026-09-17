@@ -51,7 +51,7 @@ RUN apt update \
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
 RUN pip3 install --no-cache-dir --upgrade pip \
-    && pip3 install --no-cache-dir --resume-retries 5 pymavlink pyserial mavproxy future
+    && pip3 install --no-cache-dir --resume-retries 5 pymavlink==2.4.49 pyserial==3.5 mavproxy==1.8.74 future==1.0.0
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install mavlink-router
