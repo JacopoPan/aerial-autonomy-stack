@@ -162,7 +162,7 @@ RUN apt update && \
     apt install -y --no-install-recommends \
         build-essential software-properties-common libopenblas-dev \
         libpython3.10-dev python3-pip python3-dev python3-setuptools python3-wheel && \
-    pip3 install --no-cache-dir --upgrade "cmake>=3.28" && \
+    pip3 install --no-cache-dir --upgrade "cmake==4.4.3" && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
         --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
@@ -194,7 +194,7 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir --resume-retries 5 meson ninja \
+    pip3 install --no-cache-dir --resume-retries 5 meson==1.12.0 ninja==1.13.2 \
     && wget https://download.gnome.org/sources/glib/2.76/glib-2.76.6.tar.xz \
     && tar -xf glib-2.76.6.tar.xz \
     && cd glib-2.76.6 \
