@@ -171,6 +171,8 @@ RUN apt update && \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
+        'onnxruntime_USE_FLASH_ATTENTION=OFF' \
+        # 'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
     pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \

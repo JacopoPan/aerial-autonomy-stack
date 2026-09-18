@@ -513,7 +513,7 @@ aerial-autonomy-stack
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
-- [x] [ONNX Runtime 1.29.0](https://github.com/microsoft/onnxruntime/releases)
+- [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
 
 External repositories:
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
@@ -526,7 +526,7 @@ External repositories:
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
 - [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
-- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.29.0`
+- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.30.0`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>
