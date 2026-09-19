@@ -97,7 +97,6 @@ ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 30.0}'"
-# Press Enter to cancel the action or regain the terminal when it finishes
 
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
