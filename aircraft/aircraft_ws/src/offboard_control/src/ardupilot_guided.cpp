@@ -34,6 +34,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
         RCLCPP_INFO(this->get_logger(), "Simulation time is disabled.");
     }
     last_offboard_rate_check_time_ = this->get_clock()->now(); // Monitor the rate of offboard control loop
+    last_offboard_flag_time_ = this->get_clock()->now(); // Monitor the staleness of the offboard flag
     // Initialize the arrays
     position_.fill(NAN);
     q_.fill(NAN);
@@ -49,6 +50,9 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     if (camera_extrinsics_.size() != 6) { camera_extrinsics_.assign(6, 0.0); RCLCPP_ERROR(this->get_logger(), "camera_extrinsics needs 6 values, falling back to a level camera"); }
     RCLCPP_INFO(this->get_logger(), "Camera extrinsics: x %.2f y %.2f z %.2f - roll %.1f pitch %.1f yaw %.1f (deg)",
                 camera_extrinsics_[0], camera_extrinsics_[1], camera_extrinsics_[2], camera_extrinsics_[3], camera_extrinsics_[4], camera_extrinsics_[5]);
+
+    // Parameters - Offboard flag
+    OFFBOARD_FLAG_STALE_SEC = this->declare_parameter<double>("offboard_flag_stale_sec", 2.0); // Time (s) without an /offboard_flag message, published at 10Hz by ardupilot_interface, after which to stop publishing references
 
     // MAVROS Publishers
     rclcpp::QoS qos_profile_pub = rclcpp::SensorDataQoS(); // Match MAVROS setpoint subscribers (BEST_EFFORT + VOLATILE)
@@ -187,6 +191,7 @@ void ArdupilotGuided::offboard_flag_callback(const autopilot_interface_msgs::msg
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     offboard_active_ = msg->is_active;
+    last_offboard_flag_time_ = this->get_clock()->now(); // OffboardFlag carries no stamp, use the reception time
     if (offboard_active_) {
         if (active_controller_name_ != msg->controller_name) { // Only perform the map lookup if the requested controller has changed
             active_controller_name_ = msg->controller_name;
@@ -393,6 +398,11 @@ void ArdupilotGuided::offboard_loop_callback()
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
     if (!offboard_active_) {
         return; // Do not publish anything else if not in OFFBOARD state
+    }
+    // Note: On a mode change ardupilot_interface keeps publishing is_active false, this guard is for when it stops publishing at all
+    if ((this->get_clock()->now() - last_offboard_flag_time_).seconds() > OFFBOARD_FLAG_STALE_SEC) {
+        RCLCPP_WARN_THROTTLE(get_logger(), *this->get_clock(), 1000, "Topic /offboard_flag is stale, no reference will be published"); // Throttled to one warning per 1000 ms
+        return; // Do not keep commanding the vehicle if ardupilot_interface stopped publishing the flag
     }
     if (active_controller_func_ != nullptr) {
         active_controller_func_(); // If offboard is active AND we have a valid controller, run it
