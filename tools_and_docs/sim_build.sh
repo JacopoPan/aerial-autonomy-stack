@@ -10,7 +10,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
 CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
 CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
-BUILD_OPTS="${BUILD_OPTS:-}" # Extra options passed to every `docker build`, e.g. --add-host to point apt at a local mirror
+BUILD_OPTS="${BUILD_OPTS:-}" # Extra `docker build` options, e.g. BUILD_OPTS=--progress=plain (default = none)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
