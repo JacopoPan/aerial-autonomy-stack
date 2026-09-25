@@ -415,6 +415,12 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-dev-image
 
+# Build Auterion/px4-ros2-interface-lib and Go-to mode example
+COPY /_github_clones/px4-ros2-interface-lib/px4_ros2_cpp /aas/github_ws/src/px4_ros2_cpp
+COPY /_github_clones/px4-ros2-interface-lib/examples/cpp/modes/goto /aas/github_ws/src/example_mode_goto_cpp
+WORKDIR /aas/github_ws
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --packages-select px4_ros2_cpp example_mode_goto_cpp --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
+
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src

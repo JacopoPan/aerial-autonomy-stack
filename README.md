@@ -26,6 +26,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - Dual network to separate simulated sensors (`SIM_SUBNET`) and inter-vehicle comms (`AIR_SUBNET`)
 - [Zenoh](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds) inter-vehicle ROS2 bridge
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
+- [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes (e.g. `example_mode_goto`)
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
 </details>
@@ -102,6 +103,12 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: att-test, max_duration_sec: 10.0}'"
 # Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
+```
+
+AAS also includes [`px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib), from a PX4 `QUAD` terminal run:
+```sh
+ros2 run example_mode_goto_cpp example_mode_goto --ros-args -r __ns:=/Drone${DRONE_ID} -p use_sim_time:=true
+# Then, take-off using QGroundControl and switch to the mode "Go-to Example"
 ```
 
 ![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
@@ -517,6 +524,7 @@ aerial-autonomy-stack
 External repositories:
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
+- [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
 - [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
