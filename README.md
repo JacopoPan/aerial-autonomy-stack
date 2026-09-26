@@ -26,6 +26,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - Dual network to separate simulated sensors (`SIM_SUBNET`) and inter-vehicle comms (`AIR_SUBNET`)
 - [Zenoh](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds) inter-vehicle ROS2 bridge
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
+- [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
 </details>
@@ -73,10 +74,10 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 
 # Simulation options:
 #  AUTOPILOT=px4, ardupilot
-#  HEADLESS/CAMERA/LIDAR=true, false
+#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
-#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible")
+#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true sets RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
@@ -102,6 +103,12 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: att-test, max_duration_sec: 10.0}'"
 # Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
+```
+
+AAS also includes [`px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) support, run:
+```sh
+PX4_ROS2_LIB=true ./sim_run.sh
+# Then, take-off using QGroundControl and switch to one of the "AAS <controller>" modes implemented in px4_offboard.cpp
 ```
 
 ![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
@@ -230,7 +237,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#  HEADLESS/CAMERA/LIDAR/RECORD_ROSBAG=true, false
+#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG=true, false
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -517,6 +524,7 @@ aerial-autonomy-stack
 External repositories:
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
+- [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
 - [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`

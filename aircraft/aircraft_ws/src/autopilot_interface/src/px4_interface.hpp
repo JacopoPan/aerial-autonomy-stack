@@ -79,6 +79,8 @@ private:
     double MC_TAKEOFF_COMPLETED_RATIO, VTOL_TAKEOFF_TRANSITION_WAIT_SEC, VTOL_TAKEOFF_LOITER_RADIUS;
     // Parameters - Abort Action Handle (Landing, Offboard, Orbit, Takeoff)
     double ABORT_REPOSITION_ALT;
+    // Parameters - Whether to use PX4 ROS2 Interface Lib and custom modes
+    bool PX4_ROS2_LIB;
 
     std::shared_mutex node_data_mutex_;
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();

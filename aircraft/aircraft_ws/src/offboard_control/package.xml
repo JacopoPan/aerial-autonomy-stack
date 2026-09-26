@@ -21,6 +21,7 @@
   <depend>geometry_msgs</depend>
   <depend>autopilot_interface_msgs</depend>
   <depend>px4_msgs</depend>
+  <depend>px4_ros2_cpp</depend>
   <depend>mavros_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>sensor_msgs</depend>

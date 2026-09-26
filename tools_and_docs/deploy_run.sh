@@ -30,6 +30,7 @@ RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
+PX4_ROS2_LIB="${PX4_ROS2_LIB:-false}" # Options: true, false (default)
 
 # Only used by ground-container (i.e., if GROUND is true)
 GROUND="${GROUND:-false}" # Options: true, false (default)
@@ -46,7 +47,7 @@ check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
-for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER GROUND; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
 for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
 [[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"
 if [[ "$GROUND" == "true" && -z "$QUAD_IDS$VTOL_IDS$TAIL_IDS" ]]; then abort "GROUND=true requires at least one ID in QUAD_IDS, VTOL_IDS, or TAIL_IDS"; fi
@@ -114,7 +115,7 @@ docker run $DOCKER_RUN_FLAGS \
   --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
   --volume /tmp/argus_socket:/tmp/argus_socket --volume ~/tensorrt_cache/:/tensorrt_cache --device=/dev/ttyTHS1:/dev/ttyTHS1 \
   --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
-  --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR --env ODOM=$ODOM \
+  --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR --env ODOM=$ODOM --env PX4_ROS2_LIB=$PX4_ROS2_LIB \
   --env HITL=$HITL --env SIMULATED_TIME=$HITL \
   --env DRONE_TYPE=$DRONE_TYPE --env DRONE_ID=$DRONE_ID \
   --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \

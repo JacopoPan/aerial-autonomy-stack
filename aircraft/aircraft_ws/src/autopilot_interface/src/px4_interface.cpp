@@ -49,6 +49,8 @@ PX4Interface::PX4Interface() : Node("px4_interface"),
     VTOL_TAKEOFF_LOITER_RADIUS = this->declare_parameter<double>("vtol_takeoff_loiter_radius", 200.0); // Radius (m), for a VTOL, of the post-takeoff loiter
     // Parameters - Abort Action Handle (Landing, Offboard, Orbit, Takeoff)
     ABORT_REPOSITION_ALT = this->declare_parameter<double>("abort_reposition_alt", 100.0); // Altitude (m) of the hover/loiter triggered when aborting an action
+    // Parameters - Whether to use PX4 ROS2 Interface Lib and custom modes
+    PX4_ROS2_LIB = this->declare_parameter<bool>("px4_ros2_lib", false); // False to use PX4's standard Offboard mode, True to fly with PX4 ROS2 Interface Lib modes ("AAS <controller>")
 
     // PX4 publishers
     rclcpp::QoS qos_profile_pub(10);  // Depth of 10
@@ -617,8 +619,8 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
             }
             feedback->message = "Exiting offboard control at t=" + std::to_string(current_time_us) + "us, returning to loiter/hover (Hold) state";
             goal_handle->publish_feedback(feedback);
-        } else if ((current_time_us >= (time_of_offboard_start_us + 1ULL * 1000000)) && (current_time_us < (time_of_offboard_start_us + 2ULL * 1000000))) {
-            // Send change mode for 1 sec, 1sec after the beginning of the reference stream
+        } else if (!PX4_ROS2_LIB && ((current_time_us >= (time_of_offboard_start_us + 1ULL * 1000000)) && (current_time_us < (time_of_offboard_start_us + 2ULL * 1000000)))) {
+            // Send change mode to Offboard for 1 sec, 1sec after the beginning of the reference stream when PX4_ROS2_LIB=false (i.e., not using custom modes)
             do_set_mode(6, 0); // Offboard (PX4_CUSTOM_MAIN_MODE 6 no sub mode)
         }
     }

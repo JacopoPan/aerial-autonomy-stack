@@ -125,6 +125,19 @@ PX4Offboard::PX4Offboard() : Node("px4_offboard"),
     // Vision-based guidance
     controller_map_["traj-lm"] = [this](OffboardControlMode& mode) { traj_ref_lawnmower_search(mode, {{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
     controller_map_["traj-lmr"] = [this](OffboardControlMode& mode) { traj_ref_lawnmower_search(mode, {{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
+
+    // (optional) Register one custom mode per controller through PX4 ROS2 Interface Lib, e.g. "AAS traj-test", selectable in QGC
+    if (this->declare_parameter<bool>("px4_ros2_lib", false)) {
+        while (rclcpp::ok() && !px4_ros2::waitForFMU(*this, 15s)) { RCLCPP_WARN(this->get_logger(), "Waiting for PX4 to register the external modes"); }
+        for (const auto & entry : controller_map_) {
+            auto mode = std::make_unique<AASMode>(*this, "AAS " + entry.first);
+            if (!mode->doRegister()) { throw std::runtime_error("PX4 external mode registration failed (max. 8 external modes)"); }
+            mode->setSetpointUpdateRate(0.f); // Disable the library's default setpoint timer, offboard_loop_callback calls update() instead (must follow doRegister(), which sets the default rate)
+            RCLCPP_INFO(this->get_logger(), "Registered PX4 external mode 'AAS %s' with nav_state %d", entry.first.c_str(), mode->id());
+            px4_ros2_modes_[entry.first] = std::move(mode);
+        }
+        command_pub_ = this->create_publisher<VehicleCommand>("fmu/in/vehicle_command", qos_profile_pub);
+    }
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -197,6 +210,12 @@ void PX4Offboard::offboard_flag_callback(const autopilot_interface_msgs::msg::Of
                 active_controller_func_ = it->second; // Cache the controller function
             } else {
                 active_controller_func_ = nullptr; // Failsafe
+            }
+            auto mode_it = px4_ros2_modes_.find(active_controller_name_);
+            if (mode_it != px4_ros2_modes_.end()) { // When PX4_ROS2_LIB=true, switch PX4 to the requested controller's mode
+                VehicleCommand cmd;
+                cmd.command = VehicleCommand::VEHICLE_CMD_SET_NAV_STATE; cmd.param1 = mode_it->second->id();
+                command_pub_->publish(cmd);
             }
         }
     } else { // Clean up when offboard flag is inactive
@@ -390,6 +409,17 @@ void PX4Offboard::offboard_loop_callback()
 {
     offboard_loop_count_++; // Counter to monitor the rate of the offboard loop (no lock, atomic variable)
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
+    if (!px4_ros2_modes_.empty()) { // When PX4_ROS2_LIB=true, run the controller of the mode PX4 is in, if any (selected from QGC or by an Offboard action)
+        for (const auto & [name, mode] : px4_ros2_modes_) {
+            if (mode->active_) {
+                px4_ros2_mode_ = mode.get(); // publish_ref() writes to the mode's setpoint types
+                OffboardControlMode unused; // The setpoint type used in publish_ref() sets the control mode, no heartbeat needed
+                controller_map_.at(name)(unused);
+                break; // PX4 is in one mode at a time
+            }
+        }
+        return;
+    }
     if (!offboard_active_) {
         return; // Do not publish anything else if not in OFFBOARD state
     }
@@ -432,6 +462,22 @@ std::array<double, 3> PX4Offboard::camera_bearings_to_ned(double az_rad, double 
             by + (q_[0] * ty) + ((q_[3] * tx) - (q_[1] * tz)),  // East
             bz + (q_[0] * tz) + ((q_[1] * ty) - (q_[2] * tx))}; // Down
 }
+void PX4Offboard::publish_ref(const VehicleAttitudeSetpoint &ref)
+{
+    if (!px4_ros2_mode_) { attitude_ref_pub_->publish(ref); return; } // When PX4_ROS2_LIB=false, publish directly to PX4
+    px4_ros2_mode_->attitude_->update(Eigen::Quaternionf(ref.q_d[0], ref.q_d[1], ref.q_d[2], ref.q_d[3]), Eigen::Vector3f(ref.thrust_body.data()), ref.yaw_sp_move_rate);
+}
+void PX4Offboard::publish_ref(const VehicleRatesSetpoint &ref)
+{
+    if (!px4_ros2_mode_) { rates_ref_pub_->publish(ref); return; } // When PX4_ROS2_LIB=false, publish directly to PX4
+    px4_ros2_mode_->rates_->update(Eigen::Vector3f(ref.roll, ref.pitch, ref.yaw), Eigen::Vector3f(ref.thrust_body.data()));
+}
+void PX4Offboard::publish_ref(const TrajectorySetpoint &ref)
+{
+    if (!px4_ros2_mode_) { trajectory_ref_pub_->publish(ref); return; } // When PX4_ROS2_LIB=false, publish directly to PX4
+    px4_ros2_mode_->trajectory_->update(px4_ros2::TrajectorySetpoint{}.withPosition(Eigen::Vector3f(ref.position.data())).withVelocity(Eigen::Vector3f(ref.velocity.data()))
+        .withAcceleration(Eigen::Vector3f(ref.acceleration.data())).withYaw(ref.yaw).withYawRate(ref.yawspeed));
+}
 
 // Controllers (reference generators)
 void PX4Offboard::att_ref_test(OffboardControlMode& mode)
@@ -463,7 +509,7 @@ void PX4Offboard::att_ref_test(OffboardControlMode& mode)
         RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
         return;
     }
-    attitude_ref_pub_->publish(attitude_ref);
+    publish_ref(attitude_ref);
 }
 void PX4Offboard::ctbr_ref_test(OffboardControlMode& mode)
 {
@@ -483,7 +529,7 @@ void PX4Offboard::ctbr_ref_test(OffboardControlMode& mode)
         RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
         return;
     }
-    rates_ref_pub_->publish(rates_ref);
+    publish_ref(rates_ref);
 }
 void PX4Offboard::traj_ref_test(OffboardControlMode& mode)
 {
@@ -507,7 +553,7 @@ void PX4Offboard::traj_ref_test(OffboardControlMode& mode)
         RCLCPP_WARN(get_logger(), "Unknown vehicle_type_ %d", vehicle_type_);
         return;
     }
-    trajectory_ref_pub_->publish(trajectory_ref);
+    publish_ref(trajectory_ref);
 }
 void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
 {
@@ -553,7 +599,7 @@ void PX4Offboard::traj_ref_predictive_rendezvous(OffboardControlMode& mode)
         trajectory_ref.velocity = {0.0, 0.0, 0.0};
         trajectory_ref.yawspeed = 0.0;
     }
-    trajectory_ref_pub_->publish(trajectory_ref);
+    publish_ref(trajectory_ref);
 }
 void PX4Offboard::traj_ref_lawnmower_search(OffboardControlMode& mode, const Lawnmower &pattern)
 {
@@ -579,7 +625,7 @@ void PX4Offboard::traj_ref_lawnmower_search(OffboardControlMode& mode, const Law
     trajectory_ref.yaw = NAN;                      // Holds the current yaw unless a branch below writes one
     if (!xy_valid_ || !z_valid_) {
         RCLCPP_WARN(get_logger(), "No valid local position, holding still");
-        trajectory_ref_pub_->publish(trajectory_ref);
+        publish_ref(trajectory_ref);
         return;
     }
     if (detect_fix_count_ > 0 && (now - last_detect_time_).seconds() > FIX_STALE_S) { // Detection fix became stale
@@ -606,7 +652,7 @@ void PX4Offboard::traj_ref_lawnmower_search(OffboardControlMode& mode, const Law
         lawnmower_leg_++;
         if ((pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m)) > pattern.north_m[1]) { lawnmower_leg_ = 0; }
     }
-    trajectory_ref_pub_->publish(trajectory_ref);
+    publish_ref(trajectory_ref);
 }
 
 int main(int argc, char *argv[])

@@ -6,6 +6,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(px4_ros2_cpp REQUIRED)
 find_package(mavros_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -27,6 +28,7 @@ ament_target_dependencies(px4_offboard
                           rclcpp
                           rclcpp_action
                           px4_msgs
+                          px4_ros2_cpp
                           geometry_msgs
                           autopilot_interface_msgs
                           std_msgs

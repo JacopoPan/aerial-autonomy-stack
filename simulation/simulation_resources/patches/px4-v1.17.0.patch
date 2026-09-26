@@ -22,6 +22,17 @@ index 17ef44521b..052bb52708 100644
  # Onboard link to camera
  mavlink start -x -u $udp_onboard_payload_port_local -r 4000 -f -m onboard -o $udp_onboard_payload_port_remote
  
+diff --git a/msg/versioned/ArmingCheckReply.msg b/msg/versioned/ArmingCheckReply.msg
+index b39649641f..5849b8abf0 100644
+--- a/msg/versioned/ArmingCheckReply.msg
++++ b/msg/versioned/ArmingCheckReply.msg
+@@ -40,4 +40,5 @@ bool mode_req_home_position            # Requires a home position (such as RTL/R
+ bool mode_req_prevent_arming           # Prevent arming (such as in Land mode)
+ bool mode_req_manual_control           # Requires a manual controller
+ 
+-uint8 ORB_QUEUE_LENGTH  = 4
++# Must be >= MAX_NUM_REGISTRATIONS (8), see https://github.com/PX4/PX4-Autopilot/pull/27516
++uint8 ORB_QUEUE_LENGTH  = 8
 diff --git a/src/modules/navigator/navigator_main.cpp b/src/modules/navigator/navigator_main.cpp
 index 69ca9896d4..f599c00b08 100644
 --- a/src/modules/navigator/navigator_main.cpp

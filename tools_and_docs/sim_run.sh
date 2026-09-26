@@ -24,6 +24,7 @@ RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
+PX4_ROS2_LIB="${PX4_ROS2_LIB:-false}" # Options: true, false (default)
 RTF="${RTF:-1.0}" # Real-time factor (default = 1.0), set to <=0.0 for as fast as possible execution
 START_AS_PAUSED="${START_AS_PAUSED:-false}" # Options: true, false (default)
 INSTANCE="${INSTANCE:-0}" # Integer ID to make docker network/container names unique as well as offsetting the second byte of the subnets (default = 0)
@@ -49,11 +50,12 @@ source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
-for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER START_AS_PAUSED PLOT; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
+if [[ "$PX4_ROS2_LIB" == "true" && "$RTF" != "1.0" ]]; then echo "WARNING: PX4_ROS2_LIB=true sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
 print_envvars
 
 # Set unique subnets and container/network names based on INSTANCE
@@ -206,7 +208,7 @@ if [[ "$HITL" == "false" ]]; then
         --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
         --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
         --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
-        --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR --env ODOM=$ODOM \
+        --env AUTOPILOT=$AUTOPILOT --env HEADLESS=$HEADLESS --env CAMERA=$CAMERA --env LIDAR=$LIDAR --env ODOM=$ODOM --env PX4_ROS2_LIB=$PX4_ROS2_LIB \
         --env DRONE_TYPE=$drone_type --env DRONE_ID=$DRONE_ID \
         --env SIMULATED_TIME=true \
         --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \

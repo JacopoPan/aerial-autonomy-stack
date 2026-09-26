@@ -5,11 +5,11 @@
 #####
 publications:
 
-  # - topic: /fmu/out/register_ext_component_reply
-  #   type: px4_msgs::msg::RegisterExtComponentReply
+  - topic: /fmu/out/register_ext_component_reply
+    type: px4_msgs::msg::RegisterExtComponentReply
 
-  # - topic: /fmu/out/arming_check_request
-  #   type: px4_msgs::msg::ArmingCheckRequest
+  - topic: /fmu/out/arming_check_request
+    type: px4_msgs::msg::ArmingCheckRequest
 
   # - topic: /fmu/out/mode_completed
   #   type: px4_msgs::msg::ModeCompleted
@@ -29,8 +29,8 @@ publications:
   # - topic: /fmu/out/manual_control_setpoint
   #   type: px4_msgs::msg::ManualControlSetpoint
 
-  # - topic: /fmu/out/message_format_response
-  #   type: px4_msgs::msg::MessageFormatResponse
+  - topic: /fmu/out/message_format_response
+    type: px4_msgs::msg::MessageFormatResponse
 
   # - topic: /fmu/out/position_setpoint_triplet
   #   type: px4_msgs::msg::PositionSetpointTriplet
@@ -82,26 +82,26 @@ publications:
 
 # Create uORB::Publication
 subscriptions:
-  # - topic: /fmu/in/register_ext_component_request
-  #   type: px4_msgs::msg::RegisterExtComponentRequest
+  - topic: /fmu/in/register_ext_component_request
+    type: px4_msgs::msg::RegisterExtComponentRequest
 
-  # - topic: /fmu/in/unregister_ext_component
-  #   type: px4_msgs::msg::UnregisterExtComponent
+  - topic: /fmu/in/unregister_ext_component
+    type: px4_msgs::msg::UnregisterExtComponent
 
   # - topic: /fmu/in/config_overrides_request
   #   type: px4_msgs::msg::ConfigOverrides
 
-  # - topic: /fmu/in/arming_check_reply
-  #   type: px4_msgs::msg::ArmingCheckReply
+  - topic: /fmu/in/arming_check_reply
+    type: px4_msgs::msg::ArmingCheckReply
 
-  # - topic: /fmu/in/message_format_request
-  #   type: px4_msgs::msg::MessageFormatRequest
+  - topic: /fmu/in/message_format_request
+    type: px4_msgs::msg::MessageFormatRequest
 
   # - topic: /fmu/in/mode_completed
   #   type: px4_msgs::msg::ModeCompleted
 
-  # - topic: /fmu/in/config_control_setpoints
-  #   type: px4_msgs::msg::VehicleControlMode
+  - topic: /fmu/in/config_control_setpoints
+    type: px4_msgs::msg::VehicleControlMode
 
   # - topic: /fmu/in/distance_sensor
   #   type: px4_msgs::msg::DistanceSensor
@@ -121,8 +121,8 @@ subscriptions:
   # - topic: /fmu/in/sensor_optical_flow
   #   type: px4_msgs::msg::SensorOpticalFlow
 
-  # - topic: /fmu/in/goto_setpoint
-  #   type: px4_msgs::msg::GotoSetpoint
+  - topic: /fmu/in/goto_setpoint
+    type: px4_msgs::msg::GotoSetpoint
 
   # - topic: /fmu/in/telemetry_status
   #   type: px4_msgs::msg::TelemetryStatus
