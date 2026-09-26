@@ -44,9 +44,30 @@
 #include "ground_system_msgs/msg/swarm_obs.hpp"
 #include "vision_msgs/msg/detection2_d_array.hpp"
 
+// (optional) PX4 ROS2 Interface Lib support
+#include <px4_msgs/msg/vehicle_command.hpp>
+#include <px4_ros2/components/mode.hpp>
+#include <px4_ros2/components/wait_for_fmu.hpp>
+#include <px4_ros2/control/setpoint_types/experimental/attitude.hpp>
+#include <px4_ros2/control/setpoint_types/experimental/rates.hpp>
+#include <px4_ros2/control/setpoint_types/experimental/trajectory.hpp>
+
 using namespace px4_msgs::msg;
 using namespace GeographicLib;
 using namespace std::chrono_literals; // For time literals (e.g. 1s)
+
+// (optional) Custom modes (one per controller) through PX4 ROS2 Interface Lib
+class AASMode : public px4_ros2::ModeBase
+{
+public:
+    AASMode(rclcpp::Node & node, const std::string & name) : ModeBase(node, Settings{name}.preventArming(true)) {}
+    void onActivate() override { active_ = true; }
+    void onDeactivate() override { active_ = false; }
+    std::atomic<bool> active_{false};
+    std::shared_ptr<px4_ros2::TrajectorySetpointType> trajectory_ = std::make_shared<px4_ros2::TrajectorySetpointType>(*this);
+    std::shared_ptr<px4_ros2::AttitudeSetpointType> attitude_ = std::make_shared<px4_ros2::AttitudeSetpointType>(*this);
+    std::shared_ptr<px4_ros2::RatesSetpointType> rates_ = std::make_shared<px4_ros2::RatesSetpointType>(*this);
+};
 
 class PX4Offboard : public rclcpp::Node
 {
@@ -170,6 +191,14 @@ private:
 
     // Controller variables
     int lawnmower_leg_;
+
+    // (optional) PX4 ROS2 Interface Lib support
+    std::unordered_map<std::string, std::unique_ptr<AASMode>> px4_ros2_modes_; // One external mode per controller, keyed by controller name
+    AASMode * px4_ros2_mode_ = nullptr; // Mode whose controller is running, publish_ref() writes to its setpoint types
+    rclcpp::Publisher<VehicleCommand>::SharedPtr command_pub_;
+    void publish_ref(const VehicleAttitudeSetpoint &ref);
+    void publish_ref(const VehicleRatesSetpoint &ref);
+    void publish_ref(const TrajectorySetpoint &ref);
 };
 
 #endif // OFFBOARD_CONTROL__PX4_OFFBOARD_HPP_

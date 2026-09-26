@@ -22,6 +22,7 @@
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
 
   gymnasium = ENV.fetch('GYMNASIUM', 'false') == 'true'
+  px4_ros2_lib = ENV.fetch('PX4_ROS2_LIB', 'false') == 'true'
 
   # Load sensor information from the sensor_config.yaml file
   require 'yaml'
@@ -46,7 +47,7 @@ windows:
       panes:
         - clear && echo "So nice to have you with us, this is the aircraft <%= drone_id %> container.<%= simulated_time ? '' : ' Once done, stop it with tmux kill-server.' %>"
         <% if autopilot == 'px4' %>
-        - ros2 run autopilot_interface px4_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        - ros2 run autopilot_interface px4_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% end %>
@@ -55,7 +56,7 @@ windows:
       layout: even-horizontal
       panes:
         <% if autopilot == 'px4' %>
-        - ros2 run offboard_control px4_offboard --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
+        - ros2 run offboard_control px4_offboard --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]" <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
         <% end %>
