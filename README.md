@@ -603,13 +603,6 @@ Ctrl + b, then d                      # Detach Tmux
 
 ## Future Work
 
-### Support for Gazebo Sim and Betaflight SITL
-
-- https://www.betaflight.com/docs/development/SITL
-- https://github.com/betaflight/betaloop
-- https://github.com/betaflight/aeroloop_gazebo
-- https://github.com/utiasDSL/gym-pybullet-drones/blob/a8c238c21c7586ee1735bafb358a4d5637402f14/gym_pybullet_drones/envs/BetaAviary.py#L111C1-L172C56
-
 ### Potential for technical spikes/long-term, nice-to-have features
 
 - Develop a "radar" sensor model for Gazebo sim starting from the GpuLidarSensor model
