@@ -90,6 +90,10 @@ RUN mkdir build && cd build && \
 FROM ros2-px4msgs-dds-image AS ros2-px4msgs-dds-mavros-image
 
 # MAVROS
+# Snapshot pin because of https://github.com/mavlink/mavros/issues/2293
+# Remove it when the command below lists ros-humble-mavros_2.16.0 and ros-humble-mavros-extras_2.16.0 (or newer) for both amd64 and arm64
+# for a in amd64 arm64; do curl -s http://packages.ros.org/ros2/ubuntu/dists/jammy/main/binary-$a/Packages.gz | zcat | grep -o 'ros-humble-mavros[^/]*\.deb' | grep -v dbgsym; done
+# To remove the pin: delete the two lines adding and removing "ros2-snap.list" and start RUN from "apt-get update && \"
 RUN echo "deb [trusted=yes] http://snapshots.ros.org/humble/2026-08-07/ubuntu jammy main" > /etc/apt/sources.list.d/ros2-snap.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
