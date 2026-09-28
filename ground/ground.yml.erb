@@ -65,7 +65,9 @@ windows:
         <% if headless %>
         - echo "Headless mode, not launching QGroundControl."
         <% else %>
+        # QGC offline tiles: export from QGC 5.1 Application Settings -> Maps -> Offline Maps and save them on the host as ~/Downloads/qgcMapCache.qgctiledb
         - >
+          [ -f /aas/mounted_downloads_folder/qgcMapCache.qgctiledb ] && gosu qgcuser mkdir -p /home/qgcuser/.cache/QGroundControl/QGroundControl/QGCMapCache && gosu qgcuser cp /aas/mounted_downloads_folder/qgcMapCache.qgctiledb /home/qgcuser/.cache/QGroundControl/QGroundControl/QGCMapCache/qgcMapCache.db;
           sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= simulated_time && (num_drones == 1) %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           sed -i 's/^virtualJoystickAutoCenterThrottle=.*/virtualJoystickAutoCenterThrottle=<%= num_quads == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           gosu qgcuser /squashfs-root/AppRun &
