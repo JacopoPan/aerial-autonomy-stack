@@ -399,6 +399,11 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Build Auterion/px4-ros2-interface-lib
+COPY /_github_clones/px4-ros2-interface-lib/px4_ros2_cpp /aas/github_ws/src/px4_ros2_cpp
+WORKDIR /aas/github_ws
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --packages-select px4_ros2_cpp --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
+
 # Save the YOLO model weights (ONNX, Opset 12) and class names
 WORKDIR /aas/yolo
 # Model options (from fastest to most accurate, <10MB to >100MB): yolo26n, yolo26s, yolo26m, yolo26l, yolo26x
@@ -413,20 +418,25 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
+FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-manifests
+
+# Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
+COPY ground/ground_ws/src/ground_system_msgs /src/ground_system_msgs
+COPY aircraft/aircraft_ws/src /src
+RUN find /src -type f ! -name package.xml -delete
+
 FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-dev-image
 
-# Build Auterion/px4-ros2-interface-lib
-COPY /_github_clones/px4-ros2-interface-lib/px4_ros2_cpp /aas/github_ws/src/px4_ros2_cpp
-WORKDIR /aas/github_ws
-RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --packages-select px4_ros2_cpp --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
+# Install the ROS 2 workspace dependencies (NOTE: also includes ground_system_msgs from the ground_ws)
+COPY --from=aircraft-manifests /src /aas/aircraft_ws/src
+WORKDIR /aas/aircraft_ws
+RUN rosdep update
+RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "px4_msgs px4_ros2_cpp" && apt clean && rm -rf /var/lib/apt/lists/*
 
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
 COPY tools_and_docs/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
-WORKDIR /aas/aircraft_ws
-RUN rosdep update
-RUN apt update && apt install -y python3-simpleeval && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "px4_msgs px4_ros2_cpp" && apt clean && rm -rf /var/lib/apt/lists/*
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 

@@ -168,13 +168,22 @@ RUN pip3 install --no-cache-dir --retries 5 pyzmq
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-manifests
+
+# Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
+COPY simulation/simulation_ws/src /src
+RUN find /src -type f ! -name package.xml -delete
+
 FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
 
-# Build the ROS 2 workspace
-COPY simulation/simulation_ws/src /aas/simulation_ws/src
+# Install the ROS 2 workspace dependencies
+COPY --from=simulation-manifests /src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
 RUN rosdep update
 RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
+
+# Build the ROS 2 workspace
+COPY simulation/simulation_ws/src /aas/simulation_ws/src
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
