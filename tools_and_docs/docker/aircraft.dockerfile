@@ -415,7 +415,7 @@ RUN /yolo-env/bin/python3 -c "from ultralytics import YOLO; YOLO('yolo26n.pt').e
 ################################################################################
 FROM ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image AS aircraft-dev-image
 
-# Build Auterion/px4-ros2-interface-lib and Go-to mode example
+# Build Auterion/px4-ros2-interface-lib
 COPY /_github_clones/px4-ros2-interface-lib/px4_ros2_cpp /aas/github_ws/src/px4_ros2_cpp
 WORKDIR /aas/github_ws
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --packages-select px4_ros2_cpp --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
