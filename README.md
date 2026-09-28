@@ -111,6 +111,12 @@ PX4_ROS2_LIB=true ./sim_run.sh
 # Then, take-off using QGroundControl and switch to one of the "AAS <controller>" modes implemented in px4_offboard.cpp
 ```
 
+Standalone custom modes are also supported, from a PX4 `QUAD` terminal run:
+```sh
+ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/Drone${DRONE_ID} -p use_sim_time:=true -p setpoint_type:=goto # Use setpoint_type:=trajectory, attitude, or rates to fly the same mode with a different PX4 control loop
+# Then, take-off using QGroundControl and switch to mode "AAS Template" (implemented in aircraft/aircraft_ws/src/px4_custom_mode_template/)
+```
+
 ![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
 
 ![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)

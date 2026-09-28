@@ -97,8 +97,8 @@ subscriptions:
   - topic: /fmu/in/message_format_request
     type: px4_msgs::msg::MessageFormatRequest
 
-  # - topic: /fmu/in/mode_completed
-  #   type: px4_msgs::msg::ModeCompleted
+  - topic: /fmu/in/mode_completed
+    type: px4_msgs::msg::ModeCompleted
 
   - topic: /fmu/in/config_control_setpoints
     type: px4_msgs::msg::VehicleControlMode
