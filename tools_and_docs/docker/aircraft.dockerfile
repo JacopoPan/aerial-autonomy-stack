@@ -291,7 +291,7 @@ RUN mkdir gtsam \
     && tar -xzf /tmp/repo_archive.tar.gz -C gtsam --strip-components=1 && rm /tmp/repo_archive.tar.gz \
     && cd gtsam \
     && mkdir build && cd build \
-    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF .. \
+    && cmake -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF .. \
     && make -j$(nproc) \
     && make install
 # f68321e tag is release 2.1.0 https://github.com/ceres-solver/ceres-solver/releases/tag/2.1.0
@@ -329,7 +329,7 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 COPY /_github_clones/KISS-Matcher /aas/github_ws/src/KISS-Matcher
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF"
 
 # Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup
 RUN apt-get update && \
@@ -362,7 +362,7 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
     -DCMAKE_CXX_FLAGS=-Wno-error=overloaded-virtual"
 # Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
 RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release"
+    colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release -DCONFIG_UTILS_BUILD_TESTS=OFF -DCONFIG_UTILS_BUILD_DEMOS=OFF"
 
 # Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
 RUN apt-get update && \
@@ -383,7 +383,7 @@ COPY /_github_clones/rovio /aas/github_ws/src/rovio
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF"
+    colcon build --packages-up-to rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF -DBUILD_TESTING=OFF"
 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################

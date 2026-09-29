@@ -153,7 +153,7 @@ RUN sed -i 's|>materials/|>models://waves/materials/|g' /aas/github_ws/src/asv_w
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install \
-    --merge-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON -DCMAKE_CXX_STANDARD=17"
+    --merge-install --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=OFF -DCMAKE_CXX_STANDARD=17"
 # Build the GUI plugin
 WORKDIR /aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control
 RUN mkdir build && cd build && cmake .. && make
