@@ -222,8 +222,6 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > Read [`SETUP_CHRONY.md`](/tools_and_docs/docs/SETUP_CHRONY.md) to let the Jetson timesync to the `ground-image` computer when w/o internet
 
 ```sh
-sudo apt update && sudo apt install -y git
-
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
