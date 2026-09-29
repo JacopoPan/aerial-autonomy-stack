@@ -136,7 +136,7 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
                     // In single-port/single-thread mode (drone_id == -1), detect ID from the message
                     int current_id = drone_id;
                     if (current_id == -1) {
-                        current_id = msg.sysid;
+                        current_id = static_cast<int>(msg.sysid);
                         if (std::find(drone_ids_.begin(), drone_ids_.end(), current_id) == drone_ids_.end()) {
                             continue; // Ignore IDs not in drone_ids
                         }

@@ -34,6 +34,7 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   # Aircraft image
   "https://github.com/microsoft/onnxruntime.git;v1.30.0;onnxruntime" # Only for the deployment build
   "https://github.com/PX4/px4_msgs.git;release/1.17;px4_msgs"
+  "https://github.com/Auterion/px4-ros2-interface-lib.git;release/1.17;px4-ros2-interface-lib"
   "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git;master;Micro-XRCE-DDS-Agent"
   "https://github.com/Livox-SDK/Livox-SDK2.git;master;Livox-SDK2"
   "https://github.com/Livox-SDK/livox_ros_driver2.git;master;livox_ros_driver2"
@@ -78,5 +79,7 @@ done
 if [ "$CLONE_ONLY" = "true" ]; then
   echo -e "Skipping Docker build"
 else
+  # Keep the base image local, so cached builds also work offline
+  docker image inspect nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 >/dev/null 2>&1 || docker pull nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04
   docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 fi

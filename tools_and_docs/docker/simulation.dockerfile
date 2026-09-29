@@ -68,7 +68,7 @@ RUN apt update \
         libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --retries 5 "numpy<2" mavproxy
+RUN pip3 install --no-cache-dir --retries 5 "numpy<2" mavproxy==1.8.74
 ENV GZ_VERSION=harmonic
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -127,7 +127,7 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 # Add pymavlink and mavproxy to quickly inspect MAVLink streams
-RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial mavproxy future
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial future mavproxy==1.8.74
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install https://github.com/PX4/flight_review to inspect PX4 SITL logs
@@ -168,13 +168,22 @@ RUN pip3 install --no-cache-dir --retries 5 pyzmq
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-manifests
+
+# Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
+COPY simulation/simulation_ws/src /src
+RUN find /src -type f ! -name package.xml -delete
+
 FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
 
-# Build the ROS 2 workspace
-COPY simulation/simulation_ws/src /aas/simulation_ws/src
+# Install the ROS 2 workspace dependencies
+COPY --from=simulation-manifests /src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
 RUN rosdep update
 RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
+
+# Build the ROS 2 workspace
+COPY simulation/simulation_ws/src /aas/simulation_ws/src
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
