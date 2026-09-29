@@ -80,6 +80,6 @@ if [ "$CLONE_ONLY" = "true" ]; then
   echo -e "Skipping Docker build"
 else
   # Keep the base image local, so cached builds also work offline
-  for img in nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04; do docker image inspect "$img" >/dev/null 2>&1 || docker pull "$img"; done
+  docker image inspect nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 >/dev/null 2>&1 || docker pull nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04
   docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 fi
