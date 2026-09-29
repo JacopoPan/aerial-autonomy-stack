@@ -119,12 +119,12 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
     // Custom controllers
-    controller_map_["vel-sk"] = std::bind(&ArdupilotGuided::vel_ref_stalk, this);
+    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 15.0, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
-    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {40.0, 45.0}, 8.0}); }; // ENU {min, max}, speed ceiling
-    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {40.0, 50.0}, 10.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {55.0, 60.0}, 8.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {55.0, 65.0}, 13.0}); }; // ENU {min, max}, speed ceiling
     // Vision-based guidance
     controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
     controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
@@ -491,15 +491,12 @@ void ArdupilotGuided::acc_ref_test()
     accel_msg.vector.z = 0.0; // m/s^2 Up
     setpoint_accel_pub_->publish(accel_msg);
 }
-void ArdupilotGuided::vel_ref_stalk()
+void ArdupilotGuided::vel_ref_stalk(const Stalk &stalk)
 {
     // Tunable parameters
-    constexpr double STANDOFF_M = 10.0;   // m, desired horizontal distance to the target
-    constexpr double ALT_OFFSET_M = 10.0; // m, fly this much above the target
+    constexpr double MIN_ALT_M = 15.0;    // m, never descend below this above the local origin
     constexpr double DEADBAND_M = 2.0;    // m, ignore range errors below this (absorbs link delay/jitter)
     constexpr double KP_RANGE = 0.3;      // 1/s, range error to correction speed gain
-    constexpr double MAX_CORR = 3.0;      // m/s, maximum correction speed (catch-up speed = target speed + correction)
-    constexpr double V_MAX = 12.0;        // m/s, horizontal speed limit
     constexpr double KP_ALT = 0.4;        // 1/s, altitude error to climb rate gain
     constexpr double MAX_VZ = 1.5;        // m/s, climb/descent limit
     constexpr double KP_YAW = 0.8;        // 1/s, heading error to yaw rate gain
@@ -517,23 +514,25 @@ void ArdupilotGuided::vel_ref_stalk()
         double u_E = std::sin(desired_bearing_rad_);
         double u_N = std::cos(desired_bearing_rad_);
         // Horizontal range error with continuous deadband (>0: too far, <0: too close, back away)
-        double range_error = closing_distance_ - STANDOFF_M;
+        double range_error = closing_distance_ - stalk.standoff_m;
         range_error = (std::abs(range_error) < DEADBAND_M) ? 0.0 : range_error - std::copysign(DEADBAND_M, range_error);
         // Target velocity feedforward (tracks arbitrary speed) + bounded range correction along the LOS
-        double v_corr = std::clamp(KP_RANGE * range_error, -MAX_CORR, MAX_CORR);
+        double v_corr = std::clamp(KP_RANGE * range_error, -stalk.max_corr_ms, stalk.max_corr_ms);
         double v_E = target_ve_ + (v_corr * u_E);
         double v_N = target_vn_ + (v_corr * u_N);
         double v_norm = std::hypot(v_E, v_N);
-        if (v_norm > V_MAX) { // Limit speed as a safety measure
-            v_E *= V_MAX / v_norm;
-            v_N *= V_MAX / v_norm;
+        if (v_norm > stalk.v_max_ms) { // Limit speed as a safety measure
+            v_E *= stalk.v_max_ms / v_norm;
+            v_N *= stalk.v_max_ms / v_norm;
         }
         vel_msg.twist.linear.x = v_E; // m/s East
         vel_msg.twist.linear.y = v_N; // m/s North
 
-        // Decoupled altitude hold ALT_OFFSET_M above the target
+        // Decoupled altitude hold at stalk.alt_offset_m from the target (negative is below)
         double dz_m = closing_distance_ * std::tan(desired_elevation_rad_);
-        vel_msg.twist.linear.z = std::clamp(-target_vd_ + KP_ALT * (dz_m + ALT_OFFSET_M), -MAX_VZ, MAX_VZ); // m/s Up
+        double vz_ms = -target_vd_ + KP_ALT * (dz_m + stalk.alt_offset_m);
+        if (!(position_[2] > MIN_ALT_M)) { vz_ms = std::max(vz_ms, 0.0); } // Block any descent at MIN_ALT_M (negated so a NAN also blocks descent)
+        vel_msg.twist.linear.z = std::clamp(vz_ms, -MAX_VZ, MAX_VZ); // m/s Up
 
         // Yaw rate to point at the target
         double heading_error = normalize_heading(((M_PI / 2.0) - desired_bearing_rad_) - ((M_PI / 2.0) - (heading_ * M_PI / 180.0)));
@@ -685,8 +684,8 @@ void ArdupilotGuided::acc_ref_proportional_navigation()
 }
 void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
 {
-    constexpr double SPEED_RATIO = 1.6;   // Speed ceiling ratio, as a multiple of what the tightest turn allows
-    constexpr double A_LAT_MAX_MS2 = 1.75; // m/s^2, lateral acceleration limit
+    constexpr double SPEED_RATIO = 2.0;   // Speed ceiling ratio, as a multiple of what the tightest turn allows
+    constexpr double A_LAT_MAX_MS2 = 2.50; // m/s^2, lateral acceleration limit
     constexpr double MAX_VZ_MS = 2.0;     // m/s, climb/descent limit
     constexpr double LOOKAHEAD_S = 0.6;   // s, lookahead in seconds (at the current speed)
     constexpr double SCAN_RAD = 0.5;      // rad, forward-only search window
