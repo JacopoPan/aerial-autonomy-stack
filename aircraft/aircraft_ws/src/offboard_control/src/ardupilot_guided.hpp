@@ -158,7 +158,14 @@ private:
     void att_ref_test();
     void vel_ref_test();
     void acc_ref_test();
-    void vel_ref_stalk();
+    struct Stalk
+    {
+        double standoff_m; // Horizontal distance held from the target
+        double alt_offset_m; // Signed vertical offset
+        double v_max_ms; // Horizontal speed limit
+        double max_corr_ms; // Range correction budget
+    };
+    void vel_ref_stalk(const Stalk &stalk);
     void vel_ref_lead_pursuit();
     void acc_ref_proportional_navigation();
     struct Lemniscate
