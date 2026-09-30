@@ -12,17 +12,18 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
 CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
 CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
+PREBUILT_DEPS="${PREBUILT_DEPS:-false}" # Options: true, false (default), use the pre-built stages on ghcr.io for everything (including the steps added by BUILD_ADVANCED_ODOM=true) except aircraft-manifests/aircraft-dev-image
 BUILD_OPTS="${BUILD_OPTS:-}" # Extra `docker build` options, e.g. BUILD_OPTS=--progress=plain (default = none)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
-for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY; do check_enum "$v" true false; done
+for v in BUILD_ADVANCED_ODOM CLEAN_BUILD CLONE_ONLY PREBUILT_DEPS; do check_enum "$v" true false; done
 print_envvars
 
 if [ "$CLEAN_BUILD" = "true" ]; then
   rm -rf "${SCRIPT_DIR}/../_github_clones"
   BUILD_OPTS="$BUILD_OPTS --no-cache" # If CLEAN_BUILD is "true", rebuild everything from scratch
-  docker rmi aircraft-image:latest || true
+  docker rmi aircraft-image:latest transitional-deps-image:latest ghcr.io/jacopopan/aircraft-image:deps-arm64 || true
   docker builder prune -f # Remove all dangling build cache to free up space
 fi
 
@@ -46,6 +47,9 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/ntnu-arl/mimosa.git;dev/ros2;mimosa"
   "https://github.com/JacopoPan/rovio_ros2.git;main;rovio"
 )
+if [ "$PREBUILT_DEPS" = "true" ] && [ "$CLONE_ONLY" = "false" ]; then
+  REPOS=() # Building with the pre-built stages on ghcr.io does not need the clones
+fi
 
 for repo_info in "${REPOS[@]}"; do
   IFS=';' read -r url branch dir <<< "$repo_info" # Split the string into URL, BRANCH, and DIR
@@ -79,7 +83,12 @@ done
 if [ "$CLONE_ONLY" = "true" ]; then
   echo -e "Skipping Docker build"
 else
-  # Keep the base image local, so cached builds also work offline
-  docker image inspect nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 >/dev/null 2>&1 || docker pull nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04
+  if [ "$PREBUILT_DEPS" = "true" ]; then # Pull and tag with a local name all stages up to and including ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image from ghcr.io
+    docker image inspect transitional-deps-image >/dev/null 2>&1 || { docker pull ghcr.io/jacopopan/aircraft-image:deps-arm64 && docker tag ghcr.io/jacopopan/aircraft-image:deps-arm64 transitional-deps-image; }
+    BUILD_OPTS="$BUILD_OPTS --build-context ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image=docker-image://transitional-deps-image"
+  else
+    # Keep the base image local, so cached builds also work offline
+    docker image inspect nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04 >/dev/null 2>&1 || docker pull nvcr.io/nvidia/cuda:13.3.1-tensorrt-devel-ubuntu24.04
+  fi
   docker build $BUILD_OPTS --build-arg BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM}" -t aircraft-image -f "${SCRIPT_DIR}/docker/aircraft.dockerfile" "${SCRIPT_DIR}/.."
 fi

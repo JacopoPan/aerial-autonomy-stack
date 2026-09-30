@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 180
+    timeout-minutes: 240
     permissions:
       contents: read
       packages: write
@@ -49,6 +49,12 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --oci-worker-gc=false
 
       - name: Build the aircraft image
         run: docker buildx build --build-arg BUILD_ADVANCED_ODOM=true -t aircraft-image -f ./tools_and_docs/docker/aircraft.dockerfile .
+
+      - name: Push all combined stages before "aircraft-manifests"/"aircraft-dev-image" to use "PREBUILT_DEPS=true ./deploy_build.sh"
+        if: github.ref == 'refs/heads/main'
+        run: docker buildx build --push --build-arg BUILD_ADVANCED_ODOM=true --target ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image -t ghcr.io/jacopopan/aircraft-image:deps-arm64 -f ./tools_and_docs/docker/aircraft.dockerfile .
