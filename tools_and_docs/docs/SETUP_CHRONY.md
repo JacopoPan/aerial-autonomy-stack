@@ -29,7 +29,7 @@ sudo systemctl restart chrony
 
 Install `chrony`  (on the host operating system):
 ```sh
-sudo apt update && sudo apt install chrony -y
+sudo apt update && sudo apt install chrony gedit -y
 sudo gedit /etc/chrony/chrony.conf
 ```
 
@@ -54,7 +54,7 @@ On Jetson, check with:
 ```sh
 timedatectl # Check the system clock, the hardware clock (RTC), the time zone, and whether NTP synchronization is active
 chronyc tracking | grep -E "Reference ID|Stratum|System time" # Check what it is synced to and how far off it is
-chronyc -n sources # List every candidate source (^* synced, ^+ candidate, ^- excluded, ^? unreachable, note it might take some time for the Jetson to switch sourc)e
+chronyc -n sources # List every candidate source (^* synced, ^+ candidate, ^- excluded, ^? unreachable, note it might take some time for the Jetson to switch source)
 ```
 
 On the Ground Station Computer, check with:

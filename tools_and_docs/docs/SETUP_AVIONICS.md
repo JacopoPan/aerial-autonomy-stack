@@ -42,7 +42,7 @@ swapon --show                      # Now 16G (/etc/fstab enables /swapfile at bo
 ```
 - Under "Settings" -> "System" -> "Users", unlock and enable "Automatic Login"
 - If connected to the internet, e.g. with a USB Ethernet adapter, Firefox can be installed from the "Software" application
-- Prioritize SSD over Network Boot
+- To prioritize SSD over Network Boot: press ESC at boot, then "Boot Manager" and select the SSD entry, finally:
 ```sh
 sudo efibootmgr -v                  # Check what Boot000x entry is the SSD, e.g. 0001
 sudo efibootmgr -o 0001,000B, etc.  # Copy line BootOrder from the previous command, moving the desired entry to the front
@@ -129,7 +129,7 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dear
     sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 sudo apt-get update
-export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.0-1
+export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.1-1
 sudo apt-get install -y \
       nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
       nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
@@ -146,14 +146,13 @@ docker run --rm --runtime=nvidia -e NVIDIA_DISABLE_REQUIRE=true nvcr.io/nvidia/c
 
 ## Setup `AIR_SUBNET` and `SIM_SUBNET`
 
-Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board)
+Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board); under "Identity", specify the MAC Address of each adapter
 
 ```sh
 SIM_SUBNET                          # For hardware-in-the-loop simulation only
   address  [SIM_SUBNET].90.DRONE_ID # E.g. 172.30.90.DRONE_ID, using a GL.iNet Flint 2 router
   netmask  255.255.0.0
   gateway  [SIM_SUBNET].1.1         # E.g. 172.30.1.1, using a GL.iNet Flint 2 router
-  dns      8.8.8.8
 ```
 
 ```sh
@@ -200,7 +199,7 @@ To flash the newly created `.px4` or `.apj` file to your autopilot board, follow
 
 ## PX4: Configure 6X's Network and DDS Client
 
-On the Jetson Baseboard's Orin NX, under "Settings" -> "Network", configure the "PCI Ethernet" connection to "Manual" with IPv4 with address 10.10.1.44 and netmask 255.255.255.0
+On the Jetson Baseboard's Orin NX, under "Settings" -> "Network", configure the "PCI Ethernet" connection to "Manual" with IPv4 with address 10.10.1.44 and netmask 255.255.255.0; under "Identity", specify the MAC Address
 
 Connect the Pixhawk 6X to the ground station with the USB-C port next to the RJ-45 port
 
