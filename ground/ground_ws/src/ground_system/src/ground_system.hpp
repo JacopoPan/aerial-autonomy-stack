@@ -17,6 +17,8 @@
 #include <deque>
 #include <algorithm>
 
+#include "std_msgs/msg/bool.hpp"
+
 #include "ground_system_msgs/msg/swarm_obs.hpp"
 #include "ground_system_msgs/msg/drone_obs.hpp"
 
@@ -58,6 +60,7 @@ private:
     std::atomic<bool> keep_running_;
     std::map<int, rclcpp::Time> last_seen_;
     double track_timeout_s_;
+    std::atomic<bool> use_external_tracks_;
 
     // Random Number Generation
     std::default_random_engine rng_;
@@ -76,8 +79,11 @@ private:
     std::map<int, std::deque<DelayedSimObs>> delayed_sim_obs_buf_;
 
     // ROS Handles
-    rclcpp::Publisher<ground_system_msgs::msg::SwarmObs>::SharedPtr publisher_;
+    rclcpp::Publisher<ground_system_msgs::msg::SwarmObs>::SharedPtr tracks_pub_;
+    rclcpp::Publisher<ground_system_msgs::msg::SwarmObs>::SharedPtr telemetry_tracks_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Subscription<ground_system_msgs::msg::SwarmObs>::SharedPtr external_tracks_sub_;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr use_external_tracks_sub_;
 
     // Methods
     void mavlink_listener(int drone_id, int port, int thread_idx);
