@@ -21,9 +21,10 @@ from cv_bridge import CvBridge
 
 
 CONF_THRESH = 0.5
+RECORD_VIDEO_DIR = "/aas/mounted_downloads_folder" # Host ~/Downloads, mounted by deploy_run.sh
 
 class YoloInferenceNode(Node):
-    def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher, no_inference):
+    def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher, no_inference, record_video):
         super().__init__(f'yolo_inference_node_{camera_id}')
         self.camera_id = camera_id
         self.headless = headless
@@ -32,6 +33,7 @@ class YoloInferenceNode(Node):
         self.hfov = hfov
         self.ros2_frame_publisher = ros2_frame_publisher
         self.run_inference = not no_inference # # Invert flag for readability
+        self.record_video = record_video
 
         self.udp_port = 5600 + self.camera_id  # 0 -> 5600, 1 -> 5601
         self.fx = None
@@ -40,6 +42,10 @@ class YoloInferenceNode(Node):
         self.cy = None
         self.architecture = platform.machine()
         self.is_jetson = (self.architecture == 'aarch64')
+
+        if self.record_video and (self.hitl or not self.is_jetson or not os.path.ismount(RECORD_VIDEO_DIR) or not os.access(RECORD_VIDEO_DIR, os.W_OK)):
+            self.get_logger().warn(f"Video recording disabled: it needs the CSI camera and {RECORD_VIDEO_DIR} mounted and writable")
+            self.record_video = False
         
         if self.run_inference:
             # Load classes
@@ -125,10 +131,16 @@ class YoloInferenceNode(Node):
                 # )
                 cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
             else: # Default, acquire CSI camera 
+                record_branch = (
+                    "tee name=t ! queue max-size-buffers=2 leaky=downstream ! "
+                    "nvv4l2h265enc bitrate=4000000 ! h265parse ! matroskamux ! " # Stores 1.8GB/h per camera, adjust bitrate as necessary
+                    f"filesink location={RECORD_VIDEO_DIR}/cam{self.camera_id}_{time.strftime('%Y_%m_%d-%H_%M_%S')}.mkv t. ! "
+                    ) if self.record_video else ""
                 # GPU pipeline:
                 gst_pipeline_string = (
                     f"nvarguscamerasrc sensor-id={self.camera_id} ! "
                     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
+                    f"{record_branch}"
                     "nvvidconv ! "
                     "video/x-raw(memory:NVMM), format=RGBA ! "
                     "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
@@ -485,13 +497,14 @@ def main(args=None):
     parser.add_argument('--hfov', type=float, default=100.0, help="Horizontal field of view in degrees.")
     parser.add_argument('--ros2-frame-publisher', action='store_true', help="Publish raw frames to ROS 2.")
     parser.add_argument('--no-inference', action='store_true', help="Disable YOLO inference and only run camera acquisition/streaming.")
+    parser.add_argument('--record-video', action='store_true', help=f"Record the CSI camera to {RECORD_VIDEO_DIR} as H.265 .mkv.")
     cli_args, ros_args = parser.parse_known_args()
 
     rclpy.init(args=ros_args)
 
     yolo_node = YoloInferenceNode(camera_id=cli_args.camera_id, headless=cli_args.headless, hitl=cli_args.hitl,
         remote_video_streams=cli_args.remote_video_streams, hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher,
-        no_inference=cli_args.no_inference)
+        no_inference=cli_args.no_inference, record_video=cli_args.record_video)
     yolo_node.run_inference_loop()
     
     yolo_node.destroy_node()

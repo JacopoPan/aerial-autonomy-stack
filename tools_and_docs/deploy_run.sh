@@ -27,6 +27,7 @@ DRONE_TYPE="${DRONE_TYPE:-quad}" # Options: quad (default), vtol, tail
 DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 #
 RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
+RECORD_VIDEO="${RECORD_VIDEO:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
@@ -47,7 +48,7 @@ check_enum AUTOPILOT px4 ardupilot
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
-for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
 for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
 [[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"
 if [[ "$GROUND" == "true" && -z "$QUAD_IDS$VTOL_IDS$TAIL_IDS" ]]; then abort "GROUND=true requires at least one ID in QUAD_IDS, VTOL_IDS, or TAIL_IDS"; fi
@@ -86,7 +87,6 @@ if [[ "$DEV" == "true" ]]; then
   DEV_OPTS="--entrypoint /bin/bash"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../ground/ground_ws/src/ground_system_msgs:/aas/aircraft_ws/src/ground_system_msgs:cached"
-  DEV_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
 fi
 
 if [ "$HEADLESS" = "false" ]; then
@@ -122,7 +122,7 @@ docker run $DOCKER_RUN_FLAGS \
   --env GND_CONTAINER=$GND_CONTAINER \
   --env ROS_DOMAIN_ID=$DRONE_ID \
   --env REMOTE_VIDEO_STREAMS=true \
-  --env RECORD_ROSBAG=$RECORD_ROSBAG \
+  --env RECORD_ROSBAG=$RECORD_ROSBAG --env RECORD_VIDEO=$RECORD_VIDEO \
   --net=host \
   --privileged \
   --name aircraft-container_$DRONE_ID \

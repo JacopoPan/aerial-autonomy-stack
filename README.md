@@ -241,7 +241,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG=true, false
+#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
