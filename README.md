@@ -226,6 +226,9 @@ git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
+
+# Build options:
+#  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
 ```
 
 <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml"><img align="right" src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64"></a>
