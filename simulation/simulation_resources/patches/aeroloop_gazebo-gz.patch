@@ -1,0 +1,68 @@
+diff --git a/plugins/BetaflightPlugin.cc b/plugins/BetaflightPlugin.cc
+index 2725828..89fd757 100644
+--- a/plugins/BetaflightPlugin.cc
++++ b/plugins/BetaflightPlugin.cc
+@@ -280,6 +280,9 @@ class gz::sim::systems::BetaflightPluginPrivate
+   /// \brief Socket handle
+   public: int handle;
+ 
++  /// \brief Offset added to the default ports 9002 (motors) and 9003 (state)
++  public: int portOffset = 0;
++
+   /// \brief IMU sensor entity
+   public: Entity imuEntity{kNullEntity};
+ 
+@@ -326,19 +329,10 @@ BetaflightPlugin::BetaflightPlugin()
+   setsockopt(this->dataPtr->handle, IPPROTO_TCP, TCP_NODELAY,
+       reinterpret_cast<const char *>(&one), sizeof(one));
+ 
+-  if (!this->dataPtr->Bind("127.0.0.1", 9002))
+-  {
+-    gzerr << "failed to bind with 127.0.0.1:9002, aborting plugin.\n";
+-    return;
+-  }
+-
+   this->dataPtr->betaflightOnline = false;
+ 
+   this->dataPtr->connectionTimeoutCount = 0;
+ 
+-  setsockopt(this->dataPtr->handle, SOL_SOCKET, SO_REUSEADDR,
+-     reinterpret_cast<const char *>(&one), sizeof(one));
+-
+   #ifdef _WIN32
+   u_long on = 1;
+   ioctlsocket(this->dataPtr->handle, FIONBIO,
+@@ -375,6 +369,14 @@ void BetaflightPlugin::Configure(const Entity &_entity,
+     return;
+   }
+ 
++  // Motors in on 9002 + portOffset, state out to 9003 + portOffset (match the SITL's --port-offset)
++  getSdfParam<int>(_sdf, "portOffset", this->dataPtr->portOffset, 0);
++  if (!this->dataPtr->Bind("127.0.0.1", 9002 + this->dataPtr->portOffset))
++  {
++    gzerr << "failed to bind with 127.0.0.1:" << 9002 + this->dataPtr->portOffset << ", aborting plugin.\n";
++    return;
++  }
++
+   // Get the canonical link - first link in the model
+   this->dataPtr->modelLinkEntity = this->dataPtr->model.CanonicalLink(_ecm);
+ 
+@@ -535,7 +537,8 @@ void BetaflightPlugin::Configure(const Entity &_entity,
+         const components::Imu *,
+         const components::Name *_name) -> bool
+     {
+-      if (_name->Data().find(sensorName) != std::string::npos)
++      if (_name->Data().find(sensorName) != std::string::npos &&
++          topLevelModel(_entity, _ecm) == this->dataPtr->modelEntity)
+       {
+         this->dataPtr->imuEntity = _entity;
+         return false; // Stop iteration
+@@ -856,7 +859,7 @@ void BetaflightPluginPrivate::SendState(EntityComponentManager &_ecm) const
+   }
+ 
+   struct sockaddr_in sockaddr;
+-  this->MakeSockAddr("127.0.0.1", 9003, sockaddr);
++  this->MakeSockAddr("127.0.0.1", 9003 + this->portOffset, sockaddr);
+ 
+   ::sendto(this->handle,
+            reinterpret_cast<raw_type *>(&pkt),

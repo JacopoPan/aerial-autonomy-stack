@@ -73,7 +73,7 @@ cd aerial-autonomy-stack/tools_and_docs/
 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
 # Simulation options:
-#  AUTOPILOT=px4, ardupilot
+#  AUTOPILOT=px4, ardupilot, betaflight
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
@@ -473,6 +473,7 @@ aerial-autonomy-stack
 │   │   ├── aircraft_models
 │   │   │   ├── alti_transition_quad                  # ArduPilot VTOL model
 │   │   │   ├── iris_with_ardupilot                   # ArduPilot quad model
+│   │   │   ├── iris_with_betaflight                  # Betaflight quad model
 │   │   │   ├── swan_k1_hwing                         # ArduPilot tailsitter model
 │   │   │   ├── sensor_camera                         # Camera model
 │   │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
@@ -525,6 +526,7 @@ aerial-autonomy-stack
   - **TODO: upgrade to 4.7.1** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
+- [x] [Betaflight 2026.6.2](https://github.com/betaflight/betaflight/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
 
@@ -535,6 +537,8 @@ External repositories:
 - [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
+- [`betaflight/betaflight`](https://github.com/betaflight/betaflight) tag/branch: `2026.6.2`
+- [`betaflight/aeroloop_gazebo`](https://github.com/betaflight/aeroloop_gazebo) tag/branch: `gz`
 - [`srmainwaring/asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) tag/branch: `master`
 - [`mavlink/c_library_v2`](https://github.com/mavlink/c_library_v2) tag/branch: `master`
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
@@ -617,13 +621,6 @@ Ctrl + b, then d                      # Detach Tmux
 ```
 
 ## Future Work
-
-### Support for Gazebo Sim and Betaflight SITL
-
-- https://www.betaflight.com/docs/development/SITL
-- https://github.com/betaflight/betaloop
-- https://github.com/betaflight/aeroloop_gazebo
-- https://github.com/utiasDSL/gym-pybullet-drones/blob/a8c238c21c7586ee1735bafb358a4d5637402f14/gym_pybullet_drones/envs/BetaAviary.py#L111C1-L172C56
 
 ### Potential for technical spikes/long-term, nice-to-have features
 

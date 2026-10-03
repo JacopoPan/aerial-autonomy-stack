@@ -51,6 +51,8 @@ windows:
         - ros2 run autopilot_interface px4_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        <% elsif autopilot == 'betaflight' %>
+        - python3 /aas/aircraft_resources/scripts/betaflight_rc.py --port <%= 9004 + 10 * (drone_id - 1) %>
         <% end %>
 
   - offboard_stateshare_dtc:
