@@ -2,7 +2,7 @@
 
 Streams the SITL rc_packet (double timestamp, uint16 channels[16]) over UDP at a fixed rate
 Channel map (see betaflight-2026.6.cli):
-    CH1 roll, CH2 pitch, CH3 throttle, CH4 yaw, CH5 ARM, CH6 AUTOPILOT
+    CH1 roll, CH2 pitch, CH3 throttle, CH4 yaw, CH5 ARM, CH6 AUTOPILOT, CH7 MSP OVERRIDE (ch 7 2000 hands CH1-4 to betaflight_interface)
 Commands:
     arm | disarm | ap | noap | thr <1000-2000> | ch <1-16> <1000-2000> | q
 

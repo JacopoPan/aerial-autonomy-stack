@@ -44,9 +44,13 @@ ament_target_dependencies(ardupilot_interface
                           std_msgs
                           )
 
+add_executable(betaflight_interface src/betaflight_interface.cpp)
+ament_target_dependencies(betaflight_interface rclcpp geometry_msgs sensor_msgs)
+
 install(TARGETS
   px4_interface
   ardupilot_interface
+  betaflight_interface
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(rosidl_default_runtime)
