@@ -1,0 +1,51 @@
+diff --git a/src/main/drivers/serial_tcp.c b/src/main/drivers/serial_tcp.c
+index a922cc7..8c9a16a 100644
+--- a/src/main/drivers/serial_tcp.c
++++ b/src/main/drivers/serial_tcp.c
+@@ -38,7 +38,8 @@
+ #include "io/serial.h"
+ #include "serial_tcp.h"
+ 
+-#define BASE_PORT 5760
++extern int sitlPortOffset;
++#define BASE_PORT (5760 + sitlPortOffset)
+ 
+ static const struct serialPortVTable tcpVTable; // Forward
+ static tcpPort_t tcpSerialPorts[SERIAL_PORT_COUNT];
+diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
+index ee216ef..3ef969a 100644
+--- a/src/platform/SIMULATOR/sitl.c
++++ b/src/platform/SIMULATOR/sitl.c
+@@ -198,10 +198,11 @@ static void gpxTrackClose(void)
+     }
+ }
+ 
+-#define PORT_PWM_RAW    9001    // Out
+-#define PORT_PWM        9002    // Out
+-#define PORT_STATE      9003    // In
+-#define PORT_RC         9004    // In
++int sitlPortOffset = 0; // Set by --port-offset, also used by serial_tcp.c
++#define PORT_PWM_RAW    (9001 + sitlPortOffset)    // Out
++#define PORT_PWM        (9002 + sitlPortOffset)    // Out
++#define PORT_STATE      (9003 + sitlPortOffset)    // In
++#define PORT_RC         (9004 + sitlPortOffset)    // In
+ 
+ int targetParseArgs(int argc, char * argv[])
+ {
+@@ -214,6 +215,7 @@ int targetParseArgs(int argc, char * argv[])
+ #ifdef CONFIG_IN_FILE
+             printf("  --config <file>    Load CLI config file, save to EEPROM, and exit\n");
+ #endif
++            printf("  --port-offset <n>  Add n to all UDP and TCP ports, to run multiple instances\n");
+             printf("  --gpx              Write GPS track to sitl_track.gpx\n");
+             printf("  --help, -h         Show this help message\n");
+             exit(0);
+@@ -224,6 +226,8 @@ int targetParseArgs(int argc, char * argv[])
+         } else if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc) {
+             strncpy(simulator_ip, argv[++i], sizeof(simulator_ip) - 1);
+             simulator_ip[sizeof(simulator_ip) - 1] = '\0';
++        } else if (strcmp(argv[i], "--port-offset") == 0 && i + 1 < argc) {
++            sitlPortOffset = atoi(argv[++i]);
+         } else if (strcmp(argv[i], "--gpx") == 0) {
+             gpxEnabled = true;
+         } else {

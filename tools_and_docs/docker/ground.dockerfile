@@ -67,6 +67,13 @@ RUN meson setup build . --buildtype=release \
 # Add MAVLink 2 C library
 COPY /_github_clones/c_library_v2 /usr/local/include/mavlink/
 
+# Betaflight App 2026.6.2 pin, check the release list: https://github.com/betaflight/betaflight-configurator/releases (socat relays the SITLs to the ground container)
+RUN wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /betaflight-app.deb \
+        https://github.com/betaflight/betaflight-configurator/releases/download/2026.6.2/Betaflight-2026.6.2-amd64.deb \
+    && apt update && apt install -y --no-install-recommends /betaflight-app.deb socat \
+    && rm /betaflight-app.deb && apt clean && rm -rf /var/lib/apt/lists/*
+# Run with $ python3 /aas/ground_resources/scripts/betaflight_app.py tcp://127.0.0.1:5761
+
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################

@@ -1,0 +1,23 @@
+# Written to eeprom.bin by `betaflight_SITL.elf --config <this file>` (see simulation.yml.erb)
+# RC arrives on UDP 9004 + port offset (see betaflight_rc.py)
+# aux <slot> <mode id> <aux channel> <from> <to> <logic> <link>
+#   mode id: 0 = ARM, 1 = ANGLE, 50 = MSP OVERRIDE, 56 = AUTOPILOT
+#   aux channel: 0 = AUX1 = CH5, 1 = AUX2 = CH6, 2 = AUX3 = CH7
+# ARM while AUX1/CH5 is 1700-2100
+aux 0 0 0 1700 2100 0 0
+# AUTOPILOT while AUX2/CH6 is 1700-2100
+aux 1 56 1 1700 2100 0 0
+# ANGLE mode while AUX1/CH5 is 900-2100 (i.e. always on, by tying to the whole range of CH5)
+aux 2 1 0 900 2100 0 0
+# Companion computer (betaflight_interface): MSP on UART2 = TCP 5762 + port offset
+# serial <port 0 = UART1, 1 = UART2> <function 1 = MSP> <MSP, GPS, telemetry, blackbox baud rates (unused over TCP)>
+serial 1 1 115200 57600 0 115200
+# MSP OVERRIDE while AUX3/CH7 is 1700-2100
+aux 3 50 2 1700 2100 0 0
+# MSP OVERRIDE replaces CH1-4 (roll, pitch, throttle, yaw): mask 0b1111 = 15
+set msp_override_channels_mask = 15
+# The SITL's Gazebo yaw sign is opposite to the mixer's for these props-in rotors: without this, yaw spins up and RUNAWAY disarms at takeoff
+set yaw_motors_reversed = ON
+# Hover throttle measured in Gazebo (ANGLE mode)
+set ap_hover_throttle = 1590
+save

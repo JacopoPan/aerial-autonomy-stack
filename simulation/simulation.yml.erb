@@ -35,9 +35,9 @@
   end
   rtf_string = "<real_time_factor>%g</real_time_factor>" % speedup
 
-  # Compute step size for gymnasium based on physics frequency in the world SDF files
-  physics_freq_hz = (autopilot == 'px4') ? 250 : 500
-  physics_dt = (autopilot == 'px4') ? 0.004 : 0.002
+  # Compute step size for gymnasium based on physics frequency in the world SDF files (ardupilot@500Hz, px4 and betaflight@250Hz)
+  physics_freq_hz = (autopilot == 'ardupilot') ? 500 : 250
+  physics_dt = (autopilot == 'ardupilot') ? 0.002 : 0.004
   gym_step_size = (physics_freq_hz / gym_freq_hz).to_i
   gym_step_size = 1 if gym_step_size < 1
 
@@ -72,10 +72,18 @@ windows:
           /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %> /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
           <% end %>
+          <% if autopilot == 'betaflight' %>
+          cp /aas/simulation_resources/simulation_worlds/<%= world %>.sdf /aas/simulation_resources/simulation_worlds/populated_betaflight.sdf &&
+          <% (1..num_quads).each do |id| %>
+          sed 's|<portOffset>0<|<portOffset><%= 10 * (id - 1) %><|' /aas/simulation_resources/aircraft_models/iris_with_betaflight/model.sdf > /aas/simulation_resources/aircraft_models/iris_with_betaflight/model_<%= id %>.sdf &&
+          sed -i '/<\/world>/i <include><uri>model://iris_with_betaflight/model_<%= id %>.sdf</uri><name>iris_with_betaflight_<%= id %></name><pose><%= 2 * (id - 1) %> <%= 2 * (id - 1) %> 0.5 0 0 0</pose></include>' /aas/simulation_resources/simulation_worlds/populated_betaflight.sdf &&
+          <% end %>
+          GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/aeroloop_gazebo/plugins/build:$GZ_SIM_SYSTEM_PLUGIN_PATH
+          <% end %>
           GZ_SIM_SYSTEM_PLUGIN_PATH=$GZ_SIM_SYSTEM_PLUGIN_PATH:/aas/github_ws/install/lib GZ_GUI_PLUGIN_PATH=$GZ_GUI_PLUGIN_PATH:/aas/github_ws/src/asv_wave_sim/gz-waves/src/gui/plugins/waves_control/build
           GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:/aas/simulation_resources/aircraft_models:/aas/simulation_resources/simulation_worlds:/aas/github_ws/src/asv_wave_sim/gz-waves-models/models:/aas/github_ws/src/asv_wave_sim/gz-waves-models/world_models:/aas/github_ws/src/asv_wave_sim/gz-waves-models/worlds
           GZ_SIM_PHYSICS_ENGINE_PATH=$GZ_SIM_PHYSICS_ENGINE_PATH:/usr/lib/x86_64-linux-gnu/gz-physics-7/engine-plugins/
-          gz sim -v2 <%= start_as_paused ? '' : '-r' %> <%= headless ? '-s' : '' %> <%= autopilot == 'px4' ? "#{world}.sdf" : "populated_ardupilot.sdf" %>
+          gz sim -v2 <%= start_as_paused ? '' : '-r' %> <%= headless ? '-s' : '' %> <%= autopilot == 'px4' ? "#{world}.sdf" : "populated_#{autopilot}.sdf" %>
 
   <% drones.each_with_index do |drone, sitl_instance| %>
   <% 
@@ -114,6 +122,8 @@ windows:
         vehicle_config = '-v ArduPlane'
         model_name = "swan_k1_hwing_#{drone_id}"
       end
+    elsif autopilot == 'betaflight'
+      model_name = "iris_with_betaflight_#{drone_id}"
     end
   %>
   <% if autopilot == 'px4' %>
@@ -140,6 +150,18 @@ windows:
           --add-param-file=/aas/simulation_resources/aircraft_models/<%= model_name %>/ardupilot-4.6.params
           -l $(python3 /aas/simulation_resources/patches/extract_spherical_coords.py /aas/simulation_resources/simulation_worlds/<%= world %>.sdf)
           -A "--serial1=udpclient:<%= gnd_container ? "#{sim_subnet}.90.#{ground_id}:#{16540 + sitl_instance}" : "127.0.0.1:#{14550 + sitl_instance}" %> --serial2=udpclient:<%= "#{sim_subnet}.90.#{drone_id}" %>:8888"
+  <% elsif autopilot == 'betaflight' %>
+  - bf_sitl_<%= drone_id %>:
+      layout: main-horizontal
+      panes:
+        - >
+          until gz topic -l | grep -q /world/<%= world %>/stats; do sleep 1; done &&
+          mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> &&
+          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli &&
+          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %>
+        <% if gnd_container %>
+        - while true; do socat TCP:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 15761 + 10 * sitl_instance %>,forever,interval=1 TCP:127.0.0.1:<%= 5761 + 10 * sitl_instance %>; sleep 1; done
+        <% end %>
   <% end %>
         <% if camera %>
         <% camera_streams.each do |stream| %>
@@ -178,6 +200,8 @@ windows:
         - zenoh-bridge-ros2dds
         <% if headless %>
         - echo "Headless mode, not launching QGroundControl."
+        <% elsif autopilot == 'betaflight' %>
+        - python3 /aas/ground_resources/scripts/betaflight_app.py <%= (1..num_quads).map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
         <% else %>
         - >
           sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= simulated_time && (num_drones == 1) %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&

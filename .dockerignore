@@ -8,6 +8,7 @@
 !_github_clones/ardupilot/**/.git
 !_github_clones/PX4-Autopilot/**/.git
 !_github_clones/onnxruntime/**/.git
+!_github_clones/betaflight/**/.git
 
 # Ignore logs
 tools_and_docs/logs/

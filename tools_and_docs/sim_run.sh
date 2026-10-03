@@ -4,7 +4,7 @@
 set -e
 
 # Set up the simulation
-AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot
+AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot, betaflight
 HEADLESS="${HEADLESS:-false}" # Options: true, false (default)
 CAMERA="${CAMERA:-true}" # Options: true (default), false
 LIDAR="${LIDAR:-true}" # Options: true (default), false 
@@ -47,11 +47,12 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
-check_enum AUTOPILOT px4 ardupilot
+check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+if [[ "$AUTOPILOT" == "betaflight" ]] && (( NUM_VTOLS + NUM_TAILS > 0 )); then echo "AUTOPILOT=betaflight supports quads only"; exit 1; fi
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
@@ -173,7 +174,7 @@ if [[ "$HITL" == "false" ]]; then
       --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
       --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
-      --env HEADLESS=$HEADLESS \
+      --env HEADLESS=$HEADLESS --env BETAFLIGHT_APP=$([[ "$AUTOPILOT" == "betaflight" ]] && echo true || echo false) \
       --env QUAD_IDS=$(seq -s, 1 $NUM_QUADS) \
       --env VTOL_IDS=$(seq -s, $((NUM_QUADS + 1)) $((NUM_QUADS + NUM_VTOLS))) \
       --env TAIL_IDS=$(seq -s, $((NUM_QUADS + NUM_VTOLS + 1)) $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))) \
