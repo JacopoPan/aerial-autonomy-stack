@@ -36,14 +36,13 @@ for drone_id, url in enumerate(urls, start=1):
 
 screen_w, screen_h = map(int, re.search(r'(\d+)x(\d+)', subprocess.run(['xrandr'], capture_output=True, text=True).stdout).groups())
 win_w, win_h = max(1024, 800 * screen_h // 1080), max(550, 480 * screen_h // 1080) # QGC's size (800x480 on Full HD), not below the App's minimum
-pending, windows, deadline = dict(apps), {}, time.time() + 60 # Title and place each window when it appears
+pending, deadline = dict(apps), time.time() + 60 # Title and place each window when it appears
 while pending and time.time() < deadline:
     time.sleep(1)
     for line in subprocess.run(['wmctrl', '-lp'], capture_output=True, text=True).stdout.splitlines(): # id, desktop, PID, host, title
         window, _, pid = line.split()[:3]
         if int(pid) in pending:
             drone_id, url = pending.pop(int(pid))
-            windows[int(pid)] = window
             subprocess.run(['wmctrl', '-i', '-r', window, '-N', f'Betaflight App: Drone {drone_id} ({url})'])
             subprocess.run(['wmctrl', '-i', '-r', window, '-e', f'0,{screen_w - win_w - 40 * (len(apps) - drone_id)},4096,{win_w},{win_h}']) # Where QGC goes (y=4096 is clamped to the bottom), the other drones 40 px further left each
 
