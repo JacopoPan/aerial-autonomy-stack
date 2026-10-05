@@ -6,7 +6,7 @@ set -e
 # Enable starting the aircraft container from SSH
 if [[ -n "$SSH_CLIENT" ]]; then
   export DISPLAY=":0"
-  export XAUTHORITY="/run/user/1000/gdm/Xauthority"
+  export XAUTHORITY="/run/user/$(id -u)/gdm/Xauthority"
   echo "SSH session detected, setting DISPLAY=$DISPLAY and XAUTHORITY=$XAUTHORITY"
   AAS_SSH_OPTS="--volume $XAUTHORITY:$XAUTHORITY:ro --env XAUTHORITY=$XAUTHORITY"
 fi
