@@ -54,25 +54,25 @@ class CompareTracks(Node):
         tel = {t.id: t for t in self.msgs['telemetry'].tracks}
         ext = {t.id: t for t in self.msgs['external'].tracks}
         lines = [f"last msg on /telemetry_tracks: {age['telemetry']} | on /external_tracks: {age['external']} | OK = horiz and vert err <= {self.tolerance} m",
-                 f'{"id":>4}  {"label t/e":>10}  {"horiz_m":>8}  {"vert_m":>7}  {"vel_m/s":>8}  status']
+                 f'{"id":>11}  {"label t/e":>26}  {"horiz_m":>8}  {"vert_m":>7}  {"vel_m/s":>8}  status']
         for i in sorted(tel.keys() | ext.keys()):
             a, b = tel.get(i), ext.get(i)
             if a is None or b is None:
-                lines.append(f'{i:>4}  {"external only" if a is None else "telemetry only"}')
+                lines.append(f'{i:>11}  {"external only" if a is None else "telemetry only"}')
                 continue
             h, v, vel = errors(a, b)
             ok = h <= self.tolerance and v <= self.tolerance
-            lines.append(f'{i:>4}  {f"{a.label}/{b.label}":>10}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
+            lines.append(f'{i:>11}  {f"{a.label}/{b.label}":>26}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
             if writer:
                 writer.writerow([round(now, 3), i, a.label, b.label, 'id', round(h, 3), round(v, 3), round(vel, 3), ok])
             if a.label != b.label: # Labels differ: compare the two
                 ta, tb = tel.get(a.label), ext.get(b.label)
                 if ta is None or tb is None:
-                    lines.append(f'{">>":>4}  {f"{a.label} v. {b.label}":>10} label ID missing in {"telemetry" if ta is None else "external"}')
+                    lines.append(f'{">>":>11}  {f"{a.label} v. {b.label}":>26} label ID missing in {"telemetry" if ta is None else "external"}')
                 else:
                     h, v, vel = errors(ta, tb)
                     ok = h <= self.tolerance and v <= self.tolerance
-                    lines.append(f'{">>":>4}  {f"{a.label} v. {b.label}":>10}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
+                    lines.append(f'{">>":>11}  {f"{a.label} v. {b.label}":>26}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
                     if writer:
                         writer.writerow([round(now, 3), i, a.label, b.label, 'targets', round(h, 3), round(v, 3), round(vel, 3), ok])
         if writer is None: # Only the 1 Hz wall-clock timer redraws

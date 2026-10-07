@@ -353,7 +353,7 @@ void ArdupilotGuided::ardupilot_interface_printout_callback()
         } else {
             ss << "\nGround Tracks:\n";
             for (const auto& track : local_tracks->tracks) {
-                ss << "  Id " << static_cast<int>(track.id)
+                ss << "  Id " << track.id
                 << " lat: " << std::fixed << std::setprecision(5) << track.latitude_deg
                 << " lon: " << std::fixed << std::setprecision(5) << track.longitude_deg
                 << " alt (msl): " << std::fixed << std::setprecision(2) << track.altitude_m << "\n";
