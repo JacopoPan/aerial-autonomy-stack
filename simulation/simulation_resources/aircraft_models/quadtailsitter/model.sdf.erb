@@ -128,11 +128,11 @@
           </pressure>
         </air_pressure>
       </sensor>
-      <!-- TODO: update to fix units and coordinate system when we move past Harmonic -->
-      <!-- See https://github.com/gazebosim/gz-sim/pull/2460 -->
-      <!-- 3mgauss RMS: NOTE: noise is in tesla but sensor reports data in gauss -->
-      <!-- Noise modeled after IIS2MDC -->
+      <!-- 3mgauss RMS = 3e-7 tesla, noise modeled after IIS2MDC -->
+      <!-- Noise is in the units of the field: tesla with use_units_gauss=false (PX4 gz_bridge server.config), gauss with the gz-sim default -->
       <!-- Currently unused: no magnetometer plugin is loaded in any world/model; PX4 mag comes from SENS_EN_MAGSIM -->
+      <!-- To use it after PX4 1.17/with PX4 1.18: uncomment, add to x500 and standard_vtol, load gz-sim-magnetometer-system in the worlds with use_units_gauss and use_earth_frame_ned both false, set SENS_EN_MAGSIM 0 -->
+      <!-- See: https://github.com/PX4/PX4-Autopilot/pull/28877, https://github.com/PX4/PX4-gazebo-models/pull/161 -->
       <!--
       <sensor name="magnetometer_sensor" type="magnetometer">
         <gz_frame_id>base_link</gz_frame_id>
@@ -141,17 +141,17 @@
         <magnetometer>
           <x>
             <noise type="gaussian">
-              <stddev>0.0001</stddev>
+              <stddev>3e-7</stddev>
             </noise>
           </x>
           <y>
             <noise type="gaussian">
-              <stddev>0.0001</stddev>
+              <stddev>3e-7</stddev>
             </noise>
           </y>
           <z>
             <noise type="gaussian">
-              <stddev>0.0001</stddev>
+              <stddev>3e-7</stddev>
             </noise>
           </z>
         </magnetometer>
