@@ -3,7 +3,7 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Enable starting the aircraft container from SSH
+# Enable starting the aircraft container from SSH with on-screen rendering (i.e. HEADLESS=false, e.g. HITL with a monitor on the Jetson)
 if [[ -n "$SSH_CLIENT" ]]; then
   export DISPLAY=":0"
   export XAUTHORITY="/run/user/$(id -u)/gdm/Xauthority"
