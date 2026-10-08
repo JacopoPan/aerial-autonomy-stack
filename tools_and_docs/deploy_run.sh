@@ -6,7 +6,8 @@ set -e
 # Enable starting the aircraft container from SSH with on-screen rendering (i.e. HEADLESS=false, e.g. HITL with a monitor on the Jetson)
 if [[ -n "$SSH_CLIENT" ]]; then
   export DISPLAY=":0"
-  export XAUTHORITY="/run/user/$(id -u)/gdm/Xauthority"
+  XAUTHORITY="/run/user/$(id -u)/gdm/Xauthority"
+  export XAUTHORITY
   echo "SSH session detected, setting DISPLAY=$DISPLAY and XAUTHORITY=$XAUTHORITY"
   AAS_SSH_OPTS="--volume $XAUTHORITY:$XAUTHORITY:ro --env XAUTHORITY=$XAUTHORITY"
 fi
