@@ -225,7 +225,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
-./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
+./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes over 2h, mostly building onnxruntime-gpu with TensorRT support from source
 
 # Build options:
 #  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
@@ -238,7 +238,7 @@ On a Jetson Orin, start the `aircraft-image`:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~3' to build the TensorRT cache
+DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The first run of `./deploy_run.sh` requires ~5-10' minutes to build the TensorRT cache
 
 # Deployment options:
 #  DRONE_TYPE=quad, vtol, tail
