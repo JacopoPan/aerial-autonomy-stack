@@ -76,6 +76,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  AUTOPILOT=px4, ardupilot
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
+#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true sets RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
@@ -238,13 +239,14 @@ On a Jetson Orin, start the `aircraft-image`:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The first run of `./deploy_run.sh` requires ~5-10' minutes to build the TensorRT cache
+DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The first run of `./deploy_run.sh` requires ~5-10' to build the TensorRT cache
 
 # Deployment options:
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
-#  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
+#  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false
+#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -645,6 +647,6 @@ Ctrl + b, then d                      # Detach Tmux
 
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information. Copyright (c) 2025 Jacopo Panerati
+Distributed under the MIT License. See `LICENSE` for more information. Copyright (c) 2025 Jacopo Panerati
 
 -->

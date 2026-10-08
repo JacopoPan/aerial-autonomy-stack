@@ -222,7 +222,7 @@ class YoloInferenceNode(Node):
                 cache_path = "/tensorrt_cache" # Mounted as volume by deploy_run.sh
                 os.makedirs(cache_path, exist_ok=True)
                 provider_options = {
-                    'trt_engine_cache_enable': True, # The first cache build takes ~3'
+                    'trt_engine_cache_enable': True, # The first cache build takes ~5-10'
                     'trt_engine_cache_path': cache_path,
                     # TensorRT 11 is strongly-typed, precision comes from the ONNX graph (exported with half=True), trt_fp16_enable would be ignored
                 }

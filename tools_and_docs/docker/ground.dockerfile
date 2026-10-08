@@ -10,7 +10,7 @@ FROM ros2-image AS ros2-qgc-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
-# Pinned to 5.1.3, check the release list: https://github.com/mavlink/qgroundcontrol/releases
+# Pinned to 5.1.4, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
 RUN useradd -m -s /bin/bash -u 1000 -o qgcuser \
     && usermod -aG dialout qgcuser
@@ -39,7 +39,7 @@ RUN apt update \
 ################################################################################
 FROM ros2-qgc-image AS ros2-qgc-gst-mavlink-image
 
-# Add GStreamer packages to stream the cameras to the aircraft containers
+# Add GStreamer packages to receive the camera streams from the aircraft containers
 RUN apt update \
     && apt install -y --no-install-recommends \
         gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav \

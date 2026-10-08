@@ -444,7 +444,7 @@ std::array<double, 3> ArdupilotGuided::camera_bearings_to_enu(double az_rad, dou
 // Controllers (reference generators)
 void ArdupilotGuided::att_ref_test()
 {
-    auto att_msg = mavros_msgs::msg::AttitudeTarget(); // https://docs.ros.org/en/noetic/api/mavros_msgs/html/msg/AttitudeTarget.html
+    auto att_msg = mavros_msgs::msg::AttitudeTarget(); // https://github.com/mavlink/mavros/blob/ros2/mavros_msgs/msg/AttitudeTarget.msg
     att_msg.header.stamp = this->get_clock()->now();
     att_msg.header.frame_id = "map"; // World frame
     double pitch_rad = 5.0 * M_PI / 180.0; // Positive pitch to move forward (any duration)
@@ -468,7 +468,7 @@ void ArdupilotGuided::att_ref_test()
 }
 void ArdupilotGuided::vel_ref_test()
 {
-    auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html
+    auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://github.com/ros2/common_interfaces/blob/jazzy/geometry_msgs/msg/TwistStamped.msg
     vel_msg.header.stamp = this->get_clock()->now();
     vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
     vel_msg.twist.linear.x = 3.0; // m/s East
@@ -483,7 +483,7 @@ void ArdupilotGuided::vel_ref_test()
 }
 void ArdupilotGuided::acc_ref_test()
 {
-    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Vector3.html
+    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://github.com/ros2/common_interfaces/blob/jazzy/geometry_msgs/msg/Vector3Stamped.msg
     accel_msg.header.stamp = this->get_clock()->now();
     accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
     accel_msg.vector.x = 0.4; // m/s^2 East
@@ -544,7 +544,7 @@ void ArdupilotGuided::vel_ref_stalk(const Stalk &stalk)
 }
 void ArdupilotGuided::vel_ref_lead_pursuit()
 {
-    auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Twist.html
+    auto vel_msg = geometry_msgs::msg::TwistStamped(); // https://github.com/ros2/common_interfaces/blob/jazzy/geometry_msgs/msg/TwistStamped.msg
     vel_msg.header.stamp = this->get_clock()->now();
     vel_msg.header.frame_id = "map"; // World frame, without automatic yaw alignment
     if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&
@@ -592,7 +592,7 @@ void ArdupilotGuided::vel_ref_lead_pursuit()
 }
 void ArdupilotGuided::acc_ref_proportional_navigation()
 {
-    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Vector3.html
+    auto accel_msg = geometry_msgs::msg::Vector3Stamped(); // https://github.com/ros2/common_interfaces/blob/jazzy/geometry_msgs/msg/Vector3Stamped.msg
     accel_msg.header.stamp = this->get_clock()->now();
     accel_msg.header.frame_id = "map"; // World frame, with automatic yaw alignment
     if (!std::isnan(desired_bearing_rad_) && !std::isnan(desired_elevation_rad_) && !std::isnan(closing_distance_) &&

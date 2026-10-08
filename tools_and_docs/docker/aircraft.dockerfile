@@ -211,7 +211,7 @@ RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o 
 ################################################################################
 FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image
 
-# Install the Livox SDK (SuperOdom requirement)
+# Install the Livox SDK (livox_ros_driver2 requirement)
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
 WORKDIR /aas/github_apps/Livox-SDK2
 RUN mkdir build && cd build && \
@@ -220,7 +220,7 @@ RUN mkdir build && cd build && \
     make install && \
     ldconfig
 
-# Install the Livox ROS2 driver (SuperOdom requirement), based on https://github.com/Livox-SDK/livox_ros_driver2/blob/master/README.md
+# Install the Livox ROS2 driver (SuperOdom requirement) for, e.g., the Mid-360s, based on https://github.com/Livox-SDK/livox_ros_driver2/blob/master/README.md
 # And https://github.com/Livox-SDK/livox_ros_driver2/blob/master/build.sh
 COPY /_github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
 WORKDIR /aas/github_ws/
@@ -354,7 +354,7 @@ RUN mkdir -p gtsam_points \
     && echo "gtsam_points minimal_updated ${SHA} $(find gtsam_points -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt
 WORKDIR /aas/mimosa_custom_gtsam_ws
 # Explicitly use bash, not sh, to source and build the workspace
-# Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTAM used by SuperOdom, KISS-Matcher
+# Build mimosa's GTSAM fork and gtsam_points with -DBUILD_SHARED_LIBS=OFF -DGTSAM_BUILD_SHARED_LIBRARY=OFF, not to shadow the system-wide GTSAM used by SuperOdom, KISS-Matcher
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && \
     colcon build --packages-select gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release \
     -DGTSAM_POSE3_EXPMAP=ON -DGTSAM_ROT3_EXPMAP=ON -DGTSAM_USE_QUATERNIONS=ON -DGTSAM_USE_SYSTEM_EIGEN=ON -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DGTSAM_WITH_TBB=OFF \

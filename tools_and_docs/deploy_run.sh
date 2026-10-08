@@ -134,6 +134,6 @@ docker run $DOCKER_RUN_FLAGS \
 
 # Check ONNX runtimes
 # DEV=true HEADLESS=false ./deploy_run.sh
-# docker exec -it aircraft-container bash
+# docker exec -it aircraft-container_1 bash
 # python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 # tmuxinator start -p /aas/aircraft.yml.erb
