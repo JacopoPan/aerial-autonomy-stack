@@ -159,7 +159,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm6
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
 # CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
-# WARNING: this step takes close to 2hrs, increase the /swapfile size to avoid out-of-memory process kills
+# WARNING: this step takes ~1.5h, increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
@@ -172,7 +172,7 @@ RUN apt update && \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
         'onnxruntime_USE_FLASH_ATTENTION=OFF' \
-        # 'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
+        'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
     pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \

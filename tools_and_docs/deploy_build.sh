@@ -33,7 +33,7 @@ mkdir -p "$CLONE_DIR"
 
 REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   # Aircraft image
-  "https://github.com/microsoft/onnxruntime.git;v1.30.0;onnxruntime" # Only for the deployment build
+  "https://github.com/microsoft/onnxruntime.git;v1.31.0;onnxruntime" # Only for the deployment build
   "https://github.com/PX4/px4_msgs.git;release/1.17;px4_msgs"
   "https://github.com/Auterion/px4-ros2-interface-lib.git;release/1.17;px4-ros2-interface-lib"
   "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git;master;Micro-XRCE-DDS-Agent"
