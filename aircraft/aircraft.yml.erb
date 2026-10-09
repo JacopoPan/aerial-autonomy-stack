@@ -34,7 +34,8 @@
   camera_ids = stereo_cam ? [0, 1] : [0] # In SITL/HITL simulation, these are the UDP streams on ports 5600, 5601; on real drones, these are CSI sensor-id 0, 1
 
   sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tail' => 'swan_k1_hwing'},
-                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' } }
+                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' },
+                 'betaflight' => { 'quad' => 'iris_with_betaflight' } }
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
   camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 %>
@@ -118,6 +119,10 @@ windows:
           <% else %>
           ros2 launch mavros apm.launch fcu_url:=/dev/ttyTHS1:921600 tgt_system:=<%= drone_id %>
           <% end %>
+  <% elsif autopilot == 'betaflight' %>
+  - zenoh:
+      layout: even-horizontal
+      panes:
   <% end %>
         - >
           erb /aas/aircraft_resources/comms/zenoh_config_air.json5.erb > /aas/aircraft_resources/comms/zenoh_config_air.json5 &&
@@ -166,6 +171,11 @@ windows:
         /mavros/state
         /mavros/local_position/odom
         /mavros/global_position/global
+      ]
+    when 'betaflight'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/attitude
+        /Drone#{drone_id}/rc_override
       ]
     end
   %>
