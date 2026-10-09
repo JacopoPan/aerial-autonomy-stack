@@ -159,7 +159,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm6
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
 # CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
 # Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
-# WARNING: this step takes ~1h, increase the /swapfile size to avoid out-of-memory process kills
+# WARNING: this step takes ~1.5h, increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
