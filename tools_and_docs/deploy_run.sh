@@ -3,10 +3,11 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-# Enable starting the aircraft container from SSH
+# Enable starting the aircraft container from SSH with on-screen rendering (i.e. HEADLESS=false, e.g. HITL with a monitor on the Jetson)
 if [[ -n "$SSH_CLIENT" ]]; then
   export DISPLAY=":0"
-  export XAUTHORITY="/run/user/1000/gdm/Xauthority"
+  XAUTHORITY="/run/user/$(id -u)/gdm/Xauthority"
+  export XAUTHORITY
   echo "SSH session detected, setting DISPLAY=$DISPLAY and XAUTHORITY=$XAUTHORITY"
   AAS_SSH_OPTS="--volume $XAUTHORITY:$XAUTHORITY:ro --env XAUTHORITY=$XAUTHORITY"
 fi
@@ -134,6 +135,6 @@ docker run $DOCKER_RUN_FLAGS \
 
 # Check ONNX runtimes
 # DEV=true HEADLESS=false ./deploy_run.sh
-# docker exec -it aircraft-container bash
+# docker exec -it aircraft-container_1 bash
 # python3 -c "import onnxruntime as ort; print(ort.__version__); print(ort.get_available_providers())"
 # tmuxinator start -p /aas/aircraft.yml.erb

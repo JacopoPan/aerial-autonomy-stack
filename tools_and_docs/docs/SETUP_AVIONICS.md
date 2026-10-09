@@ -22,13 +22,13 @@ sdkmanager                          # Log in with your https://developer.nvidia.
 - Connect the REC-USB-C port to the computer running `sdkmanager` and power on the board
 - On Step 1, fields "Jetson", "Host Machine Ubuntu 2x x86_64", "Target Hardware Jetson Orin NX" are auto-detected
   - Select "SDK Version JetPack 7.2.1" and "Direct Flash", no additional SDKs
-- On Step 2, under "Target Components", select all "Jetson Linux" (uncheck all others: Host Components, Jetons Runtime, SDK Components)
+- On Step 2, under "Target Components", select all "Jetson Linux" (uncheck all others: Host Components, Jetson Runtime, SDK Components)
 - Accept the "terms and conditions" and click "CONTINUE" (if prompted, click "Create" folder and/or input the password to `sudo`)
 - Wait for `sdkmanager` to download the necessary software
 - On the flash dialog after the download, choose "OEM Pre-config", username, password, and "Storage NVMe", click "Flash"
 - On `sdkmanager` click "FINISH AND EXIT" once the process is completed
 - Power-off, put the board out of recovery mode, disconnect the USB-C cable, and power-on again
-- With a screen, mouse, and keyboard connected to the Jetson basedboad, log in, finish the configuration
+- With a screen, mouse, and keyboard connected to the Jetson baseboard, log in, finish the configuration
 - Select an appropriate "Power Mode" (e.g. MAXN or 25W)
 - Increase the existing `/swapfile` size from 2G to 16G
 ```sh
@@ -42,7 +42,7 @@ swapon --show                      # Now 16G (/etc/fstab enables /swapfile at bo
 ```
 - Under "Settings" -> "System" -> "Users", unlock and enable "Automatic Login"
 - If connected to the internet, e.g. with a USB Ethernet adapter, Firefox can be installed from the "Software" application
-- To prioritize SSD over Network Boot: press ESC at boot, then "Boot Manager" and select the SSD entry, finally:
+- To always prioritize SSD over Network/USB Boot: press ESC at boot and go to Device Manager -> NVIDIA Configuration -> Boot Configuration; set "Add new devices to top or bottom of boot order" to Bottom, save with F10, confirm with Y; navigate back to the main page with ESC and select Reset, confirm with Enter; on the next boot, press ESC again, then "Boot Manager" and select the SSD entry to boot from it, finally make the change stick:
 ```sh
 sudo efibootmgr -v                  # Check what Boot000x entry is the SSD, e.g. 0001
 sudo efibootmgr -o 0001,000B, etc.  # Copy line BootOrder from the previous command, moving the desired entry to the front

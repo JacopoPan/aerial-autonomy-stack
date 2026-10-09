@@ -89,7 +89,7 @@ curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dear
     sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 
 sudo apt-get update
-export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.0-1
+export NVIDIA_CONTAINER_TOOLKIT_VERSION=1.20.1-1
 sudo apt-get install -y \
       nvidia-container-toolkit=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \
       nvidia-container-toolkit-base=${NVIDIA_CONTAINER_TOOLKIT_VERSION} \

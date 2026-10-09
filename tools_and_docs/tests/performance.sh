@@ -139,7 +139,7 @@ print(f'{mean:.2f} {std:.2f}')
 } | grep --line-buffered -E "Running:|Avg Speedup:|Elapsed Time:|CRITICAL"
 
 # Performance results from 2026-08-26 on commit f660f05a53a013513fe32e45b52cc379ece70e80
-# System: Lenovo ThinkPad P16 Gen 2 on Ubuntu 24.04.04 with 64GB RAM, Intel Core i9-13980HX x 32, NVIDIA RTX 3500 Ada Generation Laptop GPU
+# System: Lenovo ThinkPad P16 Gen 2 on Ubuntu 24.04 with 64GB RAM, Intel Core i9-13980HX x 32, NVIDIA RTX 3500 Ada Generation Laptop GPU
 # Kernel: Linux 7.0.0-30-generic; NVIDIA Driver: 610.43.02; CUDA Version: 13.3
 #
 # Running: speedup | px4 | 1 quads | both sensors

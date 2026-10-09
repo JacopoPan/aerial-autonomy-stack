@@ -219,10 +219,10 @@ class YoloInferenceNode(Node):
                 model_path = "/aas/yolo/yolo26n_640.onnx" # Real CSI camera IMX219-200 is 1280x720, we resize to 640x640 for YOLO (this is slightly wasteful when self.hitl = True)
                 self.input_size = 640 # YOLO input size
                 print("Loading TensorrtExecutionProvider on ARM64 (Jetson) architecture (building the .engine file for the first time can take several minutes, re-try if it encounters memory access errors).")
-                cache_path = "/tensorrt_cache" # Mounted as volume by main_deploy.sh
+                cache_path = "/tensorrt_cache" # Mounted as volume by deploy_run.sh
                 os.makedirs(cache_path, exist_ok=True)
                 provider_options = {
-                    'trt_engine_cache_enable': True, # The first cache build takes ~3'
+                    'trt_engine_cache_enable': True, # The first cache build takes ~5-10'
                     'trt_engine_cache_path': cache_path,
                     # TensorRT 11 is strongly-typed, precision comes from the ONNX graph (exported with half=True), trt_fp16_enable would be ignored
                 }

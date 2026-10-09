@@ -1,5 +1,5 @@
-uint8 id
-uint8 label
+int32 id
+int32 label
 float64 latitude_deg
 float64 longitude_deg
 float32 altitude_m
