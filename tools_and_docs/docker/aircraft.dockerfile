@@ -169,7 +169,7 @@ RUN apt update && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
         --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
-        --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
+        --skip_tests --disable_contrib_ops --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
         'onnxruntime_USE_FLASH_ATTENTION=OFF' \
         'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
