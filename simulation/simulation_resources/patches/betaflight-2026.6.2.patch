@@ -13,7 +13,7 @@ index a922cc7..8c9a16a 100644
  static const struct serialPortVTable tcpVTable; // Forward
  static tcpPort_t tcpSerialPorts[SERIAL_PORT_COUNT];
 diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
-index ee216ef..3ef969a 100644
+index ee216ef..8f0f9a2 100644
 --- a/src/platform/SIMULATOR/sitl.c
 +++ b/src/platform/SIMULATOR/sitl.c
 @@ -198,10 +198,11 @@ static void gpxTrackClose(void)
@@ -49,3 +49,13 @@ index ee216ef..3ef969a 100644
          } else if (strcmp(argv[i], "--gpx") == 0) {
              gpxEnabled = true;
          } else {
+@@ -274,6 +278,9 @@ static void sendMotorUpdate(void)
+ 
+ static void updateState(const fdm_packet* pkt)
+ {
++    if (!virtualGyroDev || !virtualAccDev) {
++        return; // Gazebo can send state before init() has created the virtual sensors
++    }
+     static double last_timestamp = 0; // in seconds
+     static uint64_t last_realtime = 0; // in uS
+     static struct timespec last_ts; // last packet
