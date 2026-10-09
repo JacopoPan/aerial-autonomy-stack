@@ -5,7 +5,7 @@ output-height=720
 num-batch-buffers=1
 
 [surface0]
-# See https://docs.nvidia.com/metropolis/deepstream/7.1/text/DS_plugin_gst-nvdewarper.html#configuration-file-parameters
+# See https://docs.nvidia.com/metropolis/deepstream/9.1/text/DS_plugin_gst-nvdewarper.html#configuration-file-parameters
 projection-type=4
 width=1280
 height=720

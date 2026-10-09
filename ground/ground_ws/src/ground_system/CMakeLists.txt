@@ -7,6 +7,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(ground_system_msgs REQUIRED)
 
 add_executable(ground_system
@@ -19,6 +20,7 @@ target_include_directories(ground_system PUBLIC
 
 ament_target_dependencies(ground_system
   rclcpp
+  std_msgs
   ground_system_msgs
 )
 

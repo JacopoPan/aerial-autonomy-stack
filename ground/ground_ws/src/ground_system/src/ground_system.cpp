@@ -1,6 +1,6 @@
 #include "ground_system.hpp"
 
-GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
+GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_external_tracks_(false)
 {
     // Declare Parameters
     this->declare_parameter<std::vector<int64_t>>("drone_ids", std::vector<int64_t>{1});
@@ -54,8 +54,27 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true)
     // Random Seed
     rng_.seed(std::random_device()());
 
-    // Publisher
-    publisher_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", 10);
+    // Publishers
+    tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", 10);
+    telemetry_tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", 10);
+
+    // Subscribers
+    external_tracks_sub_ = this->create_subscription<ground_system_msgs::msg::SwarmObs>("/external_tracks", rclcpp::SensorDataQoS(),
+        [this](ground_system_msgs::msg::SwarmObs::ConstSharedPtr msg) {
+            if (use_external_tracks_) {
+                tracks_pub_->publish(*msg); // Simple passthrough at the same/original rate of /external_tracks
+            }
+        });
+    use_external_tracks_sub_ = this->create_subscription<std_msgs::msg::Bool>("/use_external_tracks", 10,
+        [this](std_msgs::msg::Bool::ConstSharedPtr msg) {
+            if (msg->data != use_external_tracks_) {
+                use_external_tracks_ = msg->data;
+                RCLCPP_INFO(this->get_logger(), "New source of /tracks selected: %s", use_external_tracks_ ? "/external_tracks" : "internal");
+                if (use_external_tracks_ && external_tracks_sub_->get_publisher_count() == 0) {
+                    RCLCPP_WARN(this->get_logger(), "No publisher found for /external_tracks: /tracks will be silent");
+                }
+            }
+        });
 
     // Timer
     timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(1.0 / publish_rate_), std::bind(&GroundSystem::publish_swarm_obs, this));
@@ -272,7 +291,10 @@ void GroundSystem::publish_swarm_obs()
     }
 
     if (!swarm_msg.tracks.empty()) {
-        publisher_->publish(swarm_msg);
+        telemetry_tracks_pub_->publish(swarm_msg);
+    }
+    if (!use_external_tracks_ && !swarm_msg.tracks.empty()) {
+        tracks_pub_->publish(swarm_msg);
     }
 }
 

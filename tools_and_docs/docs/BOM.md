@@ -162,11 +162,12 @@ INS_HNTCH_FREQ      65              # Base frequency, lower than the default 80 
 INS_HNTCH_BW        32              # Half of INS_HNTCH_FREQ
 # Check INS_HNTCH_OPTS is set to 0
 
-# Speed limits
+# Speed and acceleration limits
 LOIT_SPEED          500             # 5m/s maximum horizontal speed in LOITER
 PILOT_SPEED_UP      250             # 2.5m/s climb rate in LOITER
 PILOT_SPEED_DN      150             # 1.5m/s descent rate in LOITER
 WPNAV_SPEED         500             # 5m/s maximum horizontal speed in AUTO/GUIDED
+WPNAV_ACCEL         400             # 4m/s^2 maximum horizontal acceleration in AUTO/GUIDED
 WPNAV_SPEED_UP      250             # 2.5m/s climb rate in AUTO/GUIDED
 WPNAV_SPEED_DN      150             # 1.5m/s descent rate in AUTO/GUIDED
 RTL_SPEED           500             # 5m/s maximum horizontal speed in RTL
@@ -184,6 +185,7 @@ COMPASS_ORIENT      6               # Yaw270, assuming the IST8310/6589xx is rec
 # In QGC -> Vehicle Configuration -> Sensors -> Sensor Settings, set the external compass as Priority 1 (COMPASS_PRIO1_ID) and the internal compass as Priority 2 (COMPASS_PRIO2_ID)
 
 # Failsafes
+FENCE_ENABLE        1               # (optional) The default fence is 300m radius and 100m altitude, RTL on breach (FENCE_ACTION 1)
 CIRCLE_OPTIONS      0               # Disable using the pitch/roll stick control circle mode's radius and rate
 GUID_TIMEOUT        3.0             # (default) Guided mode timeout after which vehicle will stop or return to level if no updates are received
 GUID_OPTIONS        0               # (default) If the 3rd bit is not set, interprets att_msg.thrust as a [0,1] climb-rate target

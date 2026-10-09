@@ -1,0 +1,89 @@
+"""
+Live terminal comparison of /telemetry_tracks and /external_tracks, refreshed every second
+When a drone's labels differ, a >> row compares the two (telemetry track <label t> vs external track <label e>)
+
+Use as:
+    python3 /aas/ground_resources/scripts/compare_tracks.py --ros-args -p tolerance:=5.0 -p log_dir:=/aas/mounted_downloads_folder
+    python3 /aas/ground_resources/scripts/compare_tracks.py --ros-args -p use_sim_time:=${SIMULATED_TIME}
+"""
+import csv
+import math
+import os
+import time
+
+import rclpy
+from rclpy.clock import Clock, ClockType
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
+from geographiclib.geodesic import Geodesic
+
+from ground_system_msgs.msg import SwarmObs
+
+def errors(a, b):
+    # Horizontal (WGS84 geodesic), vertical and velocity differences between two tracks
+    h = Geodesic.WGS84.Inverse(a.latitude_deg, a.longitude_deg, b.latitude_deg, b.longitude_deg)['s12']
+    v = abs(b.altitude_m - a.altitude_m)
+    vel = math.hypot(b.velocity_n_m_s - a.velocity_n_m_s, b.velocity_e_m_s - a.velocity_e_m_s, b.velocity_d_m_s - a.velocity_d_m_s)
+    return h, v, vel
+
+class CompareTracks(Node):
+    def __init__(self):
+        super().__init__('compare_tracks')
+        self.tolerance = self.declare_parameter('tolerance', 1.0).value # m: max horizontal and vertical error for OK
+        self.msgs = {'telemetry': SwarmObs(), 'external': SwarmObs()} # Latest message per source (empty until received)
+        self.rx = {'telemetry': None, 'external': None} # Receive time per source (s, node clock)
+
+        self.create_subscription(SwarmObs, '/telemetry_tracks', lambda msg: self.store('telemetry', msg), qos_profile_sensor_data)
+        self.create_subscription(SwarmObs, '/external_tracks', lambda msg: self.store('external', msg), qos_profile_sensor_data)
+        self.create_timer(1.0, self.show, clock=Clock(clock_type=ClockType.SYSTEM_TIME)) # Redraw every wall-clock second
+
+        log_dir = self.declare_parameter('log_dir', '').value # Folder for a CSV of the comparisons at 10 Hz node time ('' = no CSV)
+        if log_dir:
+            self.csv = csv.writer(open(os.path.join(log_dir, time.strftime('compare_tracks_%Y%m%d_%H%M%S.csv')), 'w', newline='', buffering=1)) # Line-buffered: rows survive a kill
+            self.csv.writerow(['t_s', 'id', 'label_t', 'label_e', 'row', 'horiz_m', 'vert_m', 'vel_m_s', 'ok'])
+            self.create_timer(0.1, lambda: self.show(self.csv), clock=self.get_clock()) # 10 Hz in node time
+
+    def store(self, source, msg):
+        self.msgs[source] = msg
+        self.rx[source] = self.get_clock().now().nanoseconds * 1e-9
+
+    def show(self, writer=None):
+        now = self.get_clock().now().nanoseconds * 1e-9
+        age = {k: 'none yet' if t is None else f'{now - t:.1f} s ago' for k, t in self.rx.items()}
+        tel = {t.id: t for t in self.msgs['telemetry'].tracks}
+        ext = {t.id: t for t in self.msgs['external'].tracks}
+        lines = [f"last msg on /telemetry_tracks: {age['telemetry']} | on /external_tracks: {age['external']} | OK = horiz and vert err <= {self.tolerance} m",
+                 f'{"id":>11}  {"label t/e":>26}  {"horiz_m":>8}  {"vert_m":>7}  {"vel_m/s":>8}  status']
+        for i in sorted(tel.keys() | ext.keys()):
+            a, b = tel.get(i), ext.get(i)
+            if a is None or b is None:
+                lines.append(f'{i:>11}  {"external only" if a is None else "telemetry only"}')
+                continue
+            h, v, vel = errors(a, b)
+            ok = h <= self.tolerance and v <= self.tolerance
+            lines.append(f'{i:>11}  {f"{a.label}/{b.label}":>26}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
+            if writer:
+                writer.writerow([round(now, 3), i, a.label, b.label, 'id', round(h, 3), round(v, 3), round(vel, 3), ok])
+            if a.label != b.label: # Labels differ: compare the two
+                ta, tb = tel.get(a.label), ext.get(b.label)
+                if ta is None or tb is None:
+                    lines.append(f'{">>":>11}  {f"{a.label} v. {b.label}":>26} label ID missing in {"telemetry" if ta is None else "external"}')
+                else:
+                    h, v, vel = errors(ta, tb)
+                    ok = h <= self.tolerance and v <= self.tolerance
+                    lines.append(f'{">>":>11}  {f"{a.label} v. {b.label}":>26}  {h:>8.2f}  {v:>7.2f}  {vel:>8.2f}  {"OK" if ok else "DIFF"}')
+                    if writer:
+                        writer.writerow([round(now, 3), i, a.label, b.label, 'targets', round(h, 3), round(v, 3), round(vel, 3), ok])
+        if writer is None: # Only the 1 Hz wall-clock timer redraws
+            print('\033[H\033[J' + '\n'.join(lines), flush=True) # Clear the terminal, then print: the table refreshes in place
+
+def main():
+    rclpy.init()
+    try:
+        rclpy.spin(CompareTracks())
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass # Ctrl-C: exit without a traceback
+
+if __name__ == '__main__':
+    main()

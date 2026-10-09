@@ -57,6 +57,8 @@ RUN useradd -m -s /bin/bash arduuser \
 RUN gosu arduuser bash -c "cd /aas/github_apps/ardupilot && ./waf configure --board sitl && ./waf build" \
     && chown -R root:root /aas/github_apps/ardupilot
 # Run with $ /aas/github_apps/ardupilot/build/sitl/bin/arducopter
+# Link the MAVProxy installed by install-prereqs-ubuntu.sh in ArduPilot's venv (isolated from the system numpy/OpenCV) for sim_vehicle.py to use
+RUN ln -s /home/arduuser/venv-ardupilot/bin/mavproxy.py /usr/local/bin/mavproxy.py
 
 # ArduPilot Gazebo Plugin
 # Based on https://ardupilot.org/dev/docs/sitl-with-gazebo.html
@@ -68,7 +70,6 @@ RUN apt update \
         libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install --no-cache-dir --retries 5 "numpy<2" mavproxy==1.8.74
 ENV GZ_VERSION=harmonic
 RUN mkdir build && cd build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
@@ -126,8 +127,8 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Add pymavlink and mavproxy to quickly inspect MAVLink streams
-RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial future mavproxy==1.8.74
+# Add pymavlink to quickly inspect MAVLink streams
+RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
 
 # Install https://github.com/PX4/flight_review to inspect PX4 SITL logs

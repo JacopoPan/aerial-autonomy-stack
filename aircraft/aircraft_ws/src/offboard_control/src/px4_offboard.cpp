@@ -288,7 +288,7 @@ void PX4Offboard::ground_tracks_callback(const ground_system_msgs::msg::SwarmObs
                 future_lat, future_lon);
     double future_alt = target_track.altitude_m - (target_track.velocity_d_m_s * PREDICTION_TIME_SEC);
 
-    // Compute GeographicLib ENU position of label48 w.r.t. PX4 vehicle (using NED)
+    // Compute GeographicLib ENU position of the target w.r.t. PX4 vehicle's origin frame (using NED)
     const GeographicLib::LocalCartesian proj(reference_lat, reference_lon, reference_alt);
     proj.Forward(future_lat, future_lon, future_alt, traj_ref_east_, traj_ref_north_, traj_ref_up_);
 }
@@ -371,7 +371,7 @@ void PX4Offboard::px4_interface_printout_callback()
         } else {
             ss << "\nGround Tracks:\n";
             for (const auto& track : local_tracks->tracks) {
-                ss << "  Id " << static_cast<int>(track.id)
+                ss << "  Id " << track.id
                 << " lat: " << std::fixed << std::setprecision(5) << track.latitude_deg
                 << " lon: " << std::fixed << std::setprecision(5) << track.longitude_deg
                 << " alt (msl): " << std::fixed << std::setprecision(2) << track.altitude_m << "\n";

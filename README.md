@@ -76,6 +76,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  AUTOPILOT=px4, ardupilot
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
+#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true sets RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
@@ -225,7 +226,10 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
-./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes ~50', including building onnxruntime-gpu with TensorRT support from source
+./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build takes over 2h, mostly building onnxruntime-gpu with TensorRT support from source
+
+# Build options:
+#  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
 ```
 
 <a href="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml"><img align="right" src="https://github.com/JacopoPan/aerial-autonomy-stack/actions/workflows/aircraft-arm64-build.yml/badge.svg" alt="aircraft-image arm64"></a>
@@ -235,13 +239,14 @@ On a Jetson Orin, start the `aircraft-image`:
 ```sh
 cd aerial-autonomy-stack/tools_and_docs/
 
-DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The 1st run of `./deploy_run.sh` requires ~3' to build the TensorRT cache
+DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The first run of `./deploy_run.sh` requires ~5-10' to build the TensorRT cache
 
 # Deployment options:
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot
-#  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autpilot)
-#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG=true, false
+#  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
+#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false
+#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -642,6 +647,6 @@ Ctrl + b, then d                      # Detach Tmux
 
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information. Copyright (c) 2025 Jacopo Panerati
+Distributed under the MIT License. See `LICENSE` for more information. Copyright (c) 2025 Jacopo Panerati
 
 -->

@@ -38,7 +38,7 @@ class AASEnv(gym.Env):
             high=1.0,
             shape=(1,), dtype=np.float32
         )
-        # [DUMMY] Observation Space is the Gazebo Sim /clocl [seconds, nanoseconds]
+        # [DUMMY] Observation Space is the Gazebo Sim /clock [seconds, nanoseconds]
         self.observation_space = gym.spaces.Box(
             low=np.array([0.0, 0.0], dtype=np.float64),
             high=np.array([np.inf, 1e9], dtype=np.float64),

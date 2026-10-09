@@ -311,11 +311,11 @@
         <static>true</static>
         <link name="link">
           <collision name="collision">
+            <pose>0 0 -5 0 0 0</pose>
             <geometry>
-              <plane>
-                <normal>0 0 1</normal>
-                <size>1 1</size>
-              </plane>
+              <box>
+                <size>100000 100000 10</size>
+              </box>
             </geometry>
             <surface>
               <friction>
