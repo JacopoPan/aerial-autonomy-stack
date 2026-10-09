@@ -722,8 +722,11 @@
     </plugin>
 
 
-    <!-- Betaflight SITL bridge (github.com/betaflight/aeroloop_gazebo, gz branch, patched), UDP 9002/9003 + portOffset (set per drone)
-      <rotor> order is Betaflight's QUADX motor order (REAR_R, FRONT_R, REAR_L, FRONT_L); gains from iris_with_ardupilot -->
+    <!--
+      Betaflight SITL bridge (github.com/betaflight/aeroloop_gazebo, gz branch, patched), UDP 9002/9003 + portOffset (set per drone)
+      <rotor> order is Betaflight's QUADX motor order (REAR_R, FRONT_R, REAR_L, FRONT_L); torque limits from iris_with_ardupilot
+      vel_p_gain = 0.05 is ardupilot_gazebo's 0.20 scaled by 1ms (1kHz) / 4ms (250Hz) (i.e. the difference in physics step), see iris_with_ardupilot
+    -->
     <plugin name="gz::sim::systems::BetaflightPlugin" filename="BetaflightPlugin">
       <portOffset>0</portOffset>
       <imuName>imu_sensor</imuName>
@@ -731,28 +734,28 @@
       <rotor id="0">
         <jointName>rotor_3_joint</jointName>
         <turningDirection>cw</turningDirection>
-        <vel_p_gain>0.20</vel_p_gain>
+        <vel_p_gain>0.05</vel_p_gain>
         <vel_cmd_max>2.5</vel_cmd_max>
         <vel_cmd_min>-2.5</vel_cmd_min>
       </rotor>
       <rotor id="1">
         <jointName>rotor_0_joint</jointName>
         <turningDirection>ccw</turningDirection>
-        <vel_p_gain>0.20</vel_p_gain>
+        <vel_p_gain>0.05</vel_p_gain>
         <vel_cmd_max>2.5</vel_cmd_max>
         <vel_cmd_min>-2.5</vel_cmd_min>
       </rotor>
       <rotor id="2">
         <jointName>rotor_1_joint</jointName>
         <turningDirection>ccw</turningDirection>
-        <vel_p_gain>0.20</vel_p_gain>
+        <vel_p_gain>0.05</vel_p_gain>
         <vel_cmd_max>2.5</vel_cmd_max>
         <vel_cmd_min>-2.5</vel_cmd_min>
       </rotor>
       <rotor id="3">
         <jointName>rotor_2_joint</jointName>
         <turningDirection>cw</turningDirection>
-        <vel_p_gain>0.20</vel_p_gain>
+        <vel_p_gain>0.05</vel_p_gain>
         <vel_cmd_max>2.5</vel_cmd_max>
         <vel_cmd_min>-2.5</vel_cmd_min>
       </rotor>

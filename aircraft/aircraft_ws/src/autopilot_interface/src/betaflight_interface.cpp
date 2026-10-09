@@ -15,7 +15,7 @@ Then, use with:
 
 Joy axes are stick positions in [-1, 1], the active Betaflight flight mode decides what they mean
 In ANGLE mode (always on, see betaflight-2026.6.cli):
-    roll, pitch = tilt angle (+-60 deg at full stick), yaw = turn rate, throttle = thrust (-1 idle, ~0.18 hovers the simulated Iris)
+    roll, pitch = tilt angle (+-60 deg at full stick), yaw = turn rate, throttle = thrust (-1 idle, ~0.19 hovers the simulated Iris)
 */
 #include <fcntl.h>
 #include <netdb.h>

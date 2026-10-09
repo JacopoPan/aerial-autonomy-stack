@@ -76,7 +76,7 @@ windows:
           cp /aas/simulation_resources/simulation_worlds/<%= world %>.sdf /aas/simulation_resources/simulation_worlds/populated_betaflight.sdf &&
           <% (1..num_quads).each do |id| %>
           sed 's|<portOffset>0<|<portOffset><%= 10 * (id - 1) %><|' /aas/simulation_resources/aircraft_models/iris_with_betaflight/model.sdf > /aas/simulation_resources/aircraft_models/iris_with_betaflight/model_<%= id %>.sdf &&
-          sed -i '/<\/world>/i <include><uri>model://iris_with_betaflight/model_<%= id %>.sdf</uri><name>iris_with_betaflight_<%= id %></name><pose><%= 2 * (id - 1) %> <%= 2 * (id - 1) - 1 %> 0.5 0 0 0</pose></include>' /aas/simulation_resources/simulation_worlds/populated_betaflight.sdf &&
+          sed -i '/<\/world>/i <include><uri>model://iris_with_betaflight/model_<%= id %>.sdf</uri><name>iris_with_betaflight_<%= id %></name><pose><%= 2 * (id - 1) %> <%= 2 * (id - 1) %> 0.5 0 0 0</pose></include>' /aas/simulation_resources/simulation_worlds/populated_betaflight.sdf &&
           <% end %>
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/aeroloop_gazebo/plugins/build:$GZ_SIM_SYSTEM_PLUGIN_PATH
           <% end %>

@@ -19,5 +19,5 @@ set msp_override_channels_mask = 15
 # The SITL's Gazebo yaw sign is opposite to the mixer's for these props-in rotors: without this, yaw spins up and RUNAWAY disarms at takeoff
 set yaw_motors_reversed = ON
 # Hover throttle measured in Gazebo (ANGLE mode)
-set ap_hover_throttle = 1590
+set ap_hover_throttle = 1595
 save

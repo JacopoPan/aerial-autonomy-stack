@@ -567,8 +567,6 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 
 ## Known Issues
 
-- Iris model (with either ArduPilot or Betaflight SITL) can slowly, not deterministically slide forward before takeoff.
-  - Suspected cause (TBD): the rotor velocity P gain (0.20, p_gain/vel_p_gain) comes from ardupilot_gazebo, whose worlds use a 1 ms physics step: at the 2ms (ArduPilot) and 4ms (Betaflight), idle rotors may oscillate and shake the airframe, try a lower gain (e.g. 0.08)
 - ArduPilot SITL for Iris uses option -f that also sets "external": True, this is not the case for the Alti Transition from ArduPilot/SITL_Models
 - ArduPilot SITL throws a floating point exception when the swan_k1_hwing tailsitter model lands (ignored with SIM_FLOAT_EXCEPT 0)
 - Several parameters used in the swan_k1_hwing/quadtailsitter main wing AdvancedLiftDrag plugin are dubious, see:
