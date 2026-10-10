@@ -28,7 +28,7 @@ if command -v nvidia-smi &> /dev/null; then
     if [ -f /etc/nv_tegra_release ]; then
         EXPECTED=595 # Version that ships with JetPack 7.2 for Jetson Orin
     else
-        EXPECTED=610 # Version tested on amd64
+        EXPECTED=615 # Version tested on amd64
     fi
     if [ "$DRIVER_MAJOR" -eq "$EXPECTED" ]; then
         echo "[PASS] NVIDIA Driver: tested with AAS (version: $DRIVER_VER)"

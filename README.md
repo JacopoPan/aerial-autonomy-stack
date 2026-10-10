@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 
 ## 1. Installation
 
-> AAS is developed on Ubuntu 24.04 with `nvidia-driver-610` using an i7-11 with 16GB RAM and RTX 3060
+> AAS is developed with Ubuntu 24.04 and `nvidia-driver-615-open` on an i7-11 with RTX 3060
 >
 > Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
 
@@ -514,7 +514,7 @@ aerial-autonomy-stack
 
 - [x] Host OS: [Ubuntu 24.04/26.04 (LTS, ESM 4/2036)](https://ubuntu.com/about/release-cycle)
 - [x] JetPack: [7.2.1 [L4T 39.2.1, Ubuntu 24-based]](https://developer.nvidia.com/embedded/jetpack-archive)
-- [x] [`nvidia-driver-610`](https://developer.nvidia.com/datacenter-driver-archive)
+- [x] [`nvidia-driver-615-open`](https://developer.nvidia.com/datacenter-driver-archive)
 - [x] [Docker Engine v29](https://docs.docker.com/engine/release-notes/)
 - [x] [NVIDIA Container Toolkit 1.20](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html)
 - [x] `amd64` base image: [`nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04`](https://catalog.ngc.nvidia.com/orgs/nvidia/-/containers/cuda/-)
