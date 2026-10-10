@@ -216,7 +216,7 @@ class OffboardBehavior(BaseActionBehavior):
             self.ros_node.get_logger().warn(f"[{self.name}] Offboard (GUIDED MODE) in ArduPilot is only supported for 'DRONE_TYPE=quad'. Skipping.")
             return None
         goal = Offboard.Goal()
-        default_controller = {'px4': 'traj-test', 'ardupilot': 'vel-test', 'betaflight': 'att-test'}[autopilot] # Pick a default controller is not specified in the YAML
+        default_controller = {'px4': 'traj-test', 'ardupilot': 'vel-test', 'betaflight': 'att-test'}[autopilot] # Pick a default controller if not specified in the YAML
         goal.controller_name = str(self.params.get('controller_name', default_controller))
         goal.max_duration_sec = float(self.params.get('max_duration_sec', 10.0))
         return goal

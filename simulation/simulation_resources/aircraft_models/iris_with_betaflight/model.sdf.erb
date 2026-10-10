@@ -530,7 +530,6 @@
         </physics>
       </joint>
 
-
       <%
         # Compute the gimbal pose based on the desired camera pose
         cam_pose = camera_ext.split(' ').map(&:to_f)
@@ -720,7 +719,6 @@
       <upward>0 0 1</upward>
       <link_name>rotor_3</link_name>
     </plugin>
-
 
     <!--
       Betaflight SITL bridge (github.com/betaflight/aeroloop_gazebo, gz branch, patched), UDP 9002/9003 + portOffset (set per drone)

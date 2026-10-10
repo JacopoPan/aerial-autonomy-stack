@@ -166,7 +166,8 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --retries 5 pyzmq
 
-# Betaflight SITL and its Gazebo plugin, patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs) and MAVLink telemetry
+# Betaflight SITL and its Gazebo plugin
+# Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, and MAVLink telemetry
 COPY /_github_clones/betaflight /aas/github_apps/betaflight
 COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/github_apps/betaflight-2026.6.2.patch
 WORKDIR /aas/github_apps/betaflight

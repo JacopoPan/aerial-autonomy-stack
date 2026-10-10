@@ -5,7 +5,7 @@ Arm and hand CH1-4 to betaflight_interface in the betaflight_rc.py pane, with th
     rc> ch 7 2000
 
 Then, from any pane of the same aircraft container:
-    python3 /aas/aircraft_resources/scripts/betaflight_sitl_check.py --ros-args -p use_sim_time:=true
+    python3 /aas/aircraft_resources/scripts/betaflight_sitl_checks.py --ros-args -p use_sim_time:=true
 
 Checks gravity and vertical speed on the ground, climb against GPS altitude, the heading against the spawn heading,
 yaw direction (gyro and heading), and horizontal velocity and GPS displacement against the heading
@@ -81,7 +81,7 @@ def main():
     from sensor_msgs.msg import Imu, Joy, NavSatFix
 
     rclpy.init(args=ros_args)
-    node = rclpy.create_node('betaflight_sitl_check')
+    node = rclpy.create_node('betaflight_sitl_checks')
     ns, latest, samples, state = f'/Drone{args.drone_id}', {}, [], {'t0': None, 'done': False}
     joy_pub = node.create_publisher(Joy, f'{ns}/rc_override', 10)
     node.create_subscription(Imu, f'{ns}/imu', lambda m: latest.update(acc_z=m.linear_acceleration.z, gyro_z=m.angular_velocity.z), 10)

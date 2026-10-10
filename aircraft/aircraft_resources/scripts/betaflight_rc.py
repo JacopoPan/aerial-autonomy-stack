@@ -9,13 +9,11 @@ Commands:
 Betaflight's RX failsafe triggers when the stream stops, so keep this running while flying
 """
 import argparse
-import os
 import socket
 import struct
 import threading
 import time
 
-SIM_IP = f"{os.environ['SIM_SUBNET']}.90.{os.environ['SIM_ID']}" if 'SIM_ID' in os.environ else '127.0.0.1'
 LOW, HIGH = 1000, 2000
 THR, ARM, AUTOPILOT = 2, 4, 5 # 0-based channel indices
 HELP = 'Commands: arm, disarm, ap, noap, thr N, ch I N, q'
@@ -23,7 +21,7 @@ HELP = 'Commands: arm, disarm, ap, noap, thr N, ch I N, q'
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--ip', default=SIM_IP, help='Betaflight SITL address (default: simulation container)')
+    parser.add_argument('--ip', default='127.0.0.1', help='Betaflight SITL address')
     parser.add_argument('--port', type=int, default=9004, help='Betaflight SITL RC port')
     parser.add_argument('--rate', type=float, default=50.0, help='Send rate in Hz (wall clock)')
     args = parser.parse_args()

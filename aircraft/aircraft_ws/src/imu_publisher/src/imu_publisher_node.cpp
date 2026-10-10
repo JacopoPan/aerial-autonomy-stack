@@ -43,8 +43,8 @@ public:
                 rclcpp::SensorDataQoS(),
                 std::bind(&ImuPublisherNode::ardupilot_and_betaflight_callback, this, std::placeholders::_1), subscriber_options);
             RCLCPP_INFO(this->get_logger(), "imu_publisher_node started for ArduPilot (passthrough)");
-        } else if (autopilot == "betaflight") {
-            betaflight_sub_ = this->create_subscription<sensor_msgs::msg::Imu>( // betaflight_interface's IMU (FLU, 50 Hz, rate limited by serial_update_rate_hz and MSP polling in betaflight_interface.cpp)
+        } else if (autopilot == "betaflight") { // Subscribe to betaflight_interface's IMU topic (50Hz)
+            betaflight_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
                 "/Drone" + std::to_string(drone_id_) + "/imu",
                 rclcpp::SensorDataQoS(),
                 std::bind(&ImuPublisherNode::ardupilot_and_betaflight_callback, this, std::placeholders::_1), subscriber_options);
@@ -85,7 +85,7 @@ private:
     void ardupilot_and_betaflight_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
     {
         sensor_msgs::msg::Imu imu_msg; // Reentrant callback with no mutex: use local variable
-        imu_msg = *msg; // Just copy the MAVROS or betaflight_interface's MSP message
+        imu_msg = *msg; // Just copy the MAVROS or betaflight_interface message
 
         imu_msg.header.frame_id = "imu_link";
         imu_pub_->publish(imu_msg);

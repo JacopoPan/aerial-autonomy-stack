@@ -51,9 +51,8 @@ check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB START_AS_PAUSED PLOT; do check_enum "$v" true false; done
-if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$HITL" == "true" || "$PLOT" == "true" ]]; then echo "AUTOPILOT=betaflight does not support HITL, PLOT"; exit 1; fi
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
-if [[ "$AUTOPILOT" == "betaflight" ]] && (( NUM_VTOLS + NUM_TAILS > 0 )); then echo "AUTOPILOT=betaflight supports quads only"; exit 1; fi
+if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$HITL" == "true" || "$PLOT" == "true" || $((NUM_VTOLS + NUM_TAILS)) -gt 0 ]]; then abort "AUTOPILOT=betaflight supports quads only, no HITL, no PLOT"; fi
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF

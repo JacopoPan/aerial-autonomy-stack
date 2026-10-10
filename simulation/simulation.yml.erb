@@ -72,8 +72,7 @@ windows:
           <% if autopilot == 'ardupilot' %>
           /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh <%= num_quads %> <%= num_vtols %> <%= num_tails %> /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/ardupilot_gazebo/build:$GZ_SIM_SYSTEM_PLUGIN_PATH 
-          <% end %>
-          <% if autopilot == 'betaflight' %>
+          <% elsif autopilot == 'betaflight' %>
           /aas/simulation_resources/patches/create_betaflight_drones_and_world.sh <%= num_quads %> /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           GZ_SIM_SYSTEM_PLUGIN_PATH=/aas/github_apps/aeroloop_gazebo/plugins/build:$GZ_SIM_SYSTEM_PLUGIN_PATH
           <% end %>
@@ -193,7 +192,7 @@ windows:
   <% end %>
 
   <% unless gnd_container %>
-  - zenoh_and_qgc:
+  - zenoh_and_gcs:
       layout: even-horizontal
       pre: if [ -n "$HOST_INPUT_GID" ]; then groupadd -g "$HOST_INPUT_GID" host_input 2>/dev/null || true; usermod -aG host_input qgcuser; fi
       panes:

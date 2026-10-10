@@ -54,19 +54,25 @@ class BetaflightInterface : public rclcpp::Node
 public:
     BetaflightInterface() : Node("betaflight_interface")
     {
+        // Parameters
         const std::string device = this->declare_parameter<std::string>("device", "tcp://127.0.0.1:5762");
+        acc_1g_ = this->declare_parameter<int>("acc_1g", 2048); // MSP_RAW_IMU accelerometer units per g: 2048 on most FC IMUs (16 g range), 256 in the SITL
+
         fd_ = open_device(device);
         RCLCPP_INFO(this->get_logger(), "MSP on %s", device.c_str());
         joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("rc_override", 10, [this](const sensor_msgs::msg::Joy &msg) {
             joy_ = msg;
             last_joy_ = this->now();
         });
-        acc_1g_ = this->declare_parameter<int>("acc_1g", 2048); // MSP_RAW_IMU accelerometer units per g: 2048 on most FC IMUs (16 g range), 256 in the SITL
-        attitude_pub_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>("attitude", 10); // Roll, pitch, yaw in rad
+
+        // Publishers
+        attitude_pub_ = this->create_publisher<geometry_msgs::msg::Vector3Stamped>("attitude", 10); // Roll, pitch, heading in rad
         imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>("imu", 10);
         global_position_pub_ = this->create_publisher<sensor_msgs::msg::NavSatFix>("global_position", 10);
         velocity_pub_ = this->create_publisher<geometry_msgs::msg::TwistStamped>("velocity", 10);
-        timer_ = rclcpp::create_timer(this, this->get_clock(), 20ms, [this]() { step(); }); // 50 Hz on the node clock (sim time in simulation, like Betaflight's scheduler) regardless of the command rate, as BetaflightFC's command thread
+
+        // Timers
+        timer_ = rclcpp::create_timer(this, this->get_clock(), 20ms, [this]() { step(); }); // 50 Hz on the node clock (sim time in simulation), independent of the Joy rate
     }
     ~BetaflightInterface() { close(fd_); }
 
@@ -177,7 +183,7 @@ private:
             msg.vector.z = s16(4) * M_PI / 180.0;
             attitude_pub_->publish(msg);
         } else if (cmd == 109 && size >= 6) { // MSP_ALTITUDE: altitude in cm, vertical speed in cm/s (for the velocity)
-            vertical_speed_ = s16(4) / 100.0; // TODO: overestimated at higher RTFs
+            vertical_speed_ = s16(4) / 100.0; // TODO: overestimated by Betaflight SITL at RTF > 1
         } else if (cmd == 106 && size >= 16) { // MSP_RAW_GPS: fix, satellites, lat, lon in 1e-7 deg, MSL altitude in m, speed in cm/s, course in 0.1 deg
             sensor_msgs::msg::NavSatFix fix;
             fix.header.stamp = this->now();

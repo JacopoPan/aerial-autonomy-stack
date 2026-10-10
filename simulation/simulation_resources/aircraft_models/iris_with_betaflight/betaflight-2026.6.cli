@@ -22,8 +22,8 @@ set mavlink_pos_rate = 10
 aux 3 50 2 1700 2100 0 0
 # MSP OVERRIDE replaces CH1-4 (roll, pitch, throttle, yaw): mask 0b1111 = 15
 set msp_override_channels_mask = 15
-# MSP OVERRIDE frames also count as RC link and trigger RX processing: CH1-4 are driven by betaflight_interface (using sim time),
-# while betaflight_rc.py (using wall time) only keeps ARM and the mode switches alive, even if Gazebo is paused
+# MSP OVERRIDE frames also count as RC link and trigger RX processing
+# This way, CH1-4 update on every betaflight_interface frame (in sim time), not only on betaflight_rc.py ARM and the mode switches frames (in wall time)
 set msp_override_failsafe = ON
 # Heading from the SITL's virtual magnetometer (fed with Gazebo's attitude), Betaflight does not trust a magnetometer by default
 set trust_mag = ON
