@@ -12,6 +12,8 @@ aux 2 1 0 900 2100 0 0
 # Companion computer (betaflight_interface in aircraft.yml.erb): MSP on UART2 = TCP 5762 + port offset
 # serial <port 0 = UART1, 1 = UART2> <function 1 = MSP> <MSP, GPS, telemetry, blackbox baud rates (unused over TCP)>
 serial 1 1 115200 57600 0 115200
+# MSP requests answered per port per second (one per serial task run, default 100)
+set serial_update_rate_hz = 500
 # MAVLink telemetry (function 512) for ground_system (/tracks) on UART3 = TCP 5763 + port offset
 serial 2 512 115200 57600 0 115200
 # Set GLOBAL_POSITION_INT in MAVLink telemetry at 10 Hz (default is 2 Hz)
@@ -20,8 +22,13 @@ set mavlink_pos_rate = 10
 aux 3 50 2 1700 2100 0 0
 # MSP OVERRIDE replaces CH1-4 (roll, pitch, throttle, yaw): mask 0b1111 = 15
 set msp_override_channels_mask = 15
-# The SITL's Gazebo yaw sign is opposite to the mixer's for these props-in rotors: without this, yaw spins up and RUNAWAY disarms at takeoff
-set yaw_motors_reversed = ON
+# MSP OVERRIDE frames also count as RC link and trigger RX processing: CH1-4 are driven by betaflight_interface (using sim time),
+# while betaflight_rc.py (using wall time) only keeps ARM and the mode switches alive, even if Gazebo is paused
+set msp_override_failsafe = ON
+# Heading from the SITL's virtual magnetometer (fed with Gazebo's attitude), Betaflight does not trust a magnetometer by default
+set trust_mag = ON
+# The SITL's simulated magnetic field points 2deg east of true north (see sitl.c), declination in 0.1deg
+set mag_declination = 20
 # Hover throttle measured in Gazebo (ANGLE mode)
 set ap_hover_throttle = 1595
 save

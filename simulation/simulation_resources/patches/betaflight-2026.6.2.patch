@@ -41,7 +41,7 @@ index a29444b..72def62 100644
  
  #define MISSION_UPLOAD_RETRY_MS   1500
 diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
-index ee216ef..7d502c5 100644
+index ee216ef..1f684dc 100644
 --- a/src/platform/SIMULATOR/sitl.c
 +++ b/src/platform/SIMULATOR/sitl.c
 @@ -198,10 +198,12 @@ static void gpxTrackClose(void)
@@ -91,6 +91,62 @@ index ee216ef..7d502c5 100644
      static double last_timestamp = 0; // in seconds
      static uint64_t last_realtime = 0; // in uS
      static struct timespec last_ts; // last packet
+@@ -295,7 +306,7 @@ static void updateState(const fdm_packet* pkt)
+     }
+ 
+     int16_t x,y,z;
+-    x = constrain(-pkt->imu_linear_acceleration_xyz[0] * ACC_SCALE, -32767, 32767);
++    x = constrain(pkt->imu_linear_acceleration_xyz[0] * ACC_SCALE, -32767, 32767); // AAS: FRD to FLU keeps X, as for the gyro
+     y = constrain(-pkt->imu_linear_acceleration_xyz[1] * ACC_SCALE, -32767, 32767);
+     z = constrain(-pkt->imu_linear_acceleration_xyz[2] * ACC_SCALE, -32767, 32767);
+     virtualAccSet(virtualAccDev, x, y, z);
+@@ -328,7 +339,7 @@ static void updateState(const fdm_packet* pkt)
+     // The Gazebo BetaflightPlugin sends the quaternion conjugated by Rx(π)
+     // (q_plugin = Rx(π) * M * Rx(π), with M the FLU-body to ENU-world
+     // attitude). Undo the conjugation (negate qy/qz), then rotate the world
+-    // frame by Rz(π/2) (ENU -> NWU): q = Rz(π/2) * Rx(π) * q_plugin * Rx(π).
++    // frame by Rz(-π/2) (ENU -> NWU): q = Rz(-π/2) * Rx(π) * q_plugin * Rx(π).
+     // FLU body equals Betaflight's internal NWU body, so the result is the
+     // proper body-to-world rotation - the Euler display and every rMat
+     // vector consumer (position estimator, mag fusion) agree at any heading.
+@@ -337,10 +348,10 @@ static void updateState(const fdm_packet* pkt)
+     const float pktQy = -pkt->imu_orientation_quat[2];
+     const float pktQz = -pkt->imu_orientation_quat[3];
+     static const float k = 0.70710678f; // cos(π/4) = sin(π/4) = √2/2
+-    const float attQw = k * (pktQw - pktQz);
+-    const float attQx = k * (pktQx - pktQy);
+-    const float attQy = k * (pktQy + pktQx);
+-    const float attQz = k * (pktQz + pktQw);
++    const float attQw = k * (pktQw + pktQz); // AAS: Rz(-π/2), Rz(+π/2) put the heading 180 deg off
++    const float attQx = k * (pktQx + pktQy);
++    const float attQy = k * (pktQy - pktQx);
++    const float attQz = k * (pktQz - pktQw);
+ #else
+     // Legacy bridges send the body-to-world quaternion directly
+     const float attQw = pkt->imu_orientation_quat[0];
+diff --git a/src/platform/SIMULATOR/sitl_gyro.h b/src/platform/SIMULATOR/sitl_gyro.h
+index 4232e57..8409631 100644
+--- a/src/platform/SIMULATOR/sitl_gyro.h
++++ b/src/platform/SIMULATOR/sitl_gyro.h
+@@ -30,7 +30,7 @@
+ // frame effectively FRD (X=fwd, Y=right, Z=down):
+ //   Roll  = +wx_FRD (roll right)                               -> keep X
+ //   Pitch = -wy_FRD (BF positive = nose down, opposite to FRD) -> negate Y
+-//   Yaw   = +wz_FRD (CW viewed from above)                     -> keep Z
+-// Legacy bridges (X-Plane, RealFlight) deliver yaw with the opposite polarity
+-// and therefore require Z to be negated.
++//   Yaw   = -wz_FRD (BF positive = counter-clockwise, as FLU) -> negate Z (AAS)
++// Legacy bridges (X-Plane, RealFlight) also require Z to be negated, so
++// gazeboBridge no longer changes the mapping (AAS).
+ //
+@@ -44,5 +44,6 @@ static inline void sitlGyroBodyFromSim(const double rpy[3], bool gazeboBridge,
+ {
+     *roll  =  rpy[0];
+     *pitch = -rpy[1];
+-    *yaw   =  gazeboBridge ? rpy[2] : -rpy[2];
++    (void)gazeboBridge; // AAS: Gazebo also needs Z negated, or a clockwise turn turns Betaflight's heading counter-clockwise
++    *yaw   = -rpy[2];
+ }
 diff --git a/src/platform/SIMULATOR/target/SITL/target.h b/src/platform/SIMULATOR/target/SITL/target.h
 index 69d3250..350e047 100644
 --- a/src/platform/SIMULATOR/target/SITL/target.h

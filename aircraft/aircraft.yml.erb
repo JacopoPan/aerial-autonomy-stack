@@ -56,7 +56,7 @@ windows:
         <% if simulated_time %>
         - python3 /aas/aircraft_resources/scripts/betaflight_rc.py --port <%= 9004 + 10 * (drone_id - 1) %>
         <% end %>
-        - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=<%= simulated_time ? "tcp://#{sim_subnet}.90.#{sim_id}:#{5762 + 10 * (drone_id - 1)}" : '/dev/ttyACM0' %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
+        - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=<%= simulated_time ? "tcp://#{sim_subnet}.90.#{sim_id}:#{5762 + 10 * (drone_id - 1)}" : '/dev/ttyACM0' %> -p acc_1g:=<%= simulated_time ? 256 : 2048 %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
         <% end %>
 
   - offboard_stateshare_dtc:
@@ -179,6 +179,8 @@ windows:
     when 'betaflight'
       rosbag_topics += %W[
         /Drone#{drone_id}/attitude
+        /Drone#{drone_id}/global_position
+        /Drone#{drone_id}/velocity
         /Drone#{drone_id}/rc_override
       ]
     end

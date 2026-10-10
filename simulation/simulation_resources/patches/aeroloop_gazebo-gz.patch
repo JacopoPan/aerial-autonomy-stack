@@ -1,8 +1,16 @@
 diff --git a/plugins/BetaflightPlugin.cc b/plugins/BetaflightPlugin.cc
-index 2725828..89fd757 100644
+index 2725828..63384e9 100644
 --- a/plugins/BetaflightPlugin.cc
 +++ b/plugins/BetaflightPlugin.cc
-@@ -280,6 +280,9 @@ class gz::sim::systems::BetaflightPluginPrivate
+@@ -52,6 +52,7 @@ typedef SSIZE_T ssize_t;
+ #include <gz/sim/Model.hh>
+ #include <gz/sim/Util.hh>
+ #include <gz/sim/components/AngularVelocity.hh>
++#include <gz/sim/components/Gravity.hh>
+ #include <gz/sim/components/Imu.hh>
+ #include <gz/sim/components/Joint.hh>
+ #include <gz/sim/components/JointForceCmd.hh>
+@@ -280,6 +281,9 @@ class gz::sim::systems::BetaflightPluginPrivate
    /// \brief Socket handle
    public: int handle;
  
@@ -12,7 +20,7 @@ index 2725828..89fd757 100644
    /// \brief IMU sensor entity
    public: Entity imuEntity{kNullEntity};
  
-@@ -326,19 +329,10 @@ BetaflightPlugin::BetaflightPlugin()
+@@ -326,19 +330,10 @@ BetaflightPlugin::BetaflightPlugin()
    setsockopt(this->dataPtr->handle, IPPROTO_TCP, TCP_NODELAY,
        reinterpret_cast<const char *>(&one), sizeof(one));
  
@@ -32,7 +40,7 @@ index 2725828..89fd757 100644
    #ifdef _WIN32
    u_long on = 1;
    ioctlsocket(this->dataPtr->handle, FIONBIO,
-@@ -375,6 +369,14 @@ void BetaflightPlugin::Configure(const Entity &_entity,
+@@ -375,6 +370,14 @@ void BetaflightPlugin::Configure(const Entity &_entity,
      return;
    }
  
@@ -47,7 +55,7 @@ index 2725828..89fd757 100644
    // Get the canonical link - first link in the model
    this->dataPtr->modelLinkEntity = this->dataPtr->model.CanonicalLink(_ecm);
  
-@@ -535,7 +537,8 @@ void BetaflightPlugin::Configure(const Entity &_entity,
+@@ -535,7 +538,8 @@ void BetaflightPlugin::Configure(const Entity &_entity,
          const components::Imu *,
          const components::Name *_name) -> bool
      {
@@ -57,7 +65,26 @@ index 2725828..89fd757 100644
        {
          this->dataPtr->imuEntity = _entity;
          return false; // Stop iteration
-@@ -856,7 +859,7 @@ void BetaflightPluginPrivate::SendState(EntityComponentManager &_ecm) const
+@@ -729,7 +733,17 @@ void BetaflightPluginPrivate::SendState(EntityComponentManager &_ecm) const
+     gzerr << "Unable to get IMU linear acceleration\n";
+     return;
+   }
+-  gz::math::Vector3d linearAccel = accelComp->Data();
++  // Specific force, as an accelerometer measures it: LinearAcceleration has no gravity
++  // (Gazebo's IMU sensor adds it only to its own output), so remove gravity in the IMU frame
++  auto imuPoseComp = _ecm.Component<components::WorldPose>(this->imuEntity);
++  auto gravityComp = _ecm.Component<components::Gravity>(worldEntity(_ecm));
++  if (!imuPoseComp || !gravityComp)
++  {
++    gzerr << "Unable to get IMU world pose or gravity\n";
++    return;
++  }
++  gz::math::Vector3d linearAccel = accelComp->Data() -
++      imuPoseComp->Data().Rot().RotateVectorReverse(gravityComp->Data());
+ 
+   // copy to pkt
+   pkt.imuLinearAccelerationXYZ[0] = linearAccel.X();
+@@ -856,7 +870,7 @@ void BetaflightPluginPrivate::SendState(EntityComponentManager &_ecm) const
    }
  
    struct sockaddr_in sockaddr;

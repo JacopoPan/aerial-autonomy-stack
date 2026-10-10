@@ -25,7 +25,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--ip', default=SIM_IP, help='Betaflight SITL address (default: simulation container)')
     parser.add_argument('--port', type=int, default=9004, help='Betaflight SITL RC port')
-    parser.add_argument('--rate', type=float, default=50.0, help='Send rate in Hz')
+    parser.add_argument('--rate', type=float, default=50.0, help='Send rate in Hz (wall clock)')
     args = parser.parse_args()
 
     channels = [1500] * 16
