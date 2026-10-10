@@ -256,7 +256,7 @@ class MissionNode(Node):
             for drone_id, (state_msg, last_seen_time) in sorted(states_copy.items()):
                 seconds_ago = now_seconds - (last_seen_time.nanoseconds / 1e9)
                 output += (f"  Id {drone_id}, lat: {state_msg.latitude_deg:.5f} lon: {state_msg.longitude_deg:.5f}, "
-                        f"alt: {state_msg.altitude_m:.2f} (px4: msl, ap: ell.), hdg: {state_msg.heading_deg:.1f}deg, "
+                        f"alt: {state_msg.altitude_m:.2f} (px4: msl, ap: ell., bf: msl), hdg: {state_msg.heading_deg:.1f}deg, "
                         f"vel: [{state_msg.vx:.1f}, {state_msg.vy:.1f}, {state_msg.vz:.1f}]"
                         f"(seen {seconds_ago:.1f}s ago)\n")
 
