@@ -48,7 +48,7 @@ public:
                 "/Drone" + std::to_string(drone_id_) + "/fmu/out/vehicle_local_position_v1", // MESSAGE_VERSION = 1 -> _v1 since 1.17
                 qos_profile_sub, std::bind(&StateSharingNode::px4_local_pos_callback, this, std::placeholders::_1), subscriber_options);
         }
-        else
+        else if (autopilot == "ardupilot")
         {
             subscription_navsat_apm_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
                 "/mavros/global_position/global", 
@@ -62,6 +62,14 @@ public:
                 "/mavros/vfr_hud",
                 qos_profile_sub, std::bind(&StateSharingNode::ardupilot_hud_callback, this, std::placeholders::_1), subscriber_options);
             
+        }
+        else if (autopilot == "betaflight") // TODO: subscribe to the state topics of betaflight_interface (MSP)
+        {
+            RCLCPP_WARN(this->get_logger(), "state_sharing_node has no Betaflight state source yet");
+        }
+        else
+        {
+            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4', 'ardupilot', or 'betaflight'.", autopilot.c_str());
         }
         RCLCPP_INFO(this->get_logger(), "state_sharing_node initialized");
     }

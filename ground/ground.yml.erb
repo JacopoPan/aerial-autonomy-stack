@@ -10,7 +10,7 @@
   num_drones = drone_ids.size
   num_quads = quad_ids.size # Only used to auto-center QGC's virtual joystick in SITL/HITL with a single quad
 
-  betaflight_app = ENV.fetch('BETAFLIGHT_APP', 'false') == 'true' # Only used for SITL with AUTOPILOT=betaflight ./sim_run.sh
+  autopilot = ENV.fetch('AUTOPILOT', 'px4') # px4, ardupilot (QGC), betaflight (Betaflight App)
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
@@ -66,14 +66,14 @@ windows:
         - zenoh-bridge-ros2dds -l tcp/0.0.0.0:7447 -c /aas/ground_resources/comms/zenoh_config_ground.json5
         <% if headless %>
         - echo "Headless mode, not launching QGroundControl."
-        <% elsif betaflight_app %>
+        <% elsif autopilot == 'betaflight' %>
         # One Betaflight App per drone instead of QGC: the simulation container relays each SITL to 127.0.0.1:5761 + 10 * (drone_id - 1)
         - >
           <% drone_ids.each do |drone_id| %>
           (while true; do socat TCP-LISTEN:<%= 5761 + 10 * (drone_id - 1) %>,bind=127.0.0.1,reuseaddr TCP-LISTEN:<%= 15761 + 10 * (drone_id - 1) %>,reuseaddr; sleep 1; done) &
           <% end %>
           python3 /aas/ground_resources/scripts/betaflight_app.py <%= drone_ids.map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
-        <% else %>
+        <% elsif autopilot == 'px4' || autopilot == 'ardupilot' %>
         # QGC offline tiles: export from QGC 5.1 Application Settings -> Maps -> Offline Maps and save them on the host as ~/Downloads/qgcMapCache.qgctiledb
         - >
           [ -f /aas/mounted_downloads_folder/qgcMapCache.qgctiledb ] && gosu qgcuser mkdir -p /home/qgcuser/.cache/QGroundControl/QGroundControl/QGCMapCache && gosu qgcuser cp /aas/mounted_downloads_folder/qgcMapCache.qgctiledb /home/qgcuser/.cache/QGroundControl/QGroundControl/QGCMapCache/qgcMapCache.db;

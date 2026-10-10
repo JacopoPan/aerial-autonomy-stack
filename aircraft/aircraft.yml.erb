@@ -53,8 +53,10 @@ windows:
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% elsif autopilot == 'betaflight' %>
+        <% if simulated_time %>
         - python3 /aas/aircraft_resources/scripts/betaflight_rc.py --port <%= 9004 + 10 * (drone_id - 1) %>
-        - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=tcp://<%= "#{sim_subnet}.90.#{sim_id}" %>:<%= 5762 + 10 * (drone_id - 1) %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
+        <% end %>
+        - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=<%= simulated_time ? "tcp://#{sim_subnet}.90.#{sim_id}:#{5762 + 10 * (drone_id - 1)}" : '/dev/ttyACM0' %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
         <% end %>
 
   - offboard_stateshare_dtc:
@@ -64,6 +66,8 @@ windows:
         - ros2 run offboard_control px4_offboard --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]" <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
+        <% elsif autopilot == 'betaflight' %>
+        - echo "Placeholder for a Betaflight offboard node."
         <% end %>
         - ros2 run state_sharing state_sharing_node --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 run drone_traffic_client dtc_client <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>

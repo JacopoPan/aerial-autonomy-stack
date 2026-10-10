@@ -43,8 +43,10 @@ public:
                 rclcpp::SensorDataQoS(),
                 std::bind(&ImuPublisherNode::ardupilot_callback, this, std::placeholders::_1), subscriber_options);
             RCLCPP_INFO(this->get_logger(), "imu_publisher_node started for ArduPilot (passthrough)");
+        } else if (autopilot == "betaflight") {
+            RCLCPP_WARN(this->get_logger(), "imu_publisher_node has no Betaflight IMU source yet");
         } else {
-            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4' or 'ardupilot'.", autopilot.c_str());
+            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4', 'ardupilot', or 'betaflight'.", autopilot.c_str());
         }
     }
 

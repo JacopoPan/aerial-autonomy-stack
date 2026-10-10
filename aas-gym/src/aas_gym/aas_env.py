@@ -71,7 +71,7 @@ class AASEnv(gym.Env):
         # self.GROUND_ID = "101" # Unused
         #
         self.GND_CONTAINER = False # Do NOT use the ground-image to run Zenoh (nor QGC)
-        self.RTF = 0.0 # As fast as possible (capped to 15x in the simulation.yml.erb)
+        self.RTF = 0.0 # As fast as possible (capped to 15x, 5x for betaflight, in the simulation.yml.erb)
         self.START_AS_PAUSED = True # Start the simulation paused and manually step with gz-sim WorldControl
         self.INSTANCE = instance
         #

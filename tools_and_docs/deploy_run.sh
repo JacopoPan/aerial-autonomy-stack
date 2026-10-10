@@ -13,7 +13,7 @@ if [[ -n "$SSH_CLIENT" ]]; then
 fi
 
 # Set up the aircraft
-AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot
+AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot, betaflight
 HEADLESS="${HEADLESS:-true}" # Options: true (default), false 
 CAMERA="${CAMERA:-true}" # Options: true (default), false
 LIDAR="${LIDAR:-true}" # Options: true (default), false
@@ -45,11 +45,12 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
-check_enum AUTOPILOT px4 ardupilot
+check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
+if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$DRONE_TYPE" != "quad" || "$HITL" == "true" ]]; then abort "AUTOPILOT=betaflight supports DRONE_TYPE=quad only, no HITL"; fi
 for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
 [[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"
 if [[ "$GROUND" == "true" && -z "$QUAD_IDS$VTOL_IDS$TAIL_IDS" ]]; then abort "GROUND=true requires at least one ID in QUAD_IDS, VTOL_IDS, or TAIL_IDS"; fi
@@ -66,7 +67,7 @@ if [[ "$GROUND" == "true" ]]; then
   docker run -it --rm \
     --volume /tmp/.X11-unix:/tmp/.X11-unix:rw \
     --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
-    --env HEADLESS=false \
+    --env HEADLESS=false --env AUTOPILOT=$AUTOPILOT \
     --env QUAD_IDS=$QUAD_IDS --env VTOL_IDS=$VTOL_IDS --env TAIL_IDS=$TAIL_IDS \
     --env SIMULATED_TIME=$HITL \
     --env ROS_DOMAIN_ID=$GROUND_ID \

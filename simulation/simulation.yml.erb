@@ -33,11 +33,12 @@
   else
     speedup = rtf.ceil # Positive RTF: round up to the nearest integer
   end
+  speedup = [speedup, 5].min if autopilot == 'betaflight' # Betaflight SITL is only tested up to 5x
   rtf_string = "<real_time_factor>%g</real_time_factor>" % speedup
 
   # Compute step size for gymnasium based on physics frequency in the world SDF files (ardupilot@500Hz, px4 and betaflight@250Hz)
-  physics_freq_hz = (autopilot == 'ardupilot') ? 500 : 250
-  physics_dt = (autopilot == 'ardupilot') ? 0.002 : 0.004
+  physics_freq_hz = { 'px4' => 250, 'ardupilot' => 500, 'betaflight' => 250 }.fetch(autopilot)
+  physics_dt = 1.0 / physics_freq_hz
   gym_step_size = (physics_freq_hz / gym_freq_hz).to_i
   gym_step_size = 1 if gym_step_size < 1
 
@@ -198,7 +199,7 @@ windows:
         - echo "Headless mode, not launching QGroundControl."
         <% elsif autopilot == 'betaflight' %>
         - python3 /aas/ground_resources/scripts/betaflight_app.py <%= (1..num_quads).map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
-        <% else %>
+        <% elsif autopilot == 'px4' || autopilot == 'ardupilot' %>
         - >
           sed -i 's/^virtualJoystick=.*/virtualJoystick=<%= simulated_time && (num_drones == 1) %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
           sed -i 's/^virtualJoystickAutoCenterThrottle=.*/virtualJoystickAutoCenterThrottle=<%= num_quads == 1 %>/g' /home/qgcuser/.config/QGroundControl/QGroundControl.ini &&
