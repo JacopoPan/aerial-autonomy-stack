@@ -155,9 +155,12 @@ windows:
           until gz topic -l | grep -q /world/<%= world %>/stats; do sleep 1; done &&
           mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli &&
-          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %>
+          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --sysid <%= drone_id %>
         <% if gnd_container %>
+        # MSP (serial 0/UART1, enabled by default) forwarded to the ground container for the Betaflight App
         - while true; do socat TCP:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 15761 + 10 * sitl_instance %>,forever,interval=1 TCP:127.0.0.1:<%= 5761 + 10 * sitl_instance %>; sleep 1; done
+        # MAVLink telemetry (serial 2/UART3 enabled in betaflight-2026.6.cli) for ground_system's /tracks
+        - while true; do socat -u TCP:127.0.0.1:<%= 5763 + 10 * sitl_instance %> UDP-SENDTO:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 16540 + sitl_instance %>; sleep 1; done
         <% end %>
   <% end %>
         <% if camera %>

@@ -12,11 +12,39 @@ index a922cc7..8c9a16a 100644
  
  static const struct serialPortVTable tcpVTable; // Forward
  static tcpPort_t tcpSerialPorts[SERIAL_PORT_COUNT];
+diff --git a/src/main/telemetry/mavlink.c b/src/main/telemetry/mavlink.c
+index baa9058..72f4111 100644
+--- a/src/main/telemetry/mavlink.c
++++ b/src/main/telemetry/mavlink.c
+@@ -93,7 +93,8 @@
+ #define TELEMETRY_MAVLINK_MAXRATE 50
+ #define TELEMETRY_MAVLINK_DELAY ((1000 * 1000) / TELEMETRY_MAVLINK_MAXRATE)
+ 
+-#define MAVLINK_SYSTEM_ID 1
++uint8_t mavlinkSystemId = 1; // Set by the SITL's --sysid, to tell drones apart
++#define MAVLINK_SYSTEM_ID mavlinkSystemId
+ #define MAVLINK_COMPONENT_ID MAV_COMP_ID_AUTOPILOT1
+ extern uint16_t rssi; // FIXME dependency on mw.c
+ 
+diff --git a/src/main/telemetry/mavlink_mission.c b/src/main/telemetry/mavlink_mission.c
+index a29444b..72def62 100644
+--- a/src/main/telemetry/mavlink_mission.c
++++ b/src/main/telemetry/mavlink_mission.c
+@@ -46,7 +46,8 @@
+ #include "telemetry/mavlink.h"
+ #include "telemetry/mavlink_mission.h"
+ 
+-#define MAVLINK_SYSTEM_ID 1
++extern uint8_t mavlinkSystemId; // Defined in mavlink.c
++#define MAVLINK_SYSTEM_ID mavlinkSystemId
+ #define MAVLINK_COMPONENT_ID MAV_COMP_ID_AUTOPILOT1
+ 
+ #define MISSION_UPLOAD_RETRY_MS   1500
 diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
-index ee216ef..8f0f9a2 100644
+index ee216ef..7d502c5 100644
 --- a/src/platform/SIMULATOR/sitl.c
 +++ b/src/platform/SIMULATOR/sitl.c
-@@ -198,10 +198,11 @@ static void gpxTrackClose(void)
+@@ -198,10 +198,12 @@ static void gpxTrackClose(void)
      }
  }
  
@@ -25,6 +53,7 @@ index ee216ef..8f0f9a2 100644
 -#define PORT_STATE      9003    // In
 -#define PORT_RC         9004    // In
 +int sitlPortOffset = 0; // Set by --port-offset, also used by serial_tcp.c
++extern uint8_t mavlinkSystemId; // Set by --sysid, defined in telemetry/mavlink.c
 +#define PORT_PWM_RAW    (9001 + sitlPortOffset)    // Out
 +#define PORT_PWM        (9002 + sitlPortOffset)    // Out
 +#define PORT_STATE      (9003 + sitlPortOffset)    // In
@@ -32,24 +61,27 @@ index ee216ef..8f0f9a2 100644
  
  int targetParseArgs(int argc, char * argv[])
  {
-@@ -214,6 +215,7 @@ int targetParseArgs(int argc, char * argv[])
+@@ -214,6 +216,8 @@ int targetParseArgs(int argc, char * argv[])
  #ifdef CONFIG_IN_FILE
              printf("  --config <file>    Load CLI config file, save to EEPROM, and exit\n");
  #endif
 +            printf("  --port-offset <n>  Add n to all UDP and TCP ports, to run multiple instances\n");
++            printf("  --sysid <n>        MAVLink system ID (default: 1), to tell multiple instances apart\n");
              printf("  --gpx              Write GPS track to sitl_track.gpx\n");
              printf("  --help, -h         Show this help message\n");
              exit(0);
-@@ -224,6 +226,8 @@ int targetParseArgs(int argc, char * argv[])
+@@ -224,6 +228,10 @@ int targetParseArgs(int argc, char * argv[])
          } else if (strcmp(argv[i], "--ip") == 0 && i + 1 < argc) {
              strncpy(simulator_ip, argv[++i], sizeof(simulator_ip) - 1);
              simulator_ip[sizeof(simulator_ip) - 1] = '\0';
 +        } else if (strcmp(argv[i], "--port-offset") == 0 && i + 1 < argc) {
 +            sitlPortOffset = atoi(argv[++i]);
++        } else if (strcmp(argv[i], "--sysid") == 0 && i + 1 < argc) {
++            mavlinkSystemId = atoi(argv[++i]);
          } else if (strcmp(argv[i], "--gpx") == 0) {
              gpxEnabled = true;
          } else {
-@@ -274,6 +278,9 @@ static void sendMotorUpdate(void)
+@@ -274,6 +282,9 @@ static void sendMotorUpdate(void)
  
  static void updateState(const fdm_packet* pkt)
  {
@@ -59,3 +91,16 @@ index ee216ef..8f0f9a2 100644
      static double last_timestamp = 0; // in seconds
      static uint64_t last_realtime = 0; // in uS
      static struct timespec last_ts; // last packet
+diff --git a/src/platform/SIMULATOR/target/SITL/target.h b/src/platform/SIMULATOR/target/SITL/target.h
+index 69d3250..350e047 100644
+--- a/src/platform/SIMULATOR/target/SITL/target.h
++++ b/src/platform/SIMULATOR/target/SITL/target.h
+@@ -120,6 +120,8 @@
+ #define USE_ALTITUDE_HOLD
+ #define USE_POSITION_HOLD
+ #define USE_FLIGHT_PLAN
++#define USE_TELEMETRY // MAVLink telemetry for the AAS ground system
++#define USE_TELEMETRY_MAVLINK
+ 
+ #define USE_PARAMETER_GROUPS
+ 

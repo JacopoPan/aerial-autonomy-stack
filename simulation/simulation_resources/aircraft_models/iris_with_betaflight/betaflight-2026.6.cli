@@ -9,9 +9,13 @@ aux 0 0 0 1700 2100 0 0
 aux 1 56 1 1700 2100 0 0
 # ANGLE mode while AUX1/CH5 is 900-2100 (i.e. always on, by tying to the whole range of CH5)
 aux 2 1 0 900 2100 0 0
-# Companion computer (betaflight_interface): MSP on UART2 = TCP 5762 + port offset
+# Companion computer (betaflight_interface in aircraft.yml.erb): MSP on UART2 = TCP 5762 + port offset
 # serial <port 0 = UART1, 1 = UART2> <function 1 = MSP> <MSP, GPS, telemetry, blackbox baud rates (unused over TCP)>
 serial 1 1 115200 57600 0 115200
+# MAVLink telemetry (function 512) for ground_system (/tracks) on UART3 = TCP 5763 + port offset
+serial 2 512 115200 57600 0 115200
+# Set GLOBAL_POSITION_INT in MAVLink telemetry at 10 Hz (default is 2 Hz)
+set mavlink_pos_rate = 10
 # MSP OVERRIDE while AUX3/CH7 is 1700-2100
 aux 3 50 2 1700 2100 0 0
 # MSP OVERRIDE replaces CH1-4 (roll, pitch, throttle, yaw): mask 0b1111 = 15
