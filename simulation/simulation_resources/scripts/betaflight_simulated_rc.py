@@ -7,16 +7,19 @@ If this script stops (the radio is lost), betaflight_interface keeps flying (msp
 On the ground, Betaflight does not arm on them (the throttle is not low)
 
 Use as:
-    python3 betaflight_simulated_rc.py <port> (9004 + port offset)
+    python3 betaflight_simulated_rc.py <port> (9004 + port offset) <betaflight-2026.6.cli>
 """
+import re
 import socket
 import struct
 import sys
 import time
 
+settings = dict(re.findall(r'^set (\w+) = (\S+)', open(sys.argv[2]).read(), re.M)) # The CLI's set lines
+hover, min_check = int(settings['ap_hover_throttle']), int(settings['min_check'])
 # Roll, pitch, throttle, yaw, CH5 ARM, CH6 flight mode, CH7 MSP OVERRIDE, CH8-16 unused
-# The throttle is ALTHOLD's center: ap_hover_throttle 1595 before Betaflight's min_check rescaling (as betaflight_interface's hold_throttle(0))
-CHANNELS = [1500, 1500, 1615, 1500, 2000, 2000, 2000] + [1000] * 9
+# The throttle is ALTHOLD's center: ap_hover_throttle before Betaflight's min_check rescaling (as betaflight_interface's hold_throttle(0))
+CHANNELS = [1500, 1500, round(min_check + (hover - 1000) * (2000 - min_check) / 1000), 1500, 2000, 2000, 2000] + [1000] * 9
 packet = struct.pack('<d16H', 0.0, *CHANNELS) # SITL rc_packet: timestamp (unused) and 16 channels
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 while True:

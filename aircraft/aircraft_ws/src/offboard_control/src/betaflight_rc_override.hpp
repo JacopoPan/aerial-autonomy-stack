@@ -38,16 +38,12 @@
 #include "ground_system_msgs/msg/swarm_obs.hpp"
 #include "vision_msgs/msg/detection2_d_array.hpp"
 
+#include "betaflight_stick_constants.hpp" // In autopilot_interface (see CMakeLists.txt)
+
 using namespace geometry_msgs::msg;
 using namespace sensor_msgs::msg;
 using namespace std::chrono_literals; // for time literals (e.g. 1s)
 
-// Stick scales of rc_override, from betaflight-2026.6.cli (linear stick curves) and Betaflight's defaults
-constexpr double MAX_RATE_RAD_S = 670.0 * M_PI / 180.0; // Rate at full stick (rc_rate = srate = 67)
-constexpr double ANGLE_LIMIT_RAD = 60.0 * M_PI / 180.0; // Tilt at full roll or pitch stick in ANGLE (angle_limit)
-constexpr double FULL_STICK_SPEED_MS = 5.0; // Horizontal velocity at full roll or pitch stick in POS HOLD (ap_max_velocity)
-constexpr double FULL_STICK_CLIMB_MS = 5.0; // Climb rate at full throttle in ALTHOLD (alt_hold_climb_rate)
-constexpr double HOVER_THROTTLE = 0.595; // Throttle stick in [0, 1] that hovers the simulated Iris in ACRO and ANGLE (ap_hover_throttle 1595)
 enum class RcMode : int { ACRO = 0, ANGLE = 1, VELOCITY = 2 }; // rc_override buttons[0], the flight mode switch (CH6) position
 
 class BetaflightRcOverride : public rclcpp::Node

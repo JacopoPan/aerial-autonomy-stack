@@ -21,6 +21,7 @@ find_package(vision_msgs REQUIRED)
 # Add the CMake module path
 set(CMAKE_MODULE_PATH "/usr/share/cmake/geographiclib" ${CMAKE_MODULE_PATH})
 find_package(GeographicLib REQUIRED)
+include_directories(../autopilot_interface/src) # betaflight_stick_constants.hpp, shared with betaflight_interface
 
 add_executable(px4_offboard src/px4_offboard.cpp)
 target_link_libraries(px4_offboard ${GeographicLib_LIBRARIES})

@@ -293,7 +293,7 @@ SR2_RC_CHAN      1
 
 Connect the FCU's USB port to a computer with the [Betaflight App](https://app.betaflight.com/), flash the Betaflight 2026.6.2 release for the FCU target
 
-In the App's CLI paste the `aux`, `msp_override_*`, `*_rc_rate`, `alt_hold_deadband`, and `serial_update_rate_hz` lines of [`betaflight-2026.6.cli`](/simulation/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli), then:
+In the App's CLI paste the `aux`, `msp_override_*`, `*_rc_rate`, `alt_hold_deadband`, `min_check`, and `serial_update_rate_hz` lines of [`betaflight-2026.6.cli`](/simulation/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli), then:
 
 ```sh
 # Hover throttle of the airframe (measured in ANGLE mode), also the center of ALTHOLD's throttle

@@ -27,7 +27,7 @@ Use with:
 Offboard: while offboard_action runs, /offboard_flag names the controller that betaflight_rc_override (offboard_control) runs
     It publishes rc_override (sensor_msgs/Joy): axes[0..3] = roll, pitch, throttle, yaw sticks in [-1, 1], buttons[0] = CH6 (0 low, 1 mid, 2 high)
     The throttle axis is the collective thrust in ACRO and ANGLE (-1 idle), the climb rate in ALTHOLD + POS HOLD (0 holds the altitude)
-    Without rc_override in the last 0.5 s, the sticks center in ALTHOLD + POS HOLD and the drone holds its position
+    Without rc_override in the last rc_override_timeout (0.5s), the sticks center in ALTHOLD + POS HOLD and the drone holds its position
 
 MSP budget: Betaflight answers one MSP request per port per serial task run, serial_update_rate_hz times per second
     (default 100Hz, set to 500Hz in betaflight-2026.6.cli), this node sends 100/s (50 MSP_SET_RAW_RC, 50 MSP_MULTIPLE_MSP)
@@ -35,7 +35,7 @@ MSP budget: Betaflight answers one MSP request per port per serial task run, ser
 Topics published at 50 Hz, from one MSP_MULTIPLE_MSP request (five replies) every timer tick:
     attitude (geometry_msgs/Vector3Stamped): roll, pitch in rad (FLU: right wing down, nose down positive), heading in rad (clockwise from north)
     imu (sensor_msgs/Imu): FLU angular velocity (rad/s) and acceleration (m/s^2), from MSP_RAW_IMU raw sensor units
-    global_position (sensor_msgs/NavSatFix): latitude, longitude, MSL altitude (1 m steps)
+    global_position (sensor_msgs/NavSatFix): latitude, longitude, MSL altitude (1m steps)
     local_position (geometry_msgs/PointStamped): east, north of the arming point and altitude above it, in m, from the first arming
     velocity (geometry_msgs/TwistStamped): ENU, from the GPS ground speed and course, and the estimated vertical speed
 And /offboard_flag (autopilot_interface_msgs/OffboardFlag) at 10 Hz, as px4_interface and ardupilot_interface
@@ -52,6 +52,15 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
     // Parameters
     const std::string device = this->declare_parameter<std::string>("device", "tcp://127.0.0.1:5762");
     acc_1g_ = this->declare_parameter<int>("acc_1g", 2048); // MSP_RAW_IMU accelerometer units per g: 2048 on most FC IMUs (16 g range), 256 in the SITL
+    POSITION_GAIN = this->declare_parameter<double>("position_gain", 0.5); // 1/s, from horizontal distance to speed
+    ALTITUDE_GAIN = this->declare_parameter<double>("altitude_gain", 0.5); // 1/s, from altitude error to climb rate
+    MAX_CLIMB = this->declare_parameter<double>("max_climb", 2.0); // m/s, climb and descent rate limit
+    LAND_SPEED = this->declare_parameter<double>("land_speed", 1.0); // m/s, commanded descent rate
+    TOUCHDOWN_TIME = this->declare_parameter<double>("touchdown_time", 1.0); // s, neither descending nor moving, after the landing descent began
+    ARRIVAL_DISTANCE = this->declare_parameter<double>("arrival_distance", 1.0); // m, horizontally and vertically
+    ARRIVAL_SPEED = this->declare_parameter<double>("arrival_speed", 0.5); // m/s, horizontally and vertically
+    ARMING_TIMEOUT = this->declare_parameter<double>("arming_timeout", 5.0); // s
+    RC_OVERRIDE_TIMEOUT = this->declare_parameter<double>("rc_override_timeout", 0.5); // s, older rc_override messages are ignored
 
     fd_ = open_device(device);
     RCLCPP_INFO(this->get_logger(), "MSP on %s", device.c_str());
@@ -343,12 +352,12 @@ std::vector<uint8_t> BetaflightInterface::rc_channels() const // MSP_SET_RAW_RC 
     }
     if (state_ == State::REPOSITIONING || state_ == State::HOVER || state_ == State::LANDING) { // Also steer in HOVER: after a move, Betaflight's own hold can settle meters away
         const auto [east, north, up] = offset();
-        const double gain = std::min(POSITION_GAIN, FULL_STICK_SPEED / std::max(std::hypot(east, north), 1e-6)); // Speed proportional to the distance, up to full stick
+        const double gain = std::min(POSITION_GAIN, FULL_STICK_SPEED_MS / std::max(std::hypot(east, north), 1e-6)); // Speed proportional to the distance, up to full stick
         const double ve = gain * east, vn = gain * north; // m/s
-        ch[0] = 1500.0 + 500.0 * (ve * std::cos(heading_) - vn * std::sin(heading_)) / FULL_STICK_SPEED; // Roll (right)
-        ch[1] = 1500.0 + 500.0 * (ve * std::sin(heading_) + vn * std::cos(heading_)) / FULL_STICK_SPEED; // Pitch (forward)
+        ch[0] = 1500.0 + 500.0 * (ve * std::cos(heading_) - vn * std::sin(heading_)) / FULL_STICK_SPEED_MS; // Roll (right)
+        ch[1] = 1500.0 + 500.0 * (ve * std::sin(heading_) + vn * std::cos(heading_)) / FULL_STICK_SPEED_MS; // Pitch (forward)
         const double climb = state_ == State::LANDING ? -LAND_SPEED : std::clamp(ALTITUDE_GAIN * up, -MAX_CLIMB, MAX_CLIMB); // m/s
-        ch[2] = hold_throttle(climb / FULL_STICK_CLIMB);
+        ch[2] = hold_throttle(climb / FULL_STICK_CLIMB_MS);
     } else if (state_ == State::OFFBOARD && rc_override_valid()) { // The offboard controller's sticks and flight mode
         const auto &axes = rc_override_.axes;
         const int mode = rc_override_.buttons[0]; // 0 ACRO, 1 ANGLE, 2 ANGLE + ALTHOLD + POS HOLD
@@ -367,10 +376,10 @@ std::vector<uint8_t> BetaflightInterface::rc_channels() const // MSP_SET_RAW_RC 
     return payload;
 }
 
-double BetaflightInterface::hold_throttle(double climb) const // Throttle PWM for a climb rate in [-1, 1] of FULL_STICK_CLIMB, 0 holds the altitude
+double BetaflightInterface::hold_throttle(double climb) const // Throttle PWM for a climb rate in [-1, 1] of FULL_STICK_CLIMB_MS, 0 holds the altitude
 {
     const double command = hover_pwm_ + climb * (climb > 0.0 ? 2000.0 - hover_pwm_ : hover_pwm_ - 1000.0); // ALTHOLD centers it on ap_hover_throttle
-    return MIN_CHECK + (command - 1000.0) * (2000.0 - MIN_CHECK) / 1000.0; // Undo the rescaling from [min_check, 2000] to [1000, 2000]
+    return MIN_CHECK_US + (command - 1000.0) * (2000.0 - MIN_CHECK_US) / 1000.0; // Undo the rescaling from [min_check, 2000] to [1000, 2000]
 }
 
 std::array<double, 3> BetaflightInterface::position() const // East, north of the arming point and altitude above it, in m

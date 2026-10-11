@@ -1,6 +1,7 @@
 # Written to eeprom.bin by `betaflight_SITL.elf --config <this file>` (see simulation.yml.erb)
 # As on hardware: the radio is the receiver, its MSP OVERRIDE switch hands CH1-6 to betaflight_interface's MSP_SET_RAW_RC frames
 # The SITL's receiver is UDP 9004 + port offset, where betaflight_simulated_rc.py stands in for the radio, with the switch on
+# Keep the rc rates, angle_limit, ap_max_velocity, alt_hold_climb_rate, min_check, and ap_hover_throttle in sync with betaflight_stick_constants.hpp
 feature RX_UDP
 # aux <slot> <mode id> <aux channel> <from> <to> <logic> <link>
 #   mode id: 0 = ARM, 1 = ANGLE, 3 = ALTHOLD, 11 = POS HOLD, 50 = MSP OVERRIDE
@@ -38,6 +39,8 @@ set mavlink_pos_rate = 10
 set trust_mag = ON
 # The SITL's simulated magnetic field points 2deg east of true north (see sitl.c), declination in 0.1deg
 set mag_declination = 20
+# Betaflight rescales the throttle from [min_check, 2000] to [1000, 2000] (the default, set here for betaflight_simulated_rc.py)
+set min_check = 1050
 # Hover throttle measured in Gazebo (ANGLE mode), also the center of ALTHOLD's throttle deadband
 set ap_hover_throttle = 1595
 save

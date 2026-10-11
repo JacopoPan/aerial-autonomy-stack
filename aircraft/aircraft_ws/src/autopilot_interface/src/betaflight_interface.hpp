@@ -32,6 +32,7 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joy.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
+#include "betaflight_stick_constants.hpp"
 
 using namespace std::chrono_literals;
 using Takeoff = autopilot_interface_msgs::action::Takeoff;
@@ -51,20 +52,6 @@ enum : uint8_t { // MSP v1 commands
     MSP_MULTIPLE_MSP = 230,
 };
 
-// Guidance, through the POS HOLD and ALTHOLD sticks (see betaflight-2026.6.cli)
-constexpr double FULL_STICK_SPEED = 5.0; // m/s, horizontal velocity at full roll or pitch stick (ap_max_velocity, default 500 cm/s)
-constexpr double FULL_STICK_CLIMB = 5.0; // m/s, climb rate at full throttle (alt_hold_climb_rate, default 50)
-constexpr double MIN_CHECK = 1050.0; // Betaflight rescales the throttle from [min_check (default 1050), 2000] to [1000, 2000]
-constexpr double POSITION_GAIN = 0.5; // 1/s, from horizontal distance to speed
-constexpr double ALTITUDE_GAIN = 0.5; // 1/s, from altitude error to climb rate
-constexpr double MAX_CLIMB = 2.0; // m/s
-constexpr double LAND_SPEED = 1.0; // m/s, commanded descent rate
-constexpr double TOUCHDOWN_TIME = 1.0; // s, neither descending nor moving, after the landing descent began
-constexpr double ARRIVAL_DISTANCE = 1.0; // m, horizontally and vertically
-constexpr double ARRIVAL_SPEED = 0.5; // m/s, horizontally and vertically
-constexpr double ARMING_TIMEOUT = 5.0; // s
-constexpr double RC_OVERRIDE_TIMEOUT = 0.5; // s, older rc_override messages are ignored
-
 enum class State { INIT, STARTED, ARMING, REPOSITIONING, HOVER, LANDING, OFFBOARD };
 constexpr const char *STATE_NAMES[] = {"INIT", "STARTED", "ARMING", "REPOSITIONING", "HOVER", "LANDING", "OFFBOARD"};
 
@@ -75,6 +62,11 @@ public:
     ~BetaflightInterface();
 
 private:
+    // Parameters - Guidance, through the POS HOLD and ALTHOLD sticks (see betaflight-2026.6.cli)
+    double POSITION_GAIN, ALTITUDE_GAIN, MAX_CLIMB, LAND_SPEED;
+    // Parameters - Action completion and timeouts
+    double TOUCHDOWN_TIME, ARRIVAL_DISTANCE, ARRIVAL_SPEED, ARMING_TIMEOUT, RC_OVERRIDE_TIMEOUT;
+
     // MSP link
     const std::vector<uint8_t> state_cmds_; // Handled in this order, so velocity (published on MSP_RAW_GPS) uses this request's vertical speed (from MSP_ALTITUDE)
     int fd_;
