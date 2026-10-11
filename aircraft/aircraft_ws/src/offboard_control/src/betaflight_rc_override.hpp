@@ -141,6 +141,7 @@ private:
 
     // Utility
     double normalize_heading(double angle_rad);
+    double steer_to_waypoint(const std::array<double, 3> &waypoint_enu_m, const std::array<double, 3> &look_at_enu_m, double v_max_ms);
     std::array<double, 3> camera_bearings_to_enu(double az_rad, double el_rad);
     void publish_rc_override(double roll, double pitch, double throttle, double yaw, RcMode mode);
     void publish_rates_ref(double roll_rate, double pitch_rate, double yaw_rate, double throttle);
@@ -154,6 +155,17 @@ private:
     void ctbr_ref_test();
     void att_ref_test();
     void vel_ref_test();
+    struct Lawnmower
+    {
+        std::array<double, 2> east_m; // {start, end of each East-West leg}
+        std::array<double, 2> north_m; // {min, max}
+        double alt_m, legs_separation_m, v_max_ms;
+        bool reattack;
+    };
+    void vel_ref_lawnmower_search(const Lawnmower &pattern);
+
+    // Controller variables
+    int lawnmower_leg_;
 };
 
 #endif // OFFBOARD_CONTROL__BETAFLIGHT_RC_OVERRIDE_HPP_

@@ -8,7 +8,7 @@ BetaflightRcOverride::BetaflightRcOverride() : Node("betaflight_rc_override"),
     desired_bearing_rad_(NAN), desired_elevation_rad_(NAN), closing_distance_(NAN),
     target_vn_(NAN), target_ve_(NAN), target_vd_(NAN),
     detect_az_rad_(NAN), detect_el_rad_(NAN), detect_fix_count_(0),
-    active_controller_func_(nullptr)
+    active_controller_func_(nullptr), lawnmower_leg_(0)
 {
     RCLCPP_INFO(this->get_logger(), "Betaflight RC override referencing!");
     RCLCPP_INFO(this->get_logger(), "namespace: %s", this->get_namespace());
@@ -111,6 +111,9 @@ BetaflightRcOverride::BetaflightRcOverride() : Node("betaflight_rc_override"),
     controller_map_["ctbr-test"] = std::bind(&BetaflightRcOverride::ctbr_ref_test, this);
     controller_map_["att-test"] = std::bind(&BetaflightRcOverride::att_ref_test, this);
     controller_map_["vel-test"] = std::bind(&BetaflightRcOverride::vel_ref_test, this);
+    // Vision-based guidance
+    controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, FULL_STICK_SPEED_MS, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
+    controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, FULL_STICK_SPEED_MS, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
 }
 
 // Callbacks for subscribers (reentrant group)
@@ -384,6 +387,20 @@ double BetaflightRcOverride::normalize_heading(double angle_rad) {
     }
     return angle_rad;
 }
+double BetaflightRcOverride::steer_to_waypoint(const std::array<double, 3> &waypoint_enu_m, const std::array<double, 3> &look_at_enu_m, double v_max_ms)
+{
+    constexpr double KP_POS = 0.5;       // 1/s, position error to speed gain
+    constexpr double MAX_VZ_MS = 2.0;    // m/s, climb and descent limit
+    constexpr double KP_YAW = 0.8;       // 1/s, heading error to yaw rate gain
+    constexpr double MAX_YAW_RATE = 0.5; // rad/s, maximum yaw rate
+    double dE = waypoint_enu_m[0] - position_[0], dN = waypoint_enu_m[1] - position_[1];
+    double dist_m = std::hypot(dE, dN);
+    double gain = std::min(v_max_ms, KP_POS * dist_m) / std::max(1e-3, dist_m);
+    double v_up = std::clamp(KP_POS * (waypoint_enu_m[2] - position_[2]), -MAX_VZ_MS, MAX_VZ_MS);
+    double heading_error = normalize_heading(std::atan2(look_at_enu_m[1] - position_[1], look_at_enu_m[0] - position_[0]) - ((M_PI / 2.0) - heading_));
+    publish_velocity_ref(gain * dE, gain * dN, v_up, std::clamp(KP_YAW * heading_error, -MAX_YAW_RATE, MAX_YAW_RATE));
+    return dist_m;
+}
 std::array<double, 3> BetaflightRcOverride::camera_bearings_to_enu(double az_rad, double el_rad)
 {
     double pitch_rad = camera_extrinsics_[4] * (M_PI / 180.0); // Mount pitch, positive is boresight down
@@ -446,6 +463,44 @@ void BetaflightRcOverride::vel_ref_test()
     const double Kp_yaw = 1.5;
     double heading_error = normalize_heading(std::atan2(v_north, v_east) - ((M_PI / 2.0) - heading_)); // ENU yaw of the velocity minus the current one
     publish_velocity_ref(v_east, v_north, 0.0, Kp_yaw * heading_error);
+}
+void BetaflightRcOverride::vel_ref_lawnmower_search(const Lawnmower &pattern)
+{
+    constexpr double ARRIVE_M = 5.0;         // m, leg endpoint acceptance radius
+    constexpr int FIX_CONFIRM_COUNT = 6;     // Number of agreeing sightings before the fix is acted on
+    constexpr double FIX_STALE_S = 10.0;     // s, timeout to drop a fix that has gone quiet
+    constexpr double APPROACH_RANGE_M = 3.0; // m, ground range held from the fix
+    constexpr double APPROACH_ALT_M = 2.5;   // m, stand-off altitude above the fix
+
+    rclcpp::Time now = this->get_clock()->now();
+    if (std::isnan(position_[0]) || std::isnan(position_[1]) || std::isnan(position_[2]) || std::isnan(heading_)) {
+        RCLCPP_WARN(get_logger(), "No valid local position or heading, no reference will be published"); // betaflight_interface centers the sticks, the drone holds its position
+        return;
+    }
+    if (detect_fix_count_ > 0 && (now - last_detect_time_).seconds() > FIX_STALE_S) { // Detection fix became stale
+        detect_fix_enu_.fill(NAN);
+        detect_fix_count_ = 0;
+    }
+    double leg_end_E = ((lawnmower_leg_ % 2) == 0) ? pattern.east_m[0] : pattern.east_m[1];
+    bool prosecuting = (detect_fix_count_ >= FIX_CONFIRM_COUNT);
+    std::array<double, 3> waypoint, look_at;
+    if (prosecuting) { // Stand off from the fix at a range and altitude that keep it framed, and stare at it
+        // Re-attack overflies and holds the leg direction, direct turns back down the current bearing
+        double away_E = pattern.reattack ? std::copysign(1.0, leg_end_E - position_[0]) : (position_[0] - detect_fix_enu_[0]);
+        double away_N = pattern.reattack ? 0.0 : (position_[1] - detect_fix_enu_[1]);
+        double away_norm = std::max(1e-3, std::hypot(away_E, away_N));
+        waypoint = {detect_fix_enu_[0] + (APPROACH_RANGE_M * away_E / away_norm),
+                    detect_fix_enu_[1] + (APPROACH_RANGE_M * away_N / away_norm),
+                    detect_fix_enu_[2] + APPROACH_ALT_M};
+        look_at = detect_fix_enu_;
+    } else { // Search: legs run East-West, stepping North between them
+        waypoint = {leg_end_E, pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m), pattern.alt_m};
+        look_at = waypoint;
+    }
+    if (steer_to_waypoint(waypoint, look_at, pattern.v_max_ms) < ARRIVE_M && !prosecuting) {
+        lawnmower_leg_++;
+        if ((pattern.north_m[0] + (lawnmower_leg_ * pattern.legs_separation_m)) > pattern.north_m[1]) { lawnmower_leg_ = 0; }
+    }
 }
 
 int main(int argc, char *argv[])
