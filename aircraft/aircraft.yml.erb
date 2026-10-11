@@ -53,9 +53,6 @@ windows:
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         <% elsif autopilot == 'betaflight' %>
-        <% if simulated_time %>
-        - python3 /aas/aircraft_resources/scripts/betaflight_rc.py --ip <%= "#{sim_subnet}.90.#{sim_id}" %> --port <%= 9004 + 10 * (drone_id - 1) %>
-        <% end %>
         - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=<%= simulated_time ? "tcp://#{sim_subnet}.90.#{sim_id}:#{5762 + 10 * (drone_id - 1)}" : '/dev/ttyACM0' %> -p acc_1g:=<%= simulated_time ? 256 : 2048 %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
         <% end %>
 
@@ -67,7 +64,7 @@ windows:
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
         <% elsif autopilot == 'betaflight' %>
-        - echo "Placeholder for a Betaflight offboard node."
+        - ros2 run offboard_control betaflight_rc_override --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
         <% end %>
         - ros2 run state_sharing state_sharing_node --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 run drone_traffic_client dtc_client <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
@@ -180,6 +177,7 @@ windows:
       rosbag_topics += %W[
         /Drone#{drone_id}/attitude
         /Drone#{drone_id}/global_position
+        /Drone#{drone_id}/local_position
         /Drone#{drone_id}/velocity
         /Drone#{drone_id}/rc_override
       ]

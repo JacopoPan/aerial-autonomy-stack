@@ -45,7 +45,14 @@ ament_target_dependencies(ardupilot_interface
                           )
 
 add_executable(betaflight_interface src/betaflight_interface.cpp)
-ament_target_dependencies(betaflight_interface rclcpp geometry_msgs sensor_msgs)
+target_link_libraries(betaflight_interface ${GeographicLib_LIBRARIES})
+ament_target_dependencies(betaflight_interface
+                          rclcpp
+                          rclcpp_action
+                          geometry_msgs
+                          sensor_msgs
+                          autopilot_interface_msgs
+                          )
 
 install(TARGETS
   px4_interface

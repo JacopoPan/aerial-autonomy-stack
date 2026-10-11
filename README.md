@@ -78,7 +78,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
-#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true sets RTF=1)
+#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true or AUTOPILOT=betaflight set RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
@@ -95,7 +95,7 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
 ```
 
-3. From any `QUAD`/`VTOL`/`TAIL` terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp) controllers:
+3. From any `QUAD`/`VTOL`/`TAIL` terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp)/[`betaflight_rc_override`](/aircraft/aircraft_ws/src/offboard_control/src/betaflight_rc_override.cpp) controllers:
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 30.0}'"
@@ -103,7 +103,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: att-test, max_duration_sec: 10.0}'"
-# Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
+# Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`, `betaflight_rc_override.cpp`
 ```
 
 AAS also includes [`px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) support, run:
@@ -149,7 +149,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > # Reposition service (quads only)
 > ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
 >
-> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot)
+> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot and Betaflight)
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test, max_duration_sec: 5.0}'"
 >
 > # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs)
@@ -452,7 +452,7 @@ aerial-autonomy-stack
 ├── aircraft
 │   ├── aircraft_ws
 │   │   └── src
-│   │       ├── autopilot_interface                   # Ardupilot/PX4 high-level actions (Takeoff, Orbit, Offboard, Land)
+│   │       ├── autopilot_interface                   # Ardupilot/PX4/Betaflight high-level actions (Takeoff, Orbit, Offboard, Land)
 │   │       ├── drone_traffic_client                  # Subscriber of topic `/dtc_commands` enforcing high-level actions from the ground
 │   │       ├── imu_publisher                         # Multiplexer between PX4/DDS and ArduPilot/MAVROS sensor topics
 │   │       ├── mission                               # Orchestrator of the actions in `autopilot_interface`

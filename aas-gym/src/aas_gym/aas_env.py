@@ -57,6 +57,8 @@ class AASEnv(gym.Env):
         # AAS Setup
         self.HEADLESS = False if self.render_mode == "human" else True # Only display GUIs if render_mode is "human"
         self.AUTOPILOT = autopilot
+        if autopilot == "betaflight": # Betaflight SITL clock keeps running while Gazebo is paused between steps, which triggers its failsafe
+            raise ValueError("autopilot='betaflight' is not supported: the Betaflight SITL is not lockstepped with Gazebo")
         self.CAMERA = camera
         self.LIDAR = lidar
         self.ODOM = odom
@@ -71,7 +73,7 @@ class AASEnv(gym.Env):
         # self.GROUND_ID = "101" # Unused
         #
         self.GND_CONTAINER = False # Do NOT use the ground-image to run Zenoh (nor QGC)
-        self.RTF = 0.0 # As fast as possible (capped to 15x, 5x for betaflight, in the simulation.yml.erb)
+        self.RTF = 0.0 # As fast as possible (capped to 15x in the simulation.yml.erb)
         self.START_AS_PAUSED = True # Start the simulation paused and manually step with gz-sim WorldControl
         self.INSTANCE = instance
         #

@@ -33,7 +33,7 @@
   else
     speedup = rtf.ceil # Positive RTF: round up to the nearest integer
   end
-  speedup = [speedup, 5].min if autopilot == 'betaflight' # Betaflight SITL is only tested up to 5x
+  speedup = 1 if autopilot == 'betaflight' # Betaflight SITL keeps time with the host clock (no lockstep with Gazebo): above 1x, its 100 Hz tasks (altitude estimate, ALTHOLD, POSHOLD) fall behind
   rtf_string = "<real_time_factor>%g</real_time_factor>" % speedup
 
   # Compute step size for gymnasium based on physics frequency in the world SDF files (ardupilot@500Hz, px4 and betaflight@250Hz)
@@ -155,6 +155,8 @@ windows:
           mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --sysid <%= drone_id %>
+        # Stand-in for the pilot's RC, with the MSP OVERRIDE switch on (UDP RC, 9004 + port offset)
+        - python3 /aas/simulation_resources/scripts/betaflight_simulated_rc.py <%= 9004 + 10 * sitl_instance %>
         <% if gnd_container %>
         # MSP (serial 0/UART1, enabled by default) forwarded to the ground container for the Betaflight App
         - while true; do socat TCP:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 15761 + 10 * sitl_instance %>,forever,interval=1 TCP:127.0.0.1:<%= 5761 + 10 * sitl_instance %>; sleep 1; done

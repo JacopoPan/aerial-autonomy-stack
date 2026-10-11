@@ -57,6 +57,7 @@ for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
 if [[ "$PX4_ROS2_LIB" == "true" && "$RTF" != "1.0" ]]; then echo "WARNING: PX4_ROS2_LIB=true sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
+if [[ "$AUTOPILOT" == "betaflight" && "$RTF" != "1.0" ]]; then echo "WARNING: AUTOPILOT=betaflight sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
 print_envvars
 
 # Set unique subnets and container/network names based on INSTANCE

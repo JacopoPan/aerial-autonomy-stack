@@ -3,7 +3,7 @@
 <package format="3">
   <name>offboard_control</name>
   <version>0.1.0</version>
-  <description>PX4 and ArduPilot ROS2 offboard control</description>
+  <description>PX4, ArduPilot, and Betaflight ROS2 offboard control</description>
   <maintainer email="jacopo.pan@gmail.com">JacopoPan</maintainer>
   <license>MIT License</license>
 

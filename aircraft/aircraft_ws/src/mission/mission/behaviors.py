@@ -199,6 +199,9 @@ class OrbitBehavior(BaseActionBehavior):
         super().__init__(name, ros_node, params, client_name="orbit_client")
 
     def create_goal(self):
+        if os.getenv('AUTOPILOT', '') == 'betaflight':
+            self.ros_node.get_logger().warn(f"[{self.name}] Orbit is not supported for 'AUTOPILOT=betaflight'. Skipping.")
+            return None
         goal = Orbit.Goal()
         goal.east = float(self.params.get('east', 0.0))
         goal.north = float(self.params.get('north', 0.0))
@@ -237,8 +240,13 @@ class SpeedBehavior(py_trees.behaviour.Behaviour):
         self.service_client = self.blackboard.get("speed_client")
         self.req_sent = False
         self.future = None
+        self.skipped = False
+        if os.getenv('AUTOPILOT', '') == 'betaflight':
+            self.ros_node.get_logger().warn(f"[{self.name}] Set speed is not supported for 'AUTOPILOT=betaflight'. Skipping.")
+            self.skipped = True
 
     def update(self):
+        if self.skipped: return py_trees.common.Status.SUCCESS
         if self.service_client is None: return py_trees.common.Status.FAILURE
         if not self.req_sent:
             if not self.service_client.service_is_ready():

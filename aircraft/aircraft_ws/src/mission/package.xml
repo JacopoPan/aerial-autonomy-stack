@@ -12,6 +12,7 @@
   <depend>action_msgs</depend>
   <depend>vision_msgs</depend>
   <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>mavros_msgs</depend>
   <depend>px4_msgs</depend>
   <depend>ground_system_msgs</depend>
