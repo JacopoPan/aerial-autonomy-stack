@@ -166,6 +166,11 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --retries 5 pyzmq
 
+################################################################################
+# Add Betaflight with Gazebo SITL Plugin #######################################
+################################################################################
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image
+
 # Betaflight SITL and its Gazebo plugin
 # Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, and MAVLink telemetry
 COPY /_github_clones/betaflight /aas/github_apps/betaflight
@@ -178,22 +183,16 @@ WORKDIR /aas/github_apps/aeroloop_gazebo
 RUN git apply ../aeroloop_gazebo-gz.patch && mkdir plugins/build && cd plugins/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
 # Run with $ /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf
 
-# Betaflight App 2026.6.2 pin, check the release list: https://github.com/betaflight/betaflight-configurator/releases (socat relays the SITLs to the ground container)
-RUN wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /betaflight-app.deb \
-        https://github.com/betaflight/betaflight-configurator/releases/download/2026.6.2/Betaflight-2026.6.2-amd64.deb \
-    && apt update && apt install -y --no-install-recommends /betaflight-app.deb socat \
-    && rm /betaflight-app.deb && apt clean && rm -rf /var/lib/apt/lists/*
-
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
-FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-manifests
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image AS simulation-manifests
 
 # Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
 COPY simulation/simulation_ws/src /src
 RUN find /src -type f ! -name package.xml -delete
 
-FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
+FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image AS simulation-dev-image
 
 # Install the ROS 2 workspace dependencies
 COPY --from=simulation-manifests /src /aas/simulation_ws/src
