@@ -57,6 +57,8 @@ class AASEnv(gym.Env):
         # AAS Setup
         self.HEADLESS = False if self.render_mode == "human" else True # Only display GUIs if render_mode is "human"
         self.AUTOPILOT = autopilot
+        if autopilot == "betaflight": # Betaflight SITL clock keeps running while Gazebo is paused between steps, which triggers its failsafe
+            raise ValueError("autopilot='betaflight' is not supported: the Betaflight SITL is not lockstepped with Gazebo")
         self.CAMERA = camera
         self.LIDAR = lidar
         self.ODOM = odom

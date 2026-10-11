@@ -166,6 +166,24 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir --retries 5 pyzmq
 
+# Betaflight SITL and its Gazebo plugin
+# Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, and MAVLink telemetry
+COPY /_github_clones/betaflight /aas/github_apps/betaflight
+COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/github_apps/betaflight-2026.6.2.patch
+WORKDIR /aas/github_apps/betaflight
+RUN git apply ../betaflight-2026.6.2.patch && make TARGET=SITL
+COPY /_github_clones/aeroloop_gazebo /aas/github_apps/aeroloop_gazebo
+COPY simulation/simulation_resources/patches/aeroloop_gazebo-gz.patch /aas/github_apps/aeroloop_gazebo-gz.patch
+WORKDIR /aas/github_apps/aeroloop_gazebo
+RUN git apply ../aeroloop_gazebo-gz.patch && mkdir plugins/build && cd plugins/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
+# Run with $ /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf
+
+# Betaflight App 2026.6.2 pin, check the release list: https://github.com/betaflight/betaflight-configurator/releases (socat relays the SITLs to the ground container)
+RUN wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /betaflight-app.deb \
+        https://github.com/betaflight/betaflight-configurator/releases/download/2026.6.2/Betaflight-2026.6.2-amd64.deb \
+    && apt update && apt install -y --no-install-recommends /betaflight-app.deb socat \
+    && rm /betaflight-app.deb && apt clean && rm -rf /var/lib/apt/lists/*
+
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
@@ -190,10 +208,12 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
-RUN chmod +x /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh
+RUN chmod +x /aas/simulation_resources/patches/create_*_drones_and_world.sh
 
 # Copy QGC configuration (only for GND_CONTAINER=false)
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
+# Copy the Betaflight App launcher (only for AUTOPILOT=betaflight and GND_CONTAINER=false)
+COPY ground/ground_resources/scripts/betaflight_app.py /aas/ground_resources/scripts/betaflight_app.py
 
 # Build gz_gst_bridge
 WORKDIR /aas/simulation_resources/comms/gz_gst_bridge

@@ -4,7 +4,7 @@
 set -e
 
 # Set up the simulation
-AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot
+AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot, betaflight
 HEADLESS="${HEADLESS:-false}" # Options: true, false (default)
 CAMERA="${CAMERA:-true}" # Options: true (default), false
 LIDAR="${LIDAR:-true}" # Options: true (default), false 
@@ -47,15 +47,17 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
-check_enum AUTOPILOT px4 ardupilot
+check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 for v in NUM_QUADS NUM_VTOLS NUM_TAILS; do check_int "$v" 0 99; done
+if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$HITL" == "true" || "$PLOT" == "true" || $((NUM_VTOLS + NUM_TAILS)) -gt 0 ]]; then abort "AUTOPILOT=betaflight supports quads only, no HITL, no PLOT"; fi
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
 if [[ "$PX4_ROS2_LIB" == "true" && "$RTF" != "1.0" ]]; then echo "WARNING: PX4_ROS2_LIB=true sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
+if [[ "$AUTOPILOT" == "betaflight" && "$RTF" != "1.0" ]]; then echo "WARNING: AUTOPILOT=betaflight sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
 print_envvars
 
 # Set unique subnets and container/network names based on INSTANCE
@@ -173,7 +175,7 @@ if [[ "$HITL" == "false" ]]; then
       --volume /tmp/.X11-unix:/tmp/.X11-unix:rw --device /dev/dri --gpus all \
       --env DISPLAY=$DISPLAY --env QT_X11_NO_MITSHM=1 --env NVIDIA_DRIVER_CAPABILITIES=all --env XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR --env GST_DEBUG=3 \
       --env __NV_PRIME_RENDER_OFFLOAD=1 --env __GLX_VENDOR_LIBRARY_NAME=nvidia \
-      --env HEADLESS=$HEADLESS \
+      --env HEADLESS=$HEADLESS --env AUTOPILOT=$AUTOPILOT \
       --env QUAD_IDS=$(seq -s, 1 $NUM_QUADS) \
       --env VTOL_IDS=$(seq -s, $((NUM_QUADS + 1)) $((NUM_QUADS + NUM_VTOLS))) \
       --env TAIL_IDS=$(seq -s, $((NUM_QUADS + NUM_VTOLS + 1)) $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))) \
@@ -259,8 +261,10 @@ cleanup() {
   for i in $(seq 1 $NUM_DRONES); do
     if [ "$AUTOPILOT" == "ardupilot" ]; then
       LOG_GLOB="/aas/ardu_sitl_${i}/logs/*.BIN" # sim_vehicle.py runs in /aas/ardu_sitl_${i}, see simulation.yml.erb
-    else
+    elif [ "$AUTOPILOT" == "px4" ]; then
       LOG_GLOB="/aas/github_apps/PX4-Autopilot/build/px4_sitl_default/rootfs/$((i - 1))/log/*/*.ulg" # px4 -i is 0-based
+    elif [ "$AUTOPILOT" == "betaflight" ]; then
+      continue # No SITL flight log
     fi
     LATEST_LOG=$(docker exec "$SIM_CONT_NAME" bash -c "ls -t $LOG_GLOB 2>/dev/null | head -n 1" || true)
     if [ -n "$LATEST_LOG" ]; then

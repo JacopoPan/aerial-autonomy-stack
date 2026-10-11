@@ -7,6 +7,7 @@
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
+#include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <mavros_msgs/msg/vfr_hud.hpp>
 #include <state_sharing/msg/shared_state.hpp>
 
@@ -48,20 +49,38 @@ public:
                 "/Drone" + std::to_string(drone_id_) + "/fmu/out/vehicle_local_position_v1", // MESSAGE_VERSION = 1 -> _v1 since 1.17
                 qos_profile_sub, std::bind(&StateSharingNode::px4_local_pos_callback, this, std::placeholders::_1), subscriber_options);
         }
-        else
+        else if (autopilot == "ardupilot")
         {
             subscription_navsat_apm_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
                 "/mavros/global_position/global", 
-                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_navsat_callback, this, std::placeholders::_1), subscriber_options);
+                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_and_betaflight_navsat_callback, this, std::placeholders::_1), subscriber_options);
 
             subscription_vel_apm_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
                 "/mavros/local_position/velocity_local",
-                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_vel_callback, this, std::placeholders::_1), subscriber_options);
+                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_and_betaflight_vel_callback, this, std::placeholders::_1), subscriber_options);
 
             subscription_hud_apm_ = this->create_subscription<mavros_msgs::msg::VfrHud>(
                 "/mavros/vfr_hud",
                 qos_profile_sub, std::bind(&StateSharingNode::ardupilot_hud_callback, this, std::placeholders::_1), subscriber_options);
             
+        }
+        else if (autopilot == "betaflight")
+        {
+            subscription_navsat_bf_ = this->create_subscription<sensor_msgs::msg::NavSatFix>(
+                "/Drone" + std::to_string(drone_id_) + "/global_position",
+                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_and_betaflight_navsat_callback, this, std::placeholders::_1), subscriber_options);
+
+            subscription_vel_bf_ = this->create_subscription<geometry_msgs::msg::TwistStamped>(
+                "/Drone" + std::to_string(drone_id_) + "/velocity",
+                qos_profile_sub, std::bind(&StateSharingNode::ardupilot_and_betaflight_vel_callback, this, std::placeholders::_1), subscriber_options);
+
+            subscription_attitude_bf_ = this->create_subscription<geometry_msgs::msg::Vector3Stamped>(
+                "/Drone" + std::to_string(drone_id_) + "/attitude",
+                qos_profile_sub, std::bind(&StateSharingNode::betaflight_attitude_callback, this, std::placeholders::_1), subscriber_options);
+        }
+        else
+        {
+            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4', 'ardupilot', or 'betaflight'.", autopilot.c_str());
         }
         RCLCPP_INFO(this->get_logger(), "state_sharing_node initialized");
     }
@@ -82,6 +101,9 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscription_navsat_apm_;
     rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscription_vel_apm_;
     rclcpp::Subscription<mavros_msgs::msg::VfrHud>::SharedPtr subscription_hud_apm_;
+    rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subscription_navsat_bf_;
+    rclcpp::Subscription<geometry_msgs::msg::TwistStamped>::SharedPtr subscription_vel_bf_;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3Stamped>::SharedPtr subscription_attitude_bf_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     void px4_global_pos_callback(const px4_msgs::msg::VehicleGlobalPosition::SharedPtr msg)
@@ -101,15 +123,15 @@ private:
         latest_state_.heading_deg = static_cast<float>(msg->heading * (180.0 / M_PI)); // Convert radians to degrees
     }
 
-    void ardupilot_navsat_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
+    void ardupilot_and_betaflight_navsat_callback(const sensor_msgs::msg::NavSatFix::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
         latest_state_.latitude_deg = msg->latitude;
         latest_state_.longitude_deg = msg->longitude;
-        latest_state_.altitude_m = static_cast<float>(msg->altitude); // This is ellipsoid altitude
+        latest_state_.altitude_m = static_cast<float>(msg->altitude); // This is ellipsoid altitude for ArduPilot, MSL (in 1m steps) for Betaflight
     }
 
-    void ardupilot_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
+    void ardupilot_and_betaflight_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
         latest_state_.vx = static_cast<float>(msg->twist.linear.x);
@@ -121,6 +143,12 @@ private:
     {
         std::lock_guard<std::mutex> lock(data_mutex_);
         latest_state_.heading_deg = msg->heading; // In degrees
+    }
+
+    void betaflight_attitude_callback(const geometry_msgs::msg::Vector3Stamped::SharedPtr msg)
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        latest_state_.heading_deg = static_cast<float>(msg->vector.z * (180.0 / M_PI)); // Convert radians to degrees, clockwise from north
     }
 
     void publish_timer_callback()

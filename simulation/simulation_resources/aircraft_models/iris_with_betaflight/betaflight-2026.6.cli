@@ -1,0 +1,43 @@
+# Written to eeprom.bin by `betaflight_SITL.elf --config <this file>` (see simulation.yml.erb)
+# As on hardware: the radio is the receiver, its MSP OVERRIDE switch hands CH1-6 to betaflight_interface's MSP_SET_RAW_RC frames
+# The SITL's receiver is UDP 9004 + port offset, where betaflight_simulated_rc.py stands in for the radio, with the switch on
+feature RX_UDP
+# aux <slot> <mode id> <aux channel> <from> <to> <logic> <link>
+#   mode id: 0 = ARM, 1 = ANGLE, 3 = ALTHOLD, 11 = POS HOLD, 50 = MSP OVERRIDE
+#   aux channel: 0 = AUX1 = CH5, 1 = AUX2 = CH6, 2 = AUX3 = CH7
+# ARM while AUX1/CH5 is 1700-2100
+aux 0 0 0 1700 2100 0 0
+# AUX2/CH6 is the flight mode switch: low = ACRO (rates), mid = ANGLE (attitude), high = ANGLE + ALTHOLD + POS HOLD (velocity)
+# ANGLE while AUX2/CH6 is 1300-2100
+aux 1 1 1 1300 2100 0 0
+# ALTHOLD and POS HOLD while AUX2/CH6 is 1700-2100, they engage once armed with the throttle raised
+aux 2 3 1 1700 2100 0 0
+aux 3 11 1 1700 2100 0 0
+# MSP OVERRIDE while AUX3/CH7 is 1700-2100 (the radio's switch)
+aux 4 50 2 1700 2100 0 0
+# MSP OVERRIDE replaces CH1-6 (sticks, ARM, flight mode): mask 0b111111 = 63
+set msp_override_channels_mask = 63
+# While MSP OVERRIDE is on, betaflight_interface's frames also count as the RC link: losing the radio does not fail safe
+set msp_override_failsafe = ON
+# Linear stick curves (center rate = max rate, 670 deg/s): sticks set proportional rates (ACRO), angles (ANGLE), velocities (POS HOLD)
+set roll_rc_rate = 67
+set pitch_rc_rate = 67
+set yaw_rc_rate = 67
+# In ALTHOLD, the throttle sets the climb rate outside this deadband around ap_hover_throttle (in percent, default 20)
+set alt_hold_deadband = 5
+# Companion computer (betaflight_interface in aircraft.yml.erb): MSP on UART2 = TCP 5762 + port offset
+# serial <port 0 = UART1, 1 = UART2> <function 1 = MSP> <MSP, GPS, telemetry, blackbox baud rates (unused over TCP)>
+serial 1 1 115200 57600 0 115200
+# MSP requests answered per port per second (one per serial task run, default 100)
+set serial_update_rate_hz = 500
+# MAVLink telemetry (function 512) for ground_system (/tracks) on UART3 = TCP 5763 + port offset
+serial 2 512 115200 57600 0 115200
+# Set GLOBAL_POSITION_INT in MAVLink telemetry at 10 Hz (default is 2 Hz)
+set mavlink_pos_rate = 10
+# Heading from the SITL's virtual magnetometer (fed with Gazebo's attitude), Betaflight does not trust a magnetometer by default
+set trust_mag = ON
+# The SITL's simulated magnetic field points 2deg east of true north (see sitl.c), declination in 0.1deg
+set mag_declination = 20
+# Hover throttle measured in Gazebo (ANGLE mode), also the center of ALTHOLD's throttle deadband
+set ap_hover_throttle = 1595
+save
