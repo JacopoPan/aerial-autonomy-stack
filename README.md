@@ -143,7 +143,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > # Land (at home) action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites params RTL_ALT/Q_RTL_ALT
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
 >
-> # Orbit action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites param CIRCLE_RATE
+> # Orbit action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites param CIRCLE_RATE, not implemented on Betaflight
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
 >
 > # Reposition service (quads only)
@@ -152,7 +152,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot and Betaflight)
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test, max_duration_sec: 5.0}'"
 >
-> # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs)
+> # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs, not implemented on Betaflight)
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
 >
 > # Gimbal status and position control (in radians)
@@ -454,7 +454,7 @@ aerial-autonomy-stack
 │   │   └── src
 │   │       ├── autopilot_interface                   # Ardupilot/PX4/Betaflight high-level actions (Takeoff, Orbit, Offboard, Land)
 │   │       ├── drone_traffic_client                  # Subscriber of topic `/dtc_commands` enforcing high-level actions from the ground
-│   │       ├── imu_publisher                         # Multiplexer between PX4/DDS and ArduPilot/MAVROS sensor topics
+│   │       ├── imu_publisher                         # Multiplexer between PX4/DDS, ArduPilot/MAVROS, and Betaflight/MSP sensor topics
 │   │       ├── mission                               # Orchestrator of the actions in `autopilot_interface`
 │   │       ├── offboard_control                      # Low-level references for the Offboard action in `autopilot_interface`
 │   │       ├── state_sharing                         # Publisher of the `/state_sharing_drone_N` topic broadcasted by Zenoh

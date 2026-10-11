@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="step", choices=["step", "speedup", "vectorenv-speedup", "learn"])
     parser.add_argument("--repetitions", type=int, default=1),
-    parser.add_argument("--autopilot", type=str, default="px4", choices=["px4", "ardupilot", "betaflight"])
+    parser.add_argument("--autopilot", type=str, default="px4", choices=["px4", "ardupilot"])
     parser.add_argument("--camera", action=argparse.BooleanOptionalAction, default=True, help="Enable/Disable Camera")
     parser.add_argument("--lidar", action=argparse.BooleanOptionalAction, default=True, help="Enable/Disable Lidar")
     parser.add_argument("--num_quads", type=int, default=1)

@@ -25,7 +25,7 @@ def main():
     elif autopilot == 'ardupilot':
         req.multi_step = int(args.step_sec * 500) # ArduPilot SDF worlds use 500 steps per simulation step (2ms)
     elif autopilot == 'betaflight':
-        req.multi_step = int(args.step_sec * 250) # Betaflight SDF worlds use 250 steps per simulation step (4ms)
+        req.multi_step = int(args.step_sec * 250) # Betaflight SDF worlds use 250 steps per simulation step (4ms), note: pausing mid-flight makes Betaflight fail safe
     req.pause = True # Stops the simulation after the step
 
     result, response = gz_node.request(
