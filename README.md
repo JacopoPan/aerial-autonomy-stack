@@ -2,7 +2,7 @@
 
 *Aerial autonomy stack* (AAS) is a "batteries included", flight-proven, open software and the simplest/fastest way to:
 
-1. **Develop** multi-drone autonomy—with PX4, ArduPilot, and ROS2
+1. **Develop** multi-drone autonomy—with PX4, ArduPilot, Betaflight, and ROS2
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
 3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
@@ -13,8 +13,8 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 <details>
 <summary><b>Features</b> <i>(click to expand)</i></summary>
 
-- **PX4 and ArduPilot multi-vehicle** simulation (**quadrotors, quadplane VTOLs, and tailsitters**)
-- ROS2 action-based autopilot interface (*via* XRCE-DDS or MAVROS)
+- **PX4, ArduPilot, and Betaflight multi-vehicle** simulation (**quadrotors, quadplane VTOLs, and tailsitters**)
+- ROS2 action-based autopilot interface (*via* XRCE-DDS, MAVROS, or MSP)
 - **YOLO** (with ONNX GPU Runtimes) and **LiDAR** Odometry (with [KISS-ICP](https://github.com/PRBonn/kiss-icp))
 - 3D worlds for perception-based simulation
 - **Steppable** [Gymnasium environment](https://gymnasium.farama.org/index.html) and **faster-than-real-time**, **multi-instance** simulation
@@ -28,6 +28,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
 - [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
+- [Betaflight MSP Override](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control) interface (i.e. RC sticks in ACRO, ANGLE, or ALTHOLD + POS HOLD)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
 </details>
 
@@ -83,7 +84,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
 
-There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
+There are **3 different ways** to autonomously fly the drones (plus QGroundControl/Betaflight App for operator supervision)
 
 1. From the `Ground`'s terminal, fly all drones in a **synchronized formation** with [`dtc_controller_node`](/ground/ground_ws/src/drone_traffic_controller/drone_traffic_controller/dtc_controller_node.py):
 ```sh
@@ -218,7 +219,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 >
 > The default quad is a [Holybro X650](https://holybro.com/collections/multicopter-kit/products/x650-kits?variant=43994378240189) with the [IMX219](https://docs.arducam.com/Nvidia-Jetson-Camera/Native-Camera/imx219/) camera and the [Livox Mid-360S](https://www.livoxtech.com/mid-360s/specs) LiDAR
 >
-> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
+> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk/FCU
 >
 > Read [`SETUP_CHRONY.md`](/tools_and_docs/docs/SETUP_CHRONY.md) to let the Jetson timesync to the `ground-image` computer when w/o internet
 
@@ -261,7 +262,7 @@ GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 <details>
 <summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
 
-> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
+> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network.
 > Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board).
 > Lock each interface's "MAC Address" under "Network Options" -> "Identity".
 
@@ -354,7 +355,7 @@ python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test
 flowchart TB
     subgraph aas [" "]
         subgraph sim ["#nbsp;simulation#nbsp;container#nbsp;(amd64)"]
-            sitl("[N x] PX4 || <br/> ArduPilot SITL"):::resource
+            sitl("[N x] PX4 || <br/> ArduPilot || <br/> Betaflight SITL"):::resource
             gz(Gazebo Sim):::resource
             subgraph models [Models]
                 drones(aircraft_models/):::resource
@@ -363,14 +364,14 @@ flowchart TB
 
             drones --> gz
             worlds --> gz
-            sitl <--> |"gz_bridge || ardupilot_gazebo"| gz
+            sitl <--> |"gz_bridge || ardupilot_gazebo <br/> || aeroloop_gazebo"| gz
         end
 
         subgraph gnd ["#nbsp;ground#nbsp;container#nbsp;(amd64)"]
             mlrouter{{mavlink-router}}:::bridge
             ground_system(ground_system):::algo
             dtc_controller(dtc_controller):::algo
-            qgc(QGroundControl):::resource
+            qgc("QGroundControl || <br/> Betaflight App"):::resource
             zenoh_gnd{{zenoh-bridge}}:::bridge
 
             ground_system --> |"/tracks"| zenoh_gnd
@@ -396,7 +397,7 @@ flowchart TB
             detection_split( ):::splitNode
             track_split( ):::splitNode
 
-            ap_link{{"uxrce_dds <br/> || MAVROS"}}:::bridge
+            ap_link{{"uxrce_dds <br/> || MAVROS <br/> || MSP"}}:::bridge
             kiss_icp -.-> |"/TBD"| ap_link
             livo_pkgs <-.-> |"/imu_data <br/> /TBD"| ap_link
             zenoh_air --> |"/tracks <br/> /state_drone_N"| track_split
@@ -424,7 +425,7 @@ flowchart TB
     gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| camera_split
     camera_split --> livo_pkgs
     camera_split -->  yolo_py
-    sitl <--> |"UDP <br/> [SIM_SUBNET]"| ap_link
+    sitl <--> |"UDP || TCP <br/> [SIM_SUBNET]"| ap_link
     sitl <--> |"MAVLink <br/> [SIM_SUBNET]"| mlrouter 
     zenoh_gnd <-.-> |"TCP <br/> [AIR_SUBNET]"| zenoh_air
 
@@ -528,11 +529,13 @@ aerial-autonomy-stack
   - **TODO: upgrade to 4.7.1** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
+- [x] [QGroundControl 5.1.5](https://github.com/mavlink/qgroundcontrol/releases)
 - [x] [Betaflight 2026.6.2](https://github.com/betaflight/betaflight/releases)
+- [x] [Betaflight App 2026.6.2](https://github.com/betaflight/betaflight-configurator/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
 
-External repositories:
+External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
 - [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
@@ -579,6 +582,8 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
 - On Jetson, if yolo_py crashes, try run `sudo systemctl restart nvargus-daemon` on the host
+- `PX4_ROS2_LIB=true` sets RTF=1: PX4 expects each external mode's arming check reply within 50ms of simulated time (`REQUEST_TIMEOUT` in `externalChecks.hpp`), that is 50ms/RTF of wall time for the XRCE-DDS and ROS2 round trip, and flags modes that keep missing it as unresponsive
+- `AUTOPILOT=betaflight` sets RTF=1 and is not supported by `aas-gym` as Betaflight SITL is not lockstepped with Gazebo (its clock is the host's): 1) above 1x its 100 Hz tasks (altitude estimate, ALTHOLD, POS HOLD) fall behind, and 2) it keeps running while Gazebo is paused by `aas-gym`
 
 ## Docker Basics
 

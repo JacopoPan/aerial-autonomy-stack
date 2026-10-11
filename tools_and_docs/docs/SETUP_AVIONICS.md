@@ -289,6 +289,29 @@ SR2_RC_CHAN      1
 - [Requesting MAVLink data from ArduPilot](https://ardupilot.org/dev/docs/mavlink-requesting-data.html)
 -->
 
+## Betaflight: Configure the FCU for `betaflight_interface`
+
+Connect the FCU's USB port to a computer with the [Betaflight App](https://app.betaflight.com/), flash the Betaflight 2026.6.2 release for the FCU target
+
+In the App's CLI paste the `aux`, `msp_override_*`, `*_rc_rate`, `alt_hold_deadband`, and `serial_update_rate_hz` lines of [`betaflight-2026.6.cli`](/simulation/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli), then:
+
+```sh
+# Hover throttle of the airframe (measured in ANGLE mode), also the center of ALTHOLD's throttle
+set ap_hover_throttle = <measured>
+save
+```
+
+Finally, connect the FCU's USB port to the Orin: `./deploy_run.sh` starts `betaflight_interface` on `/dev/ttyACM0`
+
+Before each flight, set the RC as [`betaflight_simulated_rc.py`](/simulation/simulation_resources/scripts/betaflight_simulated_rc.py) does: ARM (CH5) on, flight mode (CH6) high, throttle at hover, MSP OVERRIDE (CH7) on; set the receiver's failsafe to "No pulses" (see [RC Input](#rc-input))
+
+> [!CAUTION]
+> While MSP OVERRIDE is on, `betaflight_interface` drives CH1-6, including ARM for the `takeoff_action` ([Betaflight recommends keeping ARM on the RC](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control))
+> - Turning MSP OVERRIDE off hands CH1-6 back to the RC: if the ARM switch is off, Betaflight disarms in flight
+> - Turning MSP OVERRIDE on in flight, after arming from the RC, disarms the drone (as an idle `betaflight_interface` holds ARM low)
+> - Losing the RC link does not failsafe while MSP OVERRIDE is on (`msp_override_failsafe = ON`, Betaflight holds the switch's last value)
+> - If `betaflight_interface` stops, CH1-6 return to the RC
+
 ## Setup TELEM1 for the Radio Telemetry Link with the Ground Station
 
 TELEM1 is the [bottom-right 6-pin port on the Jetson Baseboard](https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout#tel1-tel3-ports)
@@ -349,6 +372,17 @@ SR1_RAW_SENS     0
 SR1_RC_CHAN      1
 # Tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
 # Note: on a point-to-multipoint configuration with multiple drones the serial baud rate between the ground radio and GCS computer should be greater than SERIAL1_BAUD, scaling with the number of drones yet capped by the air link (e.g., GND_TELEM_BAUD=230400 in ./deploy_run.sh)
+```
+
+### Betaflight Configuration
+
+```sh
+# MAVLink telemetry (function 512, 57600 baud) on the radio's UART: serial 0 = UART1, 1 = UART2, ...
+serial <UART number - 1> 512 115200 57600 0 115200
+# GLOBAL_POSITION_INT at 10Hz (default 2Hz)
+set mavlink_pos_rate = 10
+save
+# Betaflight's MAVLink system ID is always 1 (TODO: patch firmware for arbitrary IDs): use DRONE_ID=1 with ./deploy_run.sh
 ```
 
 ### SiK (point-to-point) and Microhard (point-to-multipoint) Radio Configuration

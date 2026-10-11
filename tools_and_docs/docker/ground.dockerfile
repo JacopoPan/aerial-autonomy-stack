@@ -10,7 +10,7 @@ FROM ros2-image AS ros2-gcs-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
-# Pinned to 5.1.4, check the release list: https://github.com/mavlink/qgroundcontrol/releases
+# Pinned to 5.1.5, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
 RUN useradd -m -s /bin/bash -u 1000 -o qgcuser \
     && usermod -aG dialout qgcuser
@@ -21,10 +21,11 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /QGroundControl-x86_64.AppImage \
-        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.4/QGroundControl-x86_64.AppImage \
+        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.5/QGroundControl-x86_64.AppImage \
     && chmod +x /QGroundControl-x86_64.AppImage \
     && /QGroundControl-x86_64.AppImage --appimage-extract \
-    && rm /QGroundControl-x86_64.AppImage
+    && rm /QGroundControl-x86_64.AppImage \
+    && chmod -R a+rX /squashfs-root
 # Run with $ gosu qgcuser /squashfs-root/AppRun
 
 # Betaflight App 2026.6.2 pin, check the release list: https://github.com/betaflight/betaflight-configurator/releases (socat relays the SITLs to the ground container)
