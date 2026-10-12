@@ -45,12 +45,12 @@ enum : uint8_t { // MSP v1 commands
     MSP_RAW_IMU = 102,
     MSP_RAW_GPS = 106,
     MSP_ATTITUDE = 108,
-    MSP_ALTITUDE = 109,
     MSP_GPS_RESCUE = 135,
     MSP_STATUS_EX = 150,
     MSP_SET_RAW_RC = 200,
     MSP_MULTIPLE_MSP = 230,
 };
+constexpr uint16_t MSP2_POSITION_ESTIMATE = 0x3012; // MSP v2, added by betaflight-2026.6.2.patch
 
 enum class State { INIT, STARTED, ARMING, REPOSITIONING, HOVER, LANDING, OFFBOARD };
 constexpr const char *STATE_NAMES[] = {"INIT", "STARTED", "ARMING", "REPOSITIONING", "HOVER", "LANDING", "OFFBOARD"};
@@ -68,19 +68,18 @@ private:
     double TOUCHDOWN_TIME, ARRIVAL_DISTANCE, ARRIVAL_SPEED, ARMING_TIMEOUT, RC_OVERRIDE_TIMEOUT;
 
     // MSP link
-    const std::vector<uint8_t> state_cmds_; // Handled in this order, so velocity (published on MSP_RAW_GPS) uses this request's vertical speed (from MSP_ALTITUDE)
+    const std::vector<uint8_t> state_cmds_; // Replies handled in this order
     int fd_;
     std::vector<uint8_t> rx_;
     int acc_1g_;
 
     // Betaflight state, from MSP replies
     bool status_received_, armed_, gps_fix_, hover_read_;
+    bool estimate_read_, xy_valid_, heading_valid_, in_control_; // From MSP2_POSITION_ESTIMATE, the last two for POS HOLD
     uint32_t arming_disable_flags_;
     uint16_t hover_pwm_; // ap_hover_throttle
-    double latitude_, longitude_; // deg
-    double altitude_; // m, from the arming point once armed
-    double vertical_speed_; // m/s, up
-    double ground_speed_; // m/s
+    std::array<double, 3> position_; // m, east, north of the arming point and altitude above it (Betaflight's estimate)
+    std::array<double, 3> velocity_; // m/s, ENU (Betaflight's estimate)
     double heading_; // rad, clockwise from north
 
     // Interface state
@@ -89,7 +88,8 @@ private:
     bool descended_; // While landing, the descent began
     rclcpp::Time quiet_since_; // While landing, neither descending nor moving since
     GeographicLib::LocalCartesian home_; // ENU from the arming point
-    bool home_set_;
+    bool home_set_; // For the current arming
+    double home_altitude_; // m, MSL of the arming point
     std::array<double, 3> target_; // m, east, north, up from home
     double takeoff_altitude_; // m
     std::string offboard_controller_;
@@ -115,15 +115,14 @@ private:
 
     // MSP link
     static int open_device(const std::string &device);
-    void send_msp(uint8_t cmd, const std::vector<uint8_t> &payload = {});
+    void send_msp(uint16_t cmd, const std::vector<uint8_t> &payload = {});
     void step();
-    void handle(uint8_t cmd, const uint8_t *d, size_t size);
+    void handle(uint16_t cmd, const uint8_t *d, size_t size);
 
     // State machine and RC channels
     void update_state();
     std::vector<uint8_t> rc_channels() const;
     double hold_throttle(double climb) const;
-    std::array<double, 3> position() const;
     std::array<double, 3> offset() const;
     void hover_here();
     bool arrived() const;
@@ -145,6 +144,7 @@ private:
     template <typename ActionT>
     void finish(GoalHandle<ActionT> &goal, bool success, const std::string &message);
     static std::string hex(uint32_t value);
+    static uint8_t crc8_dvb_s2(uint8_t crc, uint8_t byte);
 };
 
 #endif // AUTOPILOT_INTERFACE__BETAFLIGHT_INTERFACE_HPP_

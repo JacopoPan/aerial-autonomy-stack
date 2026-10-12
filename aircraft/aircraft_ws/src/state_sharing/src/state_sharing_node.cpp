@@ -128,7 +128,7 @@ private:
         std::lock_guard<std::mutex> lock(data_mutex_);
         latest_state_.latitude_deg = msg->latitude;
         latest_state_.longitude_deg = msg->longitude;
-        latest_state_.altitude_m = static_cast<float>(msg->altitude); // This is ellipsoid altitude for ArduPilot, MSL (in 1m steps) for Betaflight
+        latest_state_.altitude_m = static_cast<float>(msg->altitude); // This is ellipsoid altitude for ArduPilot, MSL for Betaflight (in 1m steps while disarmed)
     }
 
     void ardupilot_and_betaflight_vel_callback(const geometry_msgs::msg::TwistStamped::SharedPtr msg)

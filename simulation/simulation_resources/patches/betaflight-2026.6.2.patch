@@ -12,6 +12,59 @@ index a922cc7..8c9a16a 100644
  
  static const struct serialPortVTable tcpVTable; // Forward
  static tcpPort_t tcpSerialPorts[SERIAL_PORT_COUNT];
+diff --git a/src/main/msp/msp.c b/src/main/msp/msp.c
+index 61d49bf..14bafa7 100644
+--- a/src/main/msp/msp.c
++++ b/src/main/msp/msp.c
+@@ -88,7 +88,9 @@
+ #include "flight/mixer.h"
+ #include "flight/pid.h"
+ #include "flight/pid_init.h"
++#include "flight/pos_hold.h"
+ #include "flight/position.h"
++#include "flight/position_estimator.h"
+ #include "flight/rpm_filter.h"
+ #include "flight/servos.h"
+ 
+@@ -1428,6 +1430,26 @@ case MSP_NAME:
+ #endif
+         break;
+ 
++#if defined(USE_POSITION_HOLD) && !defined(USE_WING)
++    case MSP2_POSITION_ESTIMATE: { // AAS: the estimate POS HOLD flies on, for companion computers
++        const positionEstimate3d_t *estimate = positionEstimatorGetEstimate();
++        gpsLocation_t origin = {0};
++        const bool originSet = positionEstimatorGetGpsOrigin(&origin);
++        // Flags: XY and Z estimates valid, origin set, heading valid, POS HOLD in control
++        sbufWriteU8(dst, estimate->isValidXY | estimate->isValidZ << 1 | originSet << 2 | imuIsHeadingValid() << 3 | isAutopilotInControl() << 4);
++        sbufWriteU32(dst, origin.lat); // 1e-7 deg, GPS position at arming
++        sbufWriteU32(dst, origin.lon);
++        sbufWriteU32(dst, origin.altCm); // cm, MSL
++        for (int i = 0; i < 3; i++) {
++            sbufWriteU32(dst, lrintf(estimate->position.v[i])); // cm, ENU from the origin (Z from the arming altitude)
++        }
++        for (int i = 0; i < 3; i++) {
++            sbufWriteU16(dst, lrintf(estimate->velocity.v[i])); // cm/s, ENU
++        }
++        break;
++    }
++#endif
++
+     case MSP_SONAR_ALTITUDE:
+ #if defined(USE_RANGEFINDER)
+         sbufWriteU32(dst, rangefinderGetLatestAltitude());
+diff --git a/src/main/msp/msp_protocol_v2_betaflight.h b/src/main/msp/msp_protocol_v2_betaflight.h
+index 7ed9dd2..61d5240 100644
+--- a/src/main/msp/msp_protocol_v2_betaflight.h
++++ b/src/main/msp/msp_protocol_v2_betaflight.h
+@@ -36,6 +36,7 @@
+ #define MSP2_SET_BATTERY_PROFILE            0x300F
+ #define MSP2_CLI_SETTING                    0x3010
+ #define MSP2_CLI_SETTING_INFO               0x3011
++#define MSP2_POSITION_ESTIMATE              0x3012  // AAS: estimated ENU position and velocity, GPS origin, and POS HOLD status
+ 
+ // MSP2_SET_TEXT and MSP2_GET_TEXT variable types
+ #define MSP2TEXT_PILOT_NAME                      1
 diff --git a/src/main/telemetry/mavlink.c b/src/main/telemetry/mavlink.c
 index baa9058..72f4111 100644
 --- a/src/main/telemetry/mavlink.c
@@ -41,7 +94,7 @@ index a29444b..72def62 100644
  
  #define MISSION_UPLOAD_RETRY_MS   1500
 diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
-index ee216ef..1f684dc 100644
+index ee216ef..49520ba 100644
 --- a/src/platform/SIMULATOR/sitl.c
 +++ b/src/platform/SIMULATOR/sitl.c
 @@ -198,10 +198,12 @@ static void gpxTrackClose(void)
@@ -81,8 +134,25 @@ index ee216ef..1f684dc 100644
          } else if (strcmp(argv[i], "--gpx") == 0) {
              gpxEnabled = true;
          } else {
-@@ -274,6 +282,9 @@ static void sendMotorUpdate(void)
+@@ -272,8 +280,26 @@ static void sendMotorUpdate(void)
+     udpSend(&pwmLink, &pwmPkt, sizeof(servo_packet));
+ }
  
++// AAS: errors of a real receiver for the virtual GPS (0 for a perfect one): 10 Hz fixes, each published one period after
++// its measurement, with a slowly wandering position error (first-order Gauss-Markov) and white noise
++#define SITL_GPS_PERIOD_S       0.1     // gps_update_rate_hz = 10, also the fix delay
++#define SITL_GPS_WANDER_M       1.0     // Standard deviation of the slow position error, per ENU axis
++#define SITL_GPS_WANDER_TAU_S   60.0    // Correlation time of the slow position error
++#define SITL_GPS_NOISE_M        0.2     // White position noise, per ENU axis
++#define SITL_GPS_VEL_NOISE_MS   0.05    // White velocity noise, per ENU axis
++
++static double sitlGpsNoise(double sigma) // Normal sample (Box-Muller), the same sequence in every run
++{
++    const double u1 = (rand() + 1.0) / (RAND_MAX + 2.0);
++    const double u2 = rand() / (RAND_MAX + 1.0);
++    return sigma * sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
++}
++
  static void updateState(const fdm_packet* pkt)
  {
 +    if (!virtualGyroDev || !virtualAccDev) {
@@ -91,7 +161,7 @@ index ee216ef..1f684dc 100644
      static double last_timestamp = 0; // in seconds
      static uint64_t last_realtime = 0; // in uS
      static struct timespec last_ts; // last packet
-@@ -295,7 +306,7 @@ static void updateState(const fdm_packet* pkt)
+@@ -295,7 +321,7 @@ static void updateState(const fdm_packet* pkt)
      }
  
      int16_t x,y,z;
@@ -100,7 +170,7 @@ index ee216ef..1f684dc 100644
      y = constrain(-pkt->imu_linear_acceleration_xyz[1] * ACC_SCALE, -32767, 32767);
      z = constrain(-pkt->imu_linear_acceleration_xyz[2] * ACC_SCALE, -32767, 32767);
      virtualAccSet(virtualAccDev, x, y, z);
-@@ -328,7 +339,7 @@ static void updateState(const fdm_packet* pkt)
+@@ -328,7 +354,7 @@ static void updateState(const fdm_packet* pkt)
      // The Gazebo BetaflightPlugin sends the quaternion conjugated by Rx(π)
      // (q_plugin = Rx(π) * M * Rx(π), with M the FLU-body to ENU-world
      // attitude). Undo the conjugation (negate qy/qz), then rotate the world
@@ -109,7 +179,7 @@ index ee216ef..1f684dc 100644
      // FLU body equals Betaflight's internal NWU body, so the result is the
      // proper body-to-world rotation - the Euler display and every rMat
      // vector consumer (position estimator, mag fusion) agree at any heading.
-@@ -337,10 +348,10 @@ static void updateState(const fdm_packet* pkt)
+@@ -337,10 +363,10 @@ static void updateState(const fdm_packet* pkt)
      const float pktQy = -pkt->imu_orientation_quat[2];
      const float pktQz = -pkt->imu_orientation_quat[3];
      static const float k = 0.70710678f; // cos(π/4) = sin(π/4) = √2/2
@@ -124,6 +194,59 @@ index ee216ef..1f684dc 100644
  #else
      // Legacy bridges send the body-to-world quaternion directly
      const float attQw = pkt->imu_orientation_quat[0];
+@@ -436,21 +462,43 @@ static void updateState(const fdm_packet* pkt)
+     const double correctedLon = longitude;
+ #endif
+ 
+-    const double speed = sqrt(sq(pkt->velocity_xyz[0]) + sq(pkt->velocity_xyz[1]));
+-    const double speed3D = sqrt(sq(pkt->velocity_xyz[0]) + sq(pkt->velocity_xyz[1]) + sq(pkt->velocity_xyz[2]));
++    // AAS: add the SITL_GPS_* errors to fixes published one period after their measurement
++    static double measured[6], fix[6]; // Latitude, longitude (deg), altitude (m), ENU velocity (m/s)
++    static double nextFixS = 0.0, wander[3]; // Time of the next fix, slow position error (ENU, m)
++    bool newFix = false;
++    // Out-of-range lat/lon is a test-harness sentinel for GPS loss: skip the
++    // update so the virtual GPS goes stale. Kept as a range check because
++    // -ffast-math folds isnan() to false. Real bridges send valid coordinates.
++    if (pkt->timestamp >= nextFixS && fabs(latitude) <= 90.0 && fabs(longitude) <= 180.0) {
++        const double current[6] = {correctedLat, correctedLon, altitude, pkt->velocity_xyz[0], pkt->velocity_xyz[1], pkt->velocity_xyz[2]};
++        const bool delayed = pkt->timestamp < nextFixS + SITL_GPS_PERIOD_S; // Not at the first fix, or after a GPS loss
++        memcpy(fix, delayed ? measured : current, sizeof(fix));
++        memcpy(measured, current, sizeof(measured));
++        nextFixS = pkt->timestamp + SITL_GPS_PERIOD_S;
++        const double decay = exp(-SITL_GPS_PERIOD_S / SITL_GPS_WANDER_TAU_S);
++        double error[3];
++        for (int i = 0; i < 3; i++) {
++            wander[i] = decay * wander[i] + sitlGpsNoise(SITL_GPS_WANDER_M * sqrt(1.0 - decay * decay));
++            error[i] = wander[i] + sitlGpsNoise(SITL_GPS_NOISE_M);
++            fix[3 + i] += sitlGpsNoise(SITL_GPS_VEL_NOISE_MS);
++        }
++        fix[0] += error[1] / 111319.5; // North, in degrees of latitude
++        fix[1] += error[0] / (111319.5 * cos(fix[0] * M_PI / 180.0)); // East
++        fix[2] += error[2];
++        newFix = true;
++    }
++    const double *vel = &fix[3];
++    const double speed = sqrt(sq(vel[0]) + sq(vel[1]));
++    const double speed3D = sqrt(sq(vel[0]) + sq(vel[1]) + sq(vel[2]));
+     // Plugin provides ENU velocity when spherical coords configured: [0]=East, [1]=North.
+     // Course = atan2(East, North) gives standard aviation bearing from North, clockwise.
+-    double course = atan2(pkt->velocity_xyz[0], pkt->velocity_xyz[1]) * RAD2DEG;
++    double course = atan2(vel[0], vel[1]) * RAD2DEG;
+     if (course < 0.0) {
+         course += 360.0;
+     }
+     // velocity_xyz is ENU: NED velN = [1], velE = [0], velD = -[2]
+-    // Out-of-range lat/lon is a test-harness sentinel for GPS loss: skip the
+-    // update so the virtual GPS goes stale. Kept as a range check because
+-    // -ffast-math folds isnan() to false. Real bridges send valid coordinates.
+-    if (fabs(latitude) <= 90.0 && fabs(longitude) <= 180.0) {
+-        setVirtualGPS(correctedLat, correctedLon, altitude, speed, speed3D, course,
+-                      pkt->velocity_xyz[1], pkt->velocity_xyz[0], -pkt->velocity_xyz[2]);
++    if (newFix) {
++        setVirtualGPS(fix[0], fix[1], fix[2], speed, speed3D, course, vel[1], vel[0], -vel[2]);
+     }
+ 
+     if (gpxEnabled) {
 diff --git a/src/platform/SIMULATOR/sitl_gyro.h b/src/platform/SIMULATOR/sitl_gyro.h
 index 4232e57..8409631 100644
 --- a/src/platform/SIMULATOR/sitl_gyro.h

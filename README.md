@@ -584,6 +584,7 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 - On Jetson, if yolo_py crashes, try run `sudo systemctl restart nvargus-daemon` on the host
 - `PX4_ROS2_LIB=true` sets RTF=1: PX4 expects each external mode's arming check reply within 50ms of simulated time (`REQUEST_TIMEOUT` in `externalChecks.hpp`), that is 50ms/RTF of wall time for the XRCE-DDS and ROS2 round trip, and flags modes that keep missing it as unresponsive
 - `AUTOPILOT=betaflight` sets RTF=1 and is not supported by `aas-gym` as Betaflight SITL is not lockstepped with Gazebo (its clock is the host's): 1) above 1x its 100 Hz tasks (altitude estimate, ALTHOLD, POS HOLD) fall behind, and 2) it keeps running while Gazebo is paused by `aas-gym`
+- Betaflight SITL's barometer and magnetometer are noise-free (derived from Gazebo's altitude and attitude), its GPS is delayed and noisy (by the changes in `betaflight-2026.6.2.patch`)
 
 ## Docker Basics
 

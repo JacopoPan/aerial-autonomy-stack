@@ -172,7 +172,7 @@ RUN pip3 install --no-cache-dir --retries 5 pyzmq
 FROM ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image
 
 # Betaflight SITL and its Gazebo plugin
-# Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, and MAVLink telemetry
+# Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, simulated GPS noise, MAVLink telemetry, and MSP2_POSITION_ESTIMATE
 COPY /_github_clones/betaflight /aas/github_apps/betaflight
 COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/github_apps/betaflight-2026.6.2.patch
 WORKDIR /aas/github_apps/betaflight

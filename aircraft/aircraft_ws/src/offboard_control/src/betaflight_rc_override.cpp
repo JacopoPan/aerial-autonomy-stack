@@ -78,7 +78,7 @@ BetaflightRcOverride::BetaflightRcOverride() : Node("betaflight_rc_override"),
         "global_position", qos_profile_sub, // 50Hz
         std::bind(&BetaflightRcOverride::global_position_callback, this, std::placeholders::_1), subscriber_options);
     local_position_sub_ = this->create_subscription<PointStamped>(
-        "local_position", qos_profile_sub, // 50Hz, from the first arming
+        "local_position", qos_profile_sub, // 50Hz, while armed
         std::bind(&BetaflightRcOverride::local_position_callback, this, std::placeholders::_1), subscriber_options);
     velocity_sub_ = this->create_subscription<TwistStamped>(
         "velocity", qos_profile_sub, // 50Hz
@@ -122,7 +122,7 @@ void BetaflightRcOverride::global_position_callback(const NavSatFix::SharedPtr m
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     lat_ = msg->latitude;
     lon_ = msg->longitude;
-    alt_ = msg->altitude; // MSL, 1m steps
+    alt_ = msg->altitude; // MSL (only in 1m steps while disarmed)
 }
 void BetaflightRcOverride::local_position_callback(const PointStamped::SharedPtr msg)
 {

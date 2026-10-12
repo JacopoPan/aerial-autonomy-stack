@@ -5,15 +5,17 @@ Betaflight FCU interface:
 - tcp://host:port for the SITL (UARTn listens on 5760 + n + port offset)
 - serial port on hardware (e.g., /dev/ttyACM0)
 Unlike the PX4 and ArduPilot interfaces that rely on an external ROS2 middleware (uXRCE-DDS and MAVROS), this node directly handles MSP
+Requires Betaflight built with betaflight-2026.6.2.patch (for MSP2_POSITION_ESTIMATE): the SITL in simulation-image, or hardware (SETUP_AVIONICS.md)
 
 RC channels sent at 50 Hz with MSP_SET_RAW_RC, which Betaflight applies to CH1-6 while the radio's MSP OVERRIDE switch is on (see betaflight-2026.6.cli):
     CH1-4 roll, pitch, throttle, yaw sticks; CH5 ARM; CH6 flight mode; CH7-8 unused
     CH6 low = ACRO (rates), mid = ANGLE (attitude), high = ANGLE + ALTHOLD + POS HOLD (velocity)
 In ALTHOLD + POS HOLD, once armed with the throttle raised, the sticks are velocity commands and centered sticks hold position and altitude:
     roll, pitch = horizontal velocity (full stick = ap_max_velocity), throttle = climb rate (around ap_hover_throttle), yaw = yaw rate
+    While POS HOLD is not in control (e.g., no GPS or no valid heading), Betaflight flies roll and pitch as ANGLE tilts: this node centers them
 
 Actions and services (no orbit or speed), positions are from the arming point, altitudes above it:
-    takeoff_action: arm, climb to takeoff_altitude
+    takeoff_action: arm, climb to takeoff_altitude (rejected without a GPS fix, Betaflight's estimate, or a valid heading)
     set_reposition: fly to east, north, altitude (the service returns once the target is accepted)
     land_action: fly back over the arming point at landing_altitude, descend, disarm on touchdown
     offboard_action: fly the sticks and flight mode from rc_override for max_duration_sec, then hover
@@ -30,23 +32,24 @@ Offboard: while offboard_action runs, /offboard_flag names the controller that b
     Without rc_override in the last rc_override_timeout (0.5s), the sticks center in ALTHOLD + POS HOLD and the drone holds its position
 
 MSP budget: Betaflight answers one MSP request per port per serial task run, serial_update_rate_hz times per second
-    (default 100Hz, set to 500Hz in betaflight-2026.6.cli), this node sends 100/s (50 MSP_SET_RAW_RC, 50 MSP_MULTIPLE_MSP)
+    (default 100Hz, set to 500Hz in betaflight-2026.6.cli), this node sends 150/s (50 each of MSP_SET_RAW_RC, MSP_MULTIPLE_MSP, MSP2_POSITION_ESTIMATE)
 
-Topics published at 50 Hz, from one MSP_MULTIPLE_MSP request (five replies) every timer tick:
+Topics published at 50 Hz, from one MSP_MULTIPLE_MSP request (four replies) and one MSP2_POSITION_ESTIMATE request every timer tick:
     attitude (geometry_msgs/Vector3Stamped): roll, pitch in rad (FLU: right wing down, nose down positive), heading in rad (clockwise from north)
     imu (sensor_msgs/Imu): FLU angular velocity (rad/s) and acceleration (m/s^2), from MSP_RAW_IMU raw sensor units
-    global_position (sensor_msgs/NavSatFix): latitude, longitude, MSL altitude (1m steps)
-    local_position (geometry_msgs/PointStamped): east, north of the arming point and altitude above it, in m, from the first arming
-    velocity (geometry_msgs/TwistStamped): ENU, from the GPS ground speed and course, and the estimated vertical speed
+    global_position (sensor_msgs/NavSatFix): latitude, longitude, MSL altitude, Betaflight's estimate while armed, otherwise the GPS fix (altitude in 1m steps)
+    local_position (geometry_msgs/PointStamped): east, north of the arming point and altitude above it, in m, Betaflight's estimate while armed
+    velocity (geometry_msgs/TwistStamped): ENU, Betaflight's estimate (horizontally, only updated while armed)
 And /offboard_flag (autopilot_interface_msgs/OffboardFlag) at 10 Hz, as px4_interface and ardupilot_interface
 */
 #include "betaflight_interface.hpp"
 
 BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
-    state_cmds_({MSP_RAW_IMU, MSP_ATTITUDE, MSP_ALTITUDE, MSP_RAW_GPS, MSP_STATUS_EX}), fd_(-1), acc_1g_(2048),
-    status_received_(false), armed_(false), gps_fix_(false), hover_read_(false), arming_disable_flags_(0), hover_pwm_(0),
-    latitude_(0.0), longitude_(0.0), altitude_(0.0), vertical_speed_(0.0), ground_speed_(0.0), heading_(0.0),
-    state_(State::INIT), state_since_(0, 0, RCL_ROS_TIME), descended_(false), quiet_since_(0, 0, RCL_ROS_TIME), home_set_(false),
+    state_cmds_({MSP_RAW_IMU, MSP_ATTITUDE, MSP_RAW_GPS, MSP_STATUS_EX}), fd_(-1), acc_1g_(2048),
+    status_received_(false), armed_(false), gps_fix_(false), hover_read_(false),
+    estimate_read_(false), xy_valid_(false), heading_valid_(false), in_control_(false), arming_disable_flags_(0), hover_pwm_(0),
+    position_({0.0, 0.0, 0.0}), velocity_({0.0, 0.0, 0.0}), heading_(0.0),
+    state_(State::INIT), state_since_(0, 0, RCL_ROS_TIME), descended_(false), quiet_since_(0, 0, RCL_ROS_TIME), home_set_(false), home_altitude_(0.0),
     target_({0.0, 0.0, 0.0}), takeoff_altitude_(0.0), offboard_duration_(0.0), rc_override_time_(0, 0, RCL_ROS_TIME)
 {
     // Parameters
@@ -140,13 +143,20 @@ int BetaflightInterface::open_device(const std::string &device)
     return fd;
 }
 
-void BetaflightInterface::send_msp(uint8_t cmd, const std::vector<uint8_t> &payload) // MSP v1 request: $M< size cmd payload checksum
+void BetaflightInterface::send_msp(uint16_t cmd, const std::vector<uint8_t> &payload) // v1: $M< size cmd payload XOR, v2 (cmd > 255): $X< flag cmd(2) size(2) payload CRC8
 {
-    std::vector<uint8_t> frame = {'$', 'M', '<', static_cast<uint8_t>(payload.size()), cmd};
+    const bool v2 = cmd > 255;
+    std::vector<uint8_t> frame = {'$', static_cast<uint8_t>(v2 ? 'X' : 'M'), '<'};
+    if (v2) {
+        frame.insert(frame.end(), {0, static_cast<uint8_t>(cmd & 0xFF), static_cast<uint8_t>(cmd >> 8),
+                                   static_cast<uint8_t>(payload.size() & 0xFF), static_cast<uint8_t>(payload.size() >> 8)});
+    } else {
+        frame.insert(frame.end(), {static_cast<uint8_t>(payload.size()), static_cast<uint8_t>(cmd)});
+    }
     frame.insert(frame.end(), payload.begin(), payload.end());
     uint8_t checksum = 0;
     for (size_t i = 3; i < frame.size(); i++) {
-        checksum ^= frame[i];
+        checksum = v2 ? crc8_dvb_s2(checksum, frame[i]) : checksum ^ frame[i];
     }
     frame.push_back(checksum);
     if (write(fd_, frame.data(), frame.size()) != static_cast<ssize_t>(frame.size())) {
@@ -164,21 +174,36 @@ void BetaflightInterface::step()
     if (n == 0) {
         throw std::runtime_error("MSP link closed");
     }
-    const std::string header = "$M>"; // MSP v1 reply: $M> size cmd payload checksum
-    while (true) {
-        auto start = std::search(rx_.begin(), rx_.end(), header.begin(), header.end());
-        rx_.erase(rx_.begin(), start == rx_.end() ? rx_.end() - static_cast<std::ptrdiff_t>(std::min<size_t>(rx_.size(), 2)) : start); // Keep a split header
-        if (rx_.size() < 6 || rx_.size() < 6u + rx_[3]) {
+    while (true) { // Replies, as the requests in send_msp() with > (or ! for an error): v1 $M> size cmd payload XOR, v2 $X> flag cmd(2) size(2) payload CRC8
+        rx_.erase(rx_.begin(), std::find(rx_.begin(), rx_.end(), '$'));
+        if (rx_.size() < 3) {
             break;
         }
-        uint8_t checksum = 0; // XOR of size, cmd and payload, as in send_msp()
-        for (size_t i = 3; i < 5u + rx_[3]; i++) {
-            checksum ^= rx_[i];
+        if ((rx_[1] != 'M' && rx_[1] != 'X') || (rx_[2] != '>' && rx_[2] != '!')) {
+            rx_.erase(rx_.begin()); // Not a reply, look for the next one
+            continue;
         }
-        if (checksum == rx_[5u + rx_[3]]) { // Skip corrupted replies: e.g., a status read as disarmed would make this node send ARM low
-            handle(rx_[4], &rx_[5], rx_[3]);
+        const bool v2 = rx_[1] == 'X';
+        const size_t header = v2 ? 8 : 5;
+        if (rx_.size() < header) {
+            break;
         }
-        rx_.erase(rx_.begin(), rx_.begin() + 6 + rx_[3]);
+        const size_t size = v2 ? rx_[6] | rx_[7] << 8 : rx_[3];
+        if (size > 255) { // Longer than any reply to this node: not a header
+            rx_.erase(rx_.begin());
+            continue;
+        }
+        if (rx_.size() < header + size + 1) {
+            break;
+        }
+        uint8_t checksum = 0;
+        for (size_t i = 3; i < header + size; i++) {
+            checksum = v2 ? crc8_dvb_s2(checksum, rx_[i]) : checksum ^ rx_[i];
+        }
+        if (rx_[2] == '>' && checksum == rx_[header + size]) { // Skip errors and corrupted replies: e.g., a status read as disarmed would make this node send ARM low
+            handle(v2 ? rx_[4] | rx_[5] << 8 : rx_[4], &rx_[header], size);
+        }
+        rx_.erase(rx_.begin(), rx_.begin() + static_cast<std::ptrdiff_t>(header + size + 1));
     }
     update_state();
     if (state_ != State::INIT) { // Until Betaflight's first status, sending ARM low could disarm a drone in flight
@@ -188,9 +213,10 @@ void BetaflightInterface::step()
         send_msp(MSP_GPS_RESCUE); // Once, for ap_hover_throttle
     }
     send_msp(MSP_MULTIPLE_MSP, state_cmds_);
+    send_msp(MSP2_POSITION_ESTIMATE); // MSP v2 commands cannot be in MSP_MULTIPLE_MSP
 }
 
-void BetaflightInterface::handle(uint8_t cmd, const uint8_t *d, size_t size) // Publish or store the payload of an MSP reply
+void BetaflightInterface::handle(uint16_t cmd, const uint8_t *d, size_t size) // Publish or store the payload of an MSP reply
 {
     auto u16 = [d](size_t k) { return static_cast<uint16_t>(d[k] | d[k + 1] << 8); };
     auto s16 = [&u16](size_t k) { return static_cast<int16_t>(u16(k)); };
@@ -219,9 +245,6 @@ void BetaflightInterface::handle(uint8_t cmd, const uint8_t *d, size_t size) // 
         msg.vector.z = s16(4) * M_PI / 180.0;
         heading_ = msg.vector.z;
         attitude_pub_->publish(msg);
-    } else if (cmd == MSP_ALTITUDE && size >= 6) { // Altitude in cm (from the arming point once armed), vertical speed in cm/s
-        altitude_ = s32(0) / 100.0;
-        vertical_speed_ = s16(4) / 100.0;
     } else if (cmd == MSP_RAW_GPS && size >= 16) { // Fix, satellites, lat, lon in 1e-7 deg, MSL altitude in m, speed in cm/s, course in 0.1 deg
         sensor_msgs::msg::NavSatFix fix;
         fix.header.stamp = this->now();
@@ -229,26 +252,51 @@ void BetaflightInterface::handle(uint8_t cmd, const uint8_t *d, size_t size) // 
         fix.latitude = s32(2) / 1e7;
         fix.longitude = s32(6) / 1e7;
         fix.altitude = u16(10);
+        if (home_set_) { // Betaflight's estimate (from the MSP2_POSITION_ESTIMATE reply of the previous tick)
+            double up = 0.0;
+            home_.Reverse(position_[0], position_[1], 0.0, fix.latitude, fix.longitude, up);
+            fix.altitude = home_altitude_ + position_[2];
+        }
         global_position_pub_->publish(fix);
         gps_fix_ = d[0];
-        latitude_ = fix.latitude;
-        longitude_ = fix.longitude;
+    } else if (cmd == MSP2_POSITION_ESTIMATE && size >= 31) { // Flags, GPS origin (lat, lon in 1e-7 deg, MSL alt in cm), ENU position in cm and velocity in cm/s
+        estimate_read_ = true;
+        xy_valid_ = d[0] & 1; // Bit 1, the vertical estimate, is valid with the barometer
+        heading_valid_ = d[0] & 8;
+        in_control_ = d[0] & 16;
+        const bool origin_set = d[0] & 4;
+        const double origin_latitude = s32(1) / 1e7, origin_longitude = s32(5) / 1e7;
+        if (!armed_) {
+            home_set_ = false;
+        } else if (!home_set_ && origin_set && xy_valid_) { // Once per arming: once valid, the horizontal estimate is from this arming's origin
+            home_.Reset(origin_latitude, origin_longitude, 0.0);
+            home_altitude_ = s32(9) / 100.0;
+            home_set_ = true;
+        }
+        double east = 0.0, north = 0.0, up = 0.0; // Betaflight's origin from home: it moves if a GPS outage outside POS HOLD restarts its horizontal estimate
+        if (home_set_ && origin_set) {
+            home_.Forward(origin_latitude, origin_longitude, 0.0, east, north, up);
+        }
+        for (size_t i = 0; i < 3; i++) {
+            position_[i] = s32(13 + 4 * i) / 100.0;
+            velocity_[i] = s16(25 + 2 * i) / 100.0;
+        }
+        position_[0] += east;
+        position_[1] += north;
+        const auto stamp = this->now();
         if (home_set_) {
             geometry_msgs::msg::PointStamped local; // ENU, in the frame of set_reposition
-            local.header.stamp = fix.header.stamp;
-            const auto [east, north, up] = position();
-            local.point.x = east;
-            local.point.y = north;
-            local.point.z = up;
+            local.header.stamp = stamp;
+            local.point.x = position_[0];
+            local.point.y = position_[1];
+            local.point.z = position_[2];
             local_position_pub_->publish(local);
         }
         geometry_msgs::msg::TwistStamped vel; // ENU, as MAVROS's local_position/velocity_local
-        vel.header.stamp = fix.header.stamp;
-        const double speed = u16(12) / 100.0, course = u16(14) * M_PI / 1800.0;
-        ground_speed_ = speed;
-        vel.twist.linear.x = speed * std::sin(course); // East
-        vel.twist.linear.y = speed * std::cos(course); // North
-        vel.twist.linear.z = vertical_speed_; // Up
+        vel.header.stamp = stamp;
+        vel.twist.linear.x = velocity_[0];
+        vel.twist.linear.y = velocity_[1];
+        vel.twist.linear.z = velocity_[2];
         velocity_pub_->publish(vel);
     } else if (cmd == MSP_STATUS_EX && size >= 16 && size >= 21u + d[15]) { // Active modes (ARM first), extra mode bytes, arming disable flags
         armed_ = d[6] & 1;
@@ -284,18 +332,14 @@ void BetaflightInterface::update_state() // State transitions and action results
         finish(offboard_goal_, false, "Offboard canceled");
         hover_here();
     }
-    if (state_ == State::INIT && status_received_) {
+    if (state_ == State::INIT && status_received_ && (!armed_ || estimate_read_)) { // If armed, hover where Betaflight's estimate is
         if (armed_) {
-            home_.Reset(latitude_, longitude_, 0.0);
-            home_set_ = true;
-            RCLCPP_WARN(this->get_logger(), "Betaflight is already armed: hovering, with home at the current position");
+            RCLCPP_WARN(this->get_logger(), "Betaflight is already armed: hovering");
             hover_here();
         } else {
             set_state(State::STARTED);
         }
     } else if (state_ == State::ARMING && armed_) {
-        home_.Reset(latitude_, longitude_, 0.0);
-        home_set_ = true;
         target_ = {0.0, 0.0, takeoff_altitude_};
         set_state(State::REPOSITIONING);
         feedback(takeoff_goal_, "Armed, climbing to " + std::to_string(takeoff_altitude_) + " m");
@@ -314,9 +358,9 @@ void BetaflightInterface::update_state() // State transitions and action results
             }
         }
     } else if (state_ == State::LANDING) { // Touchdown: the descent began, then the drone stopped, vertically and horizontally
-        const bool descending = vertical_speed_ < -0.25 * LAND_SPEED;
+        const bool descending = velocity_[2] < -0.25 * LAND_SPEED;
         descended_ = descended_ || descending;
-        if (descending || ground_speed_ > ARRIVAL_SPEED) {
+        if (descending || (xy_valid_ && std::hypot(velocity_[0], velocity_[1]) > ARRIVAL_SPEED)) {
             quiet_since_ = this->now();
         } else if (descended_ && (this->now() - quiet_since_).seconds() > TOUCHDOWN_TIME) {
             finish(land_goal_, true, "Landed");
@@ -367,6 +411,10 @@ std::vector<uint8_t> BetaflightInterface::rc_channels() const // MSP_SET_RAW_RC 
         ch[3] = 1500.0 + 500.0 * axes[3];
         ch[5] = 1000.0 + 500.0 * mode;
     }
+    if (ch[5] == 2000.0 && !in_control_) { // Until POS HOLD takes control (once armed, with the throttle raised), and if it loses it
+        ch[0] = 1500.0;
+        ch[1] = 1500.0;
+    }
     std::vector<uint8_t> payload;
     for (const double value : ch) {
         const auto pwm = static_cast<uint16_t>(std::clamp(value, 1000.0, 2000.0));
@@ -382,22 +430,14 @@ double BetaflightInterface::hold_throttle(double climb) const // Throttle PWM fo
     return MIN_CHECK_US + (command - 1000.0) * (2000.0 - MIN_CHECK_US) / 1000.0; // Undo the rescaling from [min_check, 2000] to [1000, 2000]
 }
 
-std::array<double, 3> BetaflightInterface::position() const // East, north of the arming point and altitude above it, in m
-{
-    double east = 0.0, north = 0.0, up = 0.0;
-    home_.Forward(latitude_, longitude_, 0.0, east, north, up);
-    return {east, north, altitude_};
-}
-
 std::array<double, 3> BetaflightInterface::offset() const // East, north, up from the current position to the target, in m
 {
-    const auto [east, north, up] = position();
-    return {target_[0] - east, target_[1] - north, target_[2] - up};
+    return {target_[0] - position_[0], target_[1] - position_[1], target_[2] - position_[2]};
 }
 
 void BetaflightInterface::hover_here()
 {
-    target_ = position();
+    target_ = position_;
     set_state(State::HOVER);
 }
 
@@ -405,7 +445,7 @@ bool BetaflightInterface::arrived() const // At the target and nearly stopped (B
 {
     const auto [east, north, up] = offset();
     return std::hypot(east, north) < ARRIVAL_DISTANCE && std::abs(up) < ARRIVAL_DISTANCE
-        && ground_speed_ < ARRIVAL_SPEED && std::abs(vertical_speed_) < ARRIVAL_SPEED;
+        && std::hypot(velocity_[0], velocity_[1]) < ARRIVAL_SPEED && std::abs(velocity_[2]) < ARRIVAL_SPEED;
 }
 
 bool BetaflightInterface::rc_override_valid() const // Recent, with four finite sticks and a CH6 position
@@ -424,6 +464,10 @@ rclcpp_action::GoalResponse BetaflightInterface::accept_takeoff()
         reason = std::string("state is ") + STATE_NAMES[static_cast<int>(state_)] + ", not STARTED";
     } else if (!gps_fix_) {
         reason = "no GPS fix";
+    } else if (!estimate_read_) {
+        reason = "no MSP2_POSITION_ESTIMATE, Betaflight needs betaflight-2026.6.2.patch (see SETUP_AVIONICS.md)";
+    } else if (!heading_valid_) {
+        reason = "no valid heading, POS HOLD needs a compass with trust_mag = ON (see SETUP_AVIONICS.md)";
     } else if (hover_pwm_ == 0) {
         reason = "ap_hover_throttle not read yet, or 0";
     } else if (arming_disable_flags_) {
@@ -536,6 +580,15 @@ std::string BetaflightInterface::hex(uint32_t value)
     char buf[11];
     std::snprintf(buf, sizeof(buf), "0x%08X", value);
     return buf;
+}
+
+uint8_t BetaflightInterface::crc8_dvb_s2(uint8_t crc, uint8_t byte) // MSP v2 checksum, as Betaflight's common/crc.c
+{
+    crc ^= byte;
+    for (int i = 0; i < 8; i++) {
+        crc = (crc & 0x80) ? static_cast<uint8_t>((crc << 1) ^ 0xD5) : static_cast<uint8_t>(crc << 1);
+    }
+    return crc;
 }
 
 
