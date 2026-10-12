@@ -122,7 +122,7 @@ private:
     // State machine and RC channels
     void update_state();
     std::vector<uint8_t> rc_channels() const;
-    double hold_throttle(double climb) const;
+    double hold_throttle(double stick) const;
     std::array<double, 3> offset() const;
     void hover_here();
     bool arrived() const;
@@ -144,7 +144,7 @@ private:
     template <typename ActionT>
     void finish(GoalHandle<ActionT> &goal, bool success, const std::string &message);
     static std::string hex(uint32_t value);
-    static uint8_t crc8_dvb_s2(uint8_t crc, uint8_t byte);
+    static uint8_t checksum(const std::vector<uint8_t> &frame, size_t end, bool v2);
 };
 
 #endif // AUTOPILOT_INTERFACE__BETAFLIGHT_INTERFACE_HPP_

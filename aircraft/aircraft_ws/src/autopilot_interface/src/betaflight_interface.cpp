@@ -114,10 +114,11 @@ BetaflightInterface::~BetaflightInterface() { close(fd_); }
 int BetaflightInterface::open_device(const std::string &device)
 {
     int fd = -1;
-    if (device.rfind("tcp://", 0) == 0) {
+    if (device.substr(0, 6) == "tcp://") {
         const std::string host_port = device.substr(6);
         const size_t colon = host_port.rfind(':');
-        addrinfo hints{}, *res = nullptr;
+        addrinfo hints{};
+        addrinfo *res = nullptr;
         hints.ai_socktype = SOCK_STREAM;
         if (getaddrinfo(host_port.substr(0, colon).c_str(), host_port.substr(colon + 1).c_str(), &hints, &res) == 0) {
             fd = socket(res->ai_family, res->ai_socktype, 0);
@@ -146,19 +147,15 @@ int BetaflightInterface::open_device(const std::string &device)
 void BetaflightInterface::send_msp(uint16_t cmd, const std::vector<uint8_t> &payload) // v1: $M< size cmd payload XOR, v2 (cmd > 255): $X< flag cmd(2) size(2) payload CRC8
 {
     const bool v2 = cmd > 255;
-    std::vector<uint8_t> frame = {'$', static_cast<uint8_t>(v2 ? 'X' : 'M'), '<'};
+    std::vector<uint8_t> frame;
     if (v2) {
-        frame.insert(frame.end(), {0, static_cast<uint8_t>(cmd & 0xFF), static_cast<uint8_t>(cmd >> 8),
-                                   static_cast<uint8_t>(payload.size() & 0xFF), static_cast<uint8_t>(payload.size() >> 8)});
+        frame = {'$', 'X', '<', 0, static_cast<uint8_t>(cmd & 0xFF), static_cast<uint8_t>(cmd >> 8),
+                 static_cast<uint8_t>(payload.size() & 0xFF), static_cast<uint8_t>(payload.size() >> 8)};
     } else {
-        frame.insert(frame.end(), {static_cast<uint8_t>(payload.size()), static_cast<uint8_t>(cmd)});
+        frame = {'$', 'M', '<', static_cast<uint8_t>(payload.size()), static_cast<uint8_t>(cmd)};
     }
     frame.insert(frame.end(), payload.begin(), payload.end());
-    uint8_t checksum = 0;
-    for (size_t i = 3; i < frame.size(); i++) {
-        checksum = v2 ? crc8_dvb_s2(checksum, frame[i]) : checksum ^ frame[i];
-    }
-    frame.push_back(checksum);
+    frame.push_back(checksum(frame, frame.size(), v2));
     if (write(fd_, frame.data(), frame.size()) != static_cast<ssize_t>(frame.size())) {
         throw std::runtime_error("MSP write failed");
     }
@@ -188,7 +185,7 @@ void BetaflightInterface::step()
         if (rx_.size() < header) {
             break;
         }
-        const size_t size = v2 ? rx_[6] | rx_[7] << 8 : rx_[3];
+        const size_t size = v2 ? (rx_[6] | rx_[7] << 8) : rx_[3];
         if (size > 255) { // Longer than any reply to this node: not a header
             rx_.erase(rx_.begin());
             continue;
@@ -196,12 +193,9 @@ void BetaflightInterface::step()
         if (rx_.size() < header + size + 1) {
             break;
         }
-        uint8_t checksum = 0;
-        for (size_t i = 3; i < header + size; i++) {
-            checksum = v2 ? crc8_dvb_s2(checksum, rx_[i]) : checksum ^ rx_[i];
-        }
-        if (rx_[2] == '>' && checksum == rx_[header + size]) { // Skip errors and corrupted replies: e.g., a status read as disarmed would make this node send ARM low
-            handle(v2 ? rx_[4] | rx_[5] << 8 : rx_[4], &rx_[header], size);
+        if (rx_[2] == '>' && checksum(rx_, header + size, v2) == rx_[header + size]) { // Skip errors and corrupted replies: e.g., a status read as disarmed would make this node send ARM low
+            const uint16_t cmd = v2 ? (rx_[4] | rx_[5] << 8) : rx_[4];
+            handle(cmd, &rx_[header], size);
         }
         rx_.erase(rx_.begin(), rx_.begin() + static_cast<std::ptrdiff_t>(header + size + 1));
     }
@@ -223,8 +217,13 @@ void BetaflightInterface::handle(uint16_t cmd, const uint8_t *d, size_t size) //
     auto u32 = [&u16](size_t k) { return u16(k) | static_cast<uint32_t>(u16(k + 2)) << 16; };
     auto s32 = [&u32](size_t k) { return static_cast<int32_t>(u32(k)); };
     if (cmd == MSP_MULTIPLE_MSP) { // The replies to state_cmds_, each as size and payload
-        for (size_t i = 0, k = 0; k < state_cmds_.size() && i < size && i + 1 + d[i] <= size; i += 1 + d[i], k++) {
-            handle(state_cmds_[k], d + i + 1, d[i]);
+        size_t i = 0; // Offset of the next reply
+        for (const uint8_t state_cmd : state_cmds_) {
+            if (i >= size || i + 1 + d[i] > size) { // Missing or truncated
+                break;
+            }
+            handle(state_cmd, &d[i + 1], d[i]);
+            i += 1 + d[i];
         }
     } else if (cmd == MSP_RAW_IMU && size >= 12) { // Acceleration in acc_1g units per g, angular velocity in 16.384 units per deg/s (2000 deg/s range), FLU
         sensor_msgs::msg::Imu msg;
@@ -261,11 +260,12 @@ void BetaflightInterface::handle(uint16_t cmd, const uint8_t *d, size_t size) //
         gps_fix_ = d[0];
     } else if (cmd == MSP2_POSITION_ESTIMATE && size >= 31) { // Flags, GPS origin (lat, lon in 1e-7 deg, MSL alt in cm), ENU position in cm and velocity in cm/s
         estimate_read_ = true;
-        xy_valid_ = d[0] & 1; // Bit 1, the vertical estimate, is valid with the barometer
-        heading_valid_ = d[0] & 8;
-        in_control_ = d[0] & 16;
-        const bool origin_set = d[0] & 4;
-        const double origin_latitude = s32(1) / 1e7, origin_longitude = s32(5) / 1e7;
+        xy_valid_ = d[0] & (1 << 0); // Bit 1, the vertical estimate, is valid with the barometer
+        const bool origin_set = d[0] & (1 << 2);
+        heading_valid_ = d[0] & (1 << 3);
+        in_control_ = d[0] & (1 << 4);
+        const double origin_latitude = s32(1) / 1e7;
+        const double origin_longitude = s32(5) / 1e7;
         if (!armed_) {
             home_set_ = false;
         } else if (!home_set_ && origin_set && xy_valid_) { // Once per arming: once valid, the horizontal estimate is from this arming's origin
@@ -273,16 +273,12 @@ void BetaflightInterface::handle(uint16_t cmd, const uint8_t *d, size_t size) //
             home_altitude_ = s32(9) / 100.0;
             home_set_ = true;
         }
-        double east = 0.0, north = 0.0, up = 0.0; // Betaflight's origin from home: it moves if a GPS outage outside POS HOLD restarts its horizontal estimate
+        double origin_east = 0.0, origin_north = 0.0, origin_up = 0.0; // Betaflight's origin from home: it moves if a GPS outage outside POS HOLD restarts its horizontal estimate
         if (home_set_ && origin_set) {
-            home_.Forward(origin_latitude, origin_longitude, 0.0, east, north, up);
+            home_.Forward(origin_latitude, origin_longitude, 0.0, origin_east, origin_north, origin_up);
         }
-        for (size_t i = 0; i < 3; i++) {
-            position_[i] = s32(13 + 4 * i) / 100.0;
-            velocity_[i] = s16(25 + 2 * i) / 100.0;
-        }
-        position_[0] += east;
-        position_[1] += north;
+        position_ = {s32(13) / 100.0 + origin_east, s32(17) / 100.0 + origin_north, s32(21) / 100.0};
+        velocity_ = {s16(25) / 100.0, s16(27) / 100.0, s16(29) / 100.0};
         const auto stamp = this->now();
         if (home_set_) {
             geometry_msgs::msg::PointStamped local; // ENU, in the frame of set_reposition
@@ -300,10 +296,11 @@ void BetaflightInterface::handle(uint16_t cmd, const uint8_t *d, size_t size) //
         velocity_pub_->publish(vel);
     } else if (cmd == MSP_STATUS_EX && size >= 16 && size >= 21u + d[15]) { // Active modes (ARM first), extra mode bytes, arming disable flags
         armed_ = d[6] & 1;
-        if (u32(17 + d[15]) != arming_disable_flags_ && !armed_) {
-            RCLCPP_INFO(this->get_logger(), "Arming disable flags: 0x%08X", u32(17 + d[15]));
+        const uint32_t flags = u32(17 + d[15]); // After the d[15] extra mode bytes
+        if (!armed_ && flags != arming_disable_flags_) {
+            RCLCPP_INFO(this->get_logger(), "Arming disable flags: 0x%08X", flags);
         }
-        arming_disable_flags_ = u32(17 + d[15]);
+        arming_disable_flags_ = flags;
         status_received_ = true;
     } else if (cmd == MSP_GPS_RESCUE && size >= 14) { // ap_hover_throttle at byte 12
         hover_read_ = true;
@@ -424,9 +421,9 @@ std::vector<uint8_t> BetaflightInterface::rc_channels() const // MSP_SET_RAW_RC 
     return payload;
 }
 
-double BetaflightInterface::hold_throttle(double climb) const // Throttle PWM for a climb rate in [-1, 1] of FULL_STICK_CLIMB_MS, 0 holds the altitude
+double BetaflightInterface::hold_throttle(double stick) const // Throttle PWM in ALTHOLD for a stick in [-1, 1] (climb rate as a fraction of FULL_STICK_CLIMB_MS), 0 holds the altitude
 {
-    const double command = hover_pwm_ + climb * (climb > 0.0 ? 2000.0 - hover_pwm_ : hover_pwm_ - 1000.0); // ALTHOLD centers it on ap_hover_throttle
+    const double command = hover_pwm_ + stick * (stick > 0.0 ? 2000.0 - hover_pwm_ : hover_pwm_ - 1000.0); // ALTHOLD centers it on ap_hover_throttle
     return MIN_CHECK_US + (command - 1000.0) * (2000.0 - MIN_CHECK_US) / 1000.0; // Undo the rescaling from [min_check, 2000] to [1000, 2000]
 }
 
@@ -453,7 +450,7 @@ bool BetaflightInterface::rc_override_valid() const // Recent, with four finite 
     const auto &axes = rc_override_.axes;
     const auto &buttons = rc_override_.buttons;
     return (this->now() - rc_override_time_).seconds() < RC_OVERRIDE_TIMEOUT
-        && axes.size() >= 4 && std::all_of(axes.begin(), axes.begin() + 4, [](float a) { return std::isfinite(a); })
+        && axes.size() >= 4 && std::isfinite(axes[0]) && std::isfinite(axes[1]) && std::isfinite(axes[2]) && std::isfinite(axes[3])
         && buttons.size() >= 1 && buttons[0] >= 0 && buttons[0] <= 2;
 }
 
@@ -582,15 +579,19 @@ std::string BetaflightInterface::hex(uint32_t value)
     return buf;
 }
 
-uint8_t BetaflightInterface::crc8_dvb_s2(uint8_t crc, uint8_t byte) // MSP v2 checksum, as Betaflight's common/crc.c
+uint8_t BetaflightInterface::checksum(const std::vector<uint8_t> &frame, size_t end, bool v2) // Of frame[3] (after $M< or $X<) to frame[end - 1]
 {
-    crc ^= byte;
-    for (int i = 0; i < 8; i++) {
-        crc = (crc & 0x80) ? static_cast<uint8_t>((crc << 1) ^ 0xD5) : static_cast<uint8_t>(crc << 1);
+    uint8_t crc = 0;
+    for (size_t i = 3; i < end; i++) {
+        crc ^= frame[i]; // v1: XOR
+        if (v2) { // v2: CRC8 DVB-S2, as Betaflight's common/crc.c
+            for (int bit = 0; bit < 8; bit++) {
+                crc = (crc & 0x80) ? static_cast<uint8_t>((crc << 1) ^ 0xD5) : static_cast<uint8_t>(crc << 1);
+            }
+        }
     }
     return crc;
 }
-
 
 int main(int argc, char **argv)
 {
@@ -598,7 +599,7 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
     int ret = 0;
     try {
-        rclcpp::spin(std::make_shared<BetaflightInterface>());
+        rclcpp::spin(std::make_shared<BetaflightInterface>()); // Single-threaded: callbacks never overlap, no locks needed (unlike px4_interface and ardupilot_interface)
     } catch (const std::exception &e) {
         RCLCPP_ERROR(rclcpp::get_logger("betaflight_interface"), "%s", e.what());
         ret = 1; // Restarted by the tmux pane, e.g., while the SITL is not up yet
