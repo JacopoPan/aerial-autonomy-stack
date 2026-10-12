@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -113,6 +114,10 @@ private:
     rclcpp::Service<SetReposition>::SharedPtr reposition_service_;
     rclcpp::TimerBase::SharedPtr timer_, offboard_flag_timer_;
 
+    // Callbacks
+    void rc_override_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
+    void offboard_flag_callback();
+
     // MSP link
     static int open_device(const std::string &device);
     void send_msp(uint16_t cmd, const std::vector<uint8_t> &payload = {});
@@ -129,13 +134,16 @@ private:
     bool rc_override_valid() const;
 
     // Actions and services
-    rclcpp_action::GoalResponse accept_takeoff();
-    void start_takeoff(const GoalHandle<Takeoff> &goal);
-    rclcpp_action::GoalResponse accept_land();
-    void start_land(const GoalHandle<Land> &goal);
-    rclcpp_action::GoalResponse accept_offboard();
-    void start_offboard(const GoalHandle<Offboard> &goal);
-    void reposition(const SetReposition::Request &request, SetReposition::Response &response);
+    rclcpp_action::GoalResponse takeoff_handle_goal(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const Takeoff::Goal> goal);
+    rclcpp_action::CancelResponse takeoff_handle_cancel(const GoalHandle<Takeoff> goal_handle);
+    void takeoff_handle_accepted(const GoalHandle<Takeoff> goal_handle);
+    rclcpp_action::GoalResponse land_handle_goal(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const Land::Goal> goal);
+    rclcpp_action::CancelResponse land_handle_cancel(const GoalHandle<Land> goal_handle);
+    void land_handle_accepted(const GoalHandle<Land> goal_handle);
+    rclcpp_action::GoalResponse offboard_handle_goal(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const Offboard::Goal> goal);
+    rclcpp_action::CancelResponse offboard_handle_cancel(const GoalHandle<Offboard> goal_handle);
+    void offboard_handle_accepted(const GoalHandle<Offboard> goal_handle);
+    void set_reposition_callback(const std::shared_ptr<SetReposition::Request> request, std::shared_ptr<SetReposition::Response> response);
 
     // Utility
     void set_state(State state);

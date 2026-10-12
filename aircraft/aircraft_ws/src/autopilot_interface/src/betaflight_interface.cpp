@@ -77,39 +77,46 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
     offboard_flag_pub_ = this->create_publisher<autopilot_interface_msgs::msg::OffboardFlag>("/offboard_flag", 10);
 
     // Subscribers
-    rc_override_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("rc_override", 10, [this](const sensor_msgs::msg::Joy &msg) {
-        rc_override_ = msg;
-        rc_override_time_ = this->now();
-    });
+    rc_override_sub_ = this->create_subscription<sensor_msgs::msg::Joy>("rc_override", 10,
+        std::bind(&BetaflightInterface::rc_override_callback, this, std::placeholders::_1));
 
     // Actions and services
     takeoff_server_ = rclcpp_action::create_server<Takeoff>(this, "takeoff_action",
-        [this](const rclcpp_action::GoalUUID &, std::shared_ptr<const Takeoff::Goal>) { return accept_takeoff(); },
-        [](GoalHandle<Takeoff>) { return rclcpp_action::CancelResponse::ACCEPT; },
-        [this](GoalHandle<Takeoff> goal) { start_takeoff(goal); });
+        std::bind(&BetaflightInterface::takeoff_handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&BetaflightInterface::takeoff_handle_cancel, this, std::placeholders::_1),
+        std::bind(&BetaflightInterface::takeoff_handle_accepted, this, std::placeholders::_1));
     land_server_ = rclcpp_action::create_server<Land>(this, "land_action",
-        [this](const rclcpp_action::GoalUUID &, std::shared_ptr<const Land::Goal>) { return accept_land(); },
-        [](GoalHandle<Land>) { return rclcpp_action::CancelResponse::ACCEPT; },
-        [this](GoalHandle<Land> goal) { start_land(goal); });
+        std::bind(&BetaflightInterface::land_handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&BetaflightInterface::land_handle_cancel, this, std::placeholders::_1),
+        std::bind(&BetaflightInterface::land_handle_accepted, this, std::placeholders::_1));
     offboard_server_ = rclcpp_action::create_server<Offboard>(this, "offboard_action",
-        [this](const rclcpp_action::GoalUUID &, std::shared_ptr<const Offboard::Goal>) { return accept_offboard(); },
-        [](GoalHandle<Offboard>) { return rclcpp_action::CancelResponse::ACCEPT; },
-        [this](GoalHandle<Offboard> goal) { start_offboard(goal); });
+        std::bind(&BetaflightInterface::offboard_handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&BetaflightInterface::offboard_handle_cancel, this, std::placeholders::_1),
+        std::bind(&BetaflightInterface::offboard_handle_accepted, this, std::placeholders::_1));
     reposition_service_ = this->create_service<SetReposition>("set_reposition",
-        [this](const std::shared_ptr<SetReposition::Request> request, std::shared_ptr<SetReposition::Response> response) {
-            reposition(*request, *response);
-        });
+        std::bind(&BetaflightInterface::set_reposition_callback, this, std::placeholders::_1, std::placeholders::_2));
 
     // Timers
-    timer_ = rclcpp::create_timer(this, this->get_clock(), 20ms, [this]() { step(); }); // 50 Hz on the node clock (sim time in simulation)
-    offboard_flag_timer_ = rclcpp::create_timer(this, this->get_clock(), 100ms, [this]() {
-        autopilot_interface_msgs::msg::OffboardFlag msg;
-        msg.is_active = state_ == State::OFFBOARD;
-        msg.controller_name = msg.is_active ? offboard_controller_ : "";
-        offboard_flag_pub_->publish(msg);
-    });
+    timer_ = rclcpp::create_timer(this, this->get_clock(), 20ms, std::bind(&BetaflightInterface::step, this)); // 50 Hz on the node clock (sim time in simulation)
+    offboard_flag_timer_ = rclcpp::create_timer(this, this->get_clock(), 100ms, std::bind(&BetaflightInterface::offboard_flag_callback, this));
 }
 BetaflightInterface::~BetaflightInterface() { close(fd_); }
+
+void BetaflightInterface::rc_override_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
+{
+    rc_override_ = *msg;
+    rc_override_time_ = this->now();
+}
+
+void BetaflightInterface::offboard_flag_callback()
+{
+    autopilot_interface_msgs::msg::OffboardFlag msg; // Inactive, no controller
+    if (state_ == State::OFFBOARD) {
+        msg.is_active = true;
+        msg.controller_name = offboard_controller_;
+    }
+    offboard_flag_pub_->publish(msg);
+}
 
 int BetaflightInterface::open_device(const std::string &device)
 {
@@ -454,7 +461,7 @@ bool BetaflightInterface::rc_override_valid() const // Recent, with four finite 
         && buttons.size() >= 1 && buttons[0] >= 0 && buttons[0] <= 2;
 }
 
-rclcpp_action::GoalResponse BetaflightInterface::accept_takeoff()
+rclcpp_action::GoalResponse BetaflightInterface::takeoff_handle_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const Takeoff::Goal>)
 {
     std::string reason;
     if (state_ != State::STARTED || takeoff_goal_ || land_goal_) {
@@ -477,15 +484,20 @@ rclcpp_action::GoalResponse BetaflightInterface::accept_takeoff()
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
-void BetaflightInterface::start_takeoff(const GoalHandle<Takeoff> &goal)
+rclcpp_action::CancelResponse BetaflightInterface::takeoff_handle_cancel(const GoalHandle<Takeoff>) // Processed in update_state()
 {
-    takeoff_goal_ = goal;
-    takeoff_altitude_ = goal->get_goal()->takeoff_altitude;
+    return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void BetaflightInterface::takeoff_handle_accepted(const GoalHandle<Takeoff> goal_handle)
+{
+    takeoff_goal_ = goal_handle;
+    takeoff_altitude_ = goal_handle->get_goal()->takeoff_altitude;
     set_state(State::ARMING);
     feedback(takeoff_goal_, "Arming");
 }
 
-rclcpp_action::GoalResponse BetaflightInterface::accept_land()
+rclcpp_action::GoalResponse BetaflightInterface::land_handle_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const Land::Goal>)
 {
     if ((state_ != State::HOVER && state_ != State::REPOSITIONING) || takeoff_goal_ || land_goal_) {
         RCLCPP_ERROR(this->get_logger(), "Landing rejected, BetaflightInterface is not hovering or repositioning");
@@ -494,15 +506,20 @@ rclcpp_action::GoalResponse BetaflightInterface::accept_land()
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
-void BetaflightInterface::start_land(const GoalHandle<Land> &goal)
+rclcpp_action::CancelResponse BetaflightInterface::land_handle_cancel(const GoalHandle<Land>) // Processed in update_state()
 {
-    land_goal_ = goal;
-    target_ = {0.0, 0.0, goal->get_goal()->landing_altitude};
+    return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void BetaflightInterface::land_handle_accepted(const GoalHandle<Land> goal_handle)
+{
+    land_goal_ = goal_handle;
+    target_ = {0.0, 0.0, goal_handle->get_goal()->landing_altitude};
     set_state(State::REPOSITIONING);
     feedback(land_goal_, "Returning over the arming point at " + std::to_string(target_[2]) + " m");
 }
 
-rclcpp_action::GoalResponse BetaflightInterface::accept_offboard()
+rclcpp_action::GoalResponse BetaflightInterface::offboard_handle_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const Offboard::Goal>)
 {
     if (state_ != State::HOVER || takeoff_goal_ || land_goal_ || offboard_goal_) {
         RCLCPP_ERROR(this->get_logger(), "Offboard rejected, BetaflightInterface is not hovering");
@@ -511,27 +528,32 @@ rclcpp_action::GoalResponse BetaflightInterface::accept_offboard()
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
-void BetaflightInterface::start_offboard(const GoalHandle<Offboard> &goal)
+rclcpp_action::CancelResponse BetaflightInterface::offboard_handle_cancel(const GoalHandle<Offboard>) // Processed in update_state()
 {
-    offboard_goal_ = goal;
-    offboard_controller_ = goal->get_goal()->controller_name;
-    offboard_duration_ = goal->get_goal()->max_duration_sec;
+    return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void BetaflightInterface::offboard_handle_accepted(const GoalHandle<Offboard> goal_handle)
+{
+    offboard_goal_ = goal_handle;
+    offboard_controller_ = goal_handle->get_goal()->controller_name;
+    offboard_duration_ = goal_handle->get_goal()->max_duration_sec;
     set_state(State::OFFBOARD);
     feedback(offboard_goal_, "Offboarding with controller: " + offboard_controller_);
 }
 
-void BetaflightInterface::reposition(const SetReposition::Request &request, SetReposition::Response &response)
+void BetaflightInterface::set_reposition_callback(const std::shared_ptr<SetReposition::Request> request, std::shared_ptr<SetReposition::Response> response)
 {
-    response.success = (state_ == State::HOVER || state_ == State::REPOSITIONING) && !takeoff_goal_ && !land_goal_;
-    if (!response.success) {
-        response.message = "Set reposition rejected, BetaflightInterface is not hovering or repositioning";
-        RCLCPP_ERROR(this->get_logger(), "%s", response.message.c_str());
+    response->success = (state_ == State::HOVER || state_ == State::REPOSITIONING) && !takeoff_goal_ && !land_goal_;
+    if (!response->success) {
+        response->message = "Set reposition rejected, BetaflightInterface is not hovering or repositioning";
+        RCLCPP_ERROR(this->get_logger(), "%s", response->message.c_str());
         return;
     }
-    target_ = {request.east, request.north, request.altitude};
+    target_ = {request->east, request->north, request->altitude};
     set_state(State::REPOSITIONING);
-    response.message = "set_reposition accepted";
-    RCLCPP_INFO(this->get_logger(), "Repositioning to East-North %.2f %.2f Alt. %.2f", request.east, request.north, request.altitude);
+    response->message = "set_reposition accepted";
+    RCLCPP_INFO(this->get_logger(), "Repositioning to East-North %.2f %.2f Alt. %.2f", request->east, request->north, request->altitude);
 }
 
 void BetaflightInterface::set_state(State state)
