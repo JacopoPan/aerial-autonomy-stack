@@ -355,7 +355,7 @@ python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test
 flowchart TB
     subgraph aas [" "]
         subgraph sim ["#nbsp;simulation#nbsp;container#nbsp;(amd64)"]
-            sitl("[N x] PX4 ||ArduPilot ||#nbsp;Betaflight#nbsp;SITL"):::resource
+            sitl("[N x] PX4 || ArduPilot ||#nbsp;Betaflight#nbsp;SITL"):::resource
             gz(Gazebo Sim):::resource
             subgraph models [Models]
                 drones(aircraft_models/):::resource
