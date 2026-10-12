@@ -54,7 +54,7 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
 {
     // Parameters
     const std::string device = this->declare_parameter<std::string>("device", "tcp://127.0.0.1:5762");
-    acc_1g_ = this->declare_parameter<int>("acc_1g", 2048); // MSP_RAW_IMU accelerometer units per g: 2048 on most FC IMUs (16 g range), 256 in the SITL
+    acc_1g_ = static_cast<int>(this->declare_parameter<int>("acc_1g", 2048)); // MSP_RAW_IMU accelerometer units per g: 2048 on most FC IMUs (16 g range), 256 in the SITL
     POSITION_GAIN = this->declare_parameter<double>("position_gain", 0.5); // 1/s, from horizontal distance to speed
     ALTITUDE_GAIN = this->declare_parameter<double>("altitude_gain", 0.5); // 1/s, from altitude error to climb rate
     MAX_CLIMB = this->declare_parameter<double>("max_climb", 2.0); // m/s, climb and descent rate limit
