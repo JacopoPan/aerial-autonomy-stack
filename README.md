@@ -351,11 +351,11 @@ python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test
 ## Appendix B: Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'monospace'}}}%%
+%%{init: {'theme': 'base', 'flowchart': {'wrappingWidth': 200}, 'themeVariables': { 'fontFamily': 'monospace'}}}%%
 flowchart TB
     subgraph aas [" "]
         subgraph sim ["#nbsp;simulation#nbsp;container#nbsp;(amd64)"]
-            sitl("[N x] PX4 || <br/> ArduPilot || <br/> Betaflight SITL"):::resource
+            sitl("[N x] PX4 ||ArduPilot ||#nbsp;Betaflight#nbsp;SITL"):::resource
             gz(Gazebo Sim):::resource
             subgraph models [Models]
                 drones(aircraft_models/):::resource
@@ -368,11 +368,11 @@ flowchart TB
         end
 
         subgraph gnd ["#nbsp;ground#nbsp;container#nbsp;(amd64)"]
-            mlrouter{{mavlink-router}}:::bridge
+            mlrouter{{mavlink_router}}:::bridge
             ground_system(ground_system):::algo
             dtc_controller(dtc_controller):::algo
-            qgc("QGroundControl || <br/> Betaflight App"):::resource
-            zenoh_gnd{{zenoh-bridge}}:::bridge
+            qgc("QGroundControl#nbsp;||#nbsp;Betaflight#nbsp;App"):::resource
+            zenoh_gnd{{zenoh_bridge}}:::bridge
 
             ground_system --> |"/tracks"| zenoh_gnd
             dtc_controller --> |"/dtc_commands"| zenoh_gnd
@@ -386,7 +386,7 @@ flowchart TB
                 kiss_icp(kiss_icp):::algo
                 livo_pkgs(livo_pkgs):::algo
             end
-            zenoh_air{{zenoh-bridge}}:::bridge
+            zenoh_air{{zenoh_bridge}}:::bridge
             subgraph control [Control]
                 dtc_client(dtc_client):::algo
                 mission(mission):::algo
@@ -397,7 +397,7 @@ flowchart TB
             detection_split( ):::splitNode
             track_split( ):::splitNode
 
-            ap_link{{"uxrce_dds <br/> || MAVROS <br/> || MSP"}}:::bridge
+            ap_link{{"uxrce_dds || MAVROS#nbsp;|| MSP"}}:::bridge
             kiss_icp -.-> |"/TBD"| ap_link
             livo_pkgs <-.-> |"/imu_data <br/> /TBD"| ap_link
             zenoh_air --> |"/tracks <br/> /state_drone_N"| track_split
@@ -413,7 +413,6 @@ flowchart TB
             mission --> |"ros2 action"| autopilot_interface
             dtc_client --> |"ros2 action"| autopilot_interface
             zenoh_air <--> |"/state_drone_n"| state_sharing
-            autopilot_interface ~~~ state_sharing
         end
         lidar_split( ):::splitNode
         camera_split( ):::splitNode
@@ -425,8 +424,8 @@ flowchart TB
     gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| camera_split
     camera_split --> livo_pkgs
     camera_split -->  yolo_py
-    sitl <--> |"UDP || TCP <br/> [SIM_SUBNET]"| ap_link
-    sitl <--> |"MAVLink <br/> [SIM_SUBNET]"| mlrouter 
+    sitl <--> |"UDP || TCP [SIM_SUBNET]"| ap_link
+    sitl <--> |"MAVLink [SIM_SUBNET]"| mlrouter
     zenoh_gnd <-.-> |"TCP <br/> [AIR_SUBNET]"| zenoh_air
 
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
@@ -436,7 +435,7 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    linkStyle 23,24,25,26,27,28,29,30 stroke:teal,stroke-width:3px; linkStyle 31 stroke:blue,stroke-width:4px;
+    linkStyle 22,23,24,25,26,27,28,29 stroke:teal,stroke-width:3px; linkStyle 30 stroke:blue,stroke-width:4px;
 ```
 
 <details>
