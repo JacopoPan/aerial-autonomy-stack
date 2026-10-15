@@ -94,7 +94,7 @@ index a29444b..72def62 100644
  
  #define MISSION_UPLOAD_RETRY_MS   1500
 diff --git a/src/platform/SIMULATOR/sitl.c b/src/platform/SIMULATOR/sitl.c
-index ee216ef..49520ba 100644
+index ee216ef..cb024c2 100644
 --- a/src/platform/SIMULATOR/sitl.c
 +++ b/src/platform/SIMULATOR/sitl.c
 @@ -198,10 +198,12 @@ static void gpxTrackClose(void)
@@ -161,7 +161,15 @@ index ee216ef..49520ba 100644
      static double last_timestamp = 0; // in seconds
      static uint64_t last_realtime = 0; // in uS
      static struct timespec last_ts; // last packet
-@@ -295,7 +321,7 @@ static void updateState(const fdm_packet* pkt)
+@@ -285,6 +311,7 @@ static void updateState(const fdm_packet* pkt)
+     if (realtime_now > last_realtime + 500*1e3) { // 500ms timeout
+         last_timestamp = pkt->timestamp;
+         last_realtime = realtime_now;
++        last_ts = now_ts; // AAS: without this, the next packet's real time counts from the last packet before the gap, i.e. from boot for the first one, so simRate ~0 and the SITL clock stalls when the simulation starts
+         sendMotorUpdate();
+         return;
+     }
+@@ -295,7 +322,7 @@ static void updateState(const fdm_packet* pkt)
      }
  
      int16_t x,y,z;
@@ -170,7 +178,7 @@ index ee216ef..49520ba 100644
      y = constrain(-pkt->imu_linear_acceleration_xyz[1] * ACC_SCALE, -32767, 32767);
      z = constrain(-pkt->imu_linear_acceleration_xyz[2] * ACC_SCALE, -32767, 32767);
      virtualAccSet(virtualAccDev, x, y, z);
-@@ -328,7 +354,7 @@ static void updateState(const fdm_packet* pkt)
+@@ -328,7 +355,7 @@ static void updateState(const fdm_packet* pkt)
      // The Gazebo BetaflightPlugin sends the quaternion conjugated by Rx(π)
      // (q_plugin = Rx(π) * M * Rx(π), with M the FLU-body to ENU-world
      // attitude). Undo the conjugation (negate qy/qz), then rotate the world
@@ -179,7 +187,7 @@ index ee216ef..49520ba 100644
      // FLU body equals Betaflight's internal NWU body, so the result is the
      // proper body-to-world rotation - the Euler display and every rMat
      // vector consumer (position estimator, mag fusion) agree at any heading.
-@@ -337,10 +363,10 @@ static void updateState(const fdm_packet* pkt)
+@@ -337,10 +364,10 @@ static void updateState(const fdm_packet* pkt)
      const float pktQy = -pkt->imu_orientation_quat[2];
      const float pktQz = -pkt->imu_orientation_quat[3];
      static const float k = 0.70710678f; // cos(π/4) = sin(π/4) = √2/2
@@ -194,7 +202,7 @@ index ee216ef..49520ba 100644
  #else
      // Legacy bridges send the body-to-world quaternion directly
      const float attQw = pkt->imu_orientation_quat[0];
-@@ -436,21 +462,43 @@ static void updateState(const fdm_packet* pkt)
+@@ -436,21 +463,43 @@ static void updateState(const fdm_packet* pkt)
      const double correctedLon = longitude;
  #endif
  
