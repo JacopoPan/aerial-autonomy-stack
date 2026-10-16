@@ -246,7 +246,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_TYPE=quad, vtol, tail
 #  AUTOPILOT=px4, ardupilot, betaflight
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
-#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false
+#  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false (recordings are saved on the host's ~/Downloads/ folder)
 #  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 ```
 
@@ -256,7 +256,7 @@ On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
 cd aerial-autonomy-stack/tools_and_docs/
 
 ./sim_build.sh                                        # Build all images for amd64, including ground-image
-GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh    # Optionally, use offline QGC maps placing file qgcMapCache.qgctiledb in the host's ~/Downloads/ folder
 ```
 
 <details>
@@ -525,7 +525,7 @@ aerial-autonomy-stack
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
 - [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
-  - **TODO: upgrade to 4.7.1** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385)
+  - **TODO: upgrade to 4.7.2** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385), [4.7.2 discussion](https://discuss.ardupilot.org/t/copter-4-7-2-released/145800)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
 - [x] [QGroundControl 5.1.5](https://github.com/mavlink/qgroundcontrol/releases)
