@@ -13,7 +13,11 @@ import socket
 import struct
 import time
 
-MSP_RC, MSP_RAW_GPS, MSP_ALTITUDE, MSP_BOXIDS, MSP_STATUS_EX = 105, 106, 109, 119, 150
+MSP_RC = 105
+MSP_RAW_GPS = 106
+MSP_ALTITUDE = 109
+MSP_BOXIDS = 119
+MSP_STATUS_EX = 150
 BOX_NAMES = {0: 'ARM', 1: 'ANGLE', 2: 'HORIZON', 3: 'ALTHOLD', 11: 'POSHOLD', 27: 'FAILSAFE', 28: 'AIRMODE', 46: 'GPSRESCUE',
              50: 'MSPOVERRIDE', 56: 'AUTOPILOT'} # Permanent IDs (msp_box.c), others print as numbers
 ARMING_DISABLE_FLAGS = ['NOGYRO', 'FAILSAFE', 'RXLOSS', 'NOT_DISARMED', 'BOXFAILSAFE', 'RUNAWAY', 'CRASH', 'THROTTLE', 'ANGLE',
@@ -26,13 +30,20 @@ def request(sock, cmd): # MSP v1 request without payload: $M< size cmd checksum 
 
 def split_replies(buffer): # MSP v1 replies $M> size cmd payload checksum: returns [(cmd, payload)] and the incomplete rest
     replies = []
-    while (start := buffer.find(b'$M>')) >= 0:
+    start = buffer.find(b'$M>')
+    while start >= 0:
         buffer = buffer[start:]
-        if len(buffer) < 6 or len(buffer) < 6 + buffer[3]:
+        if len(buffer) < 6 or len(buffer) < 6 + buffer[3]: # Incomplete
             return replies, buffer
-        replies.append((buffer[4], buffer[5:5 + buffer[3]]))
-        buffer = buffer[6 + buffer[3]:]
+        size, cmd = buffer[3], buffer[4]
+        replies.append((cmd, buffer[5:5 + size]))
+        buffer = buffer[6 + size:]
+        start = buffer.find(b'$M>')
     return replies, buffer[-2:] # Keep a split header
+
+def bit_names(value, names): # The names of the bits set in value, '-' if none
+    set_names = [name for bit, name in enumerate(names) if (value >> bit) & 1]
+    return '+'.join(set_names) if set_names else '-'
 
 def main():
     parser = argparse.ArgumentParser(description='Print the Betaflight SITL state from MSP on UART1')
@@ -43,13 +54,17 @@ def main():
 
     sock = socket.create_connection((args.ip, args.port), timeout=5.0)
     print(f'MSP on {args.ip}:{args.port}', flush=True)
-    box_ids, buffer, state, t0 = [], b'', {}, time.monotonic()
+    box_names = [] # Of the active modes bits, from MSP_BOXIDS
+    buffer = b''
+    modes = flags = rc = alt = gps = '?' # Until their replies arrive
+    t0 = time.monotonic()
     request(sock, MSP_BOXIDS) # Once, to name the bits of the active modes
     while True:
         for cmd in (MSP_STATUS_EX, MSP_RC, MSP_ALTITUDE, MSP_RAW_GPS):
             request(sock, cmd)
         deadline = time.monotonic() + args.period
-        while (left := deadline - time.monotonic()) > 0:
+        left = args.period
+        while left > 0: # Replies until the next requests
             sock.settimeout(left)
             try:
                 data = sock.recv(4096)
@@ -58,23 +73,24 @@ def main():
             if not data:
                 raise SystemExit('MSP link closed')
             replies, buffer = split_replies(buffer + data)
-            for cmd, p in replies:
+            for cmd, payload in replies:
                 if cmd == MSP_BOXIDS:
-                    box_ids = list(p)
-                elif cmd == MSP_STATUS_EX and len(p) >= 16 and len(p) >= 21 + p[15]: # Active modes (32 bits, then p[15] more bytes), arming disable flags
-                    modes = struct.unpack_from('<I', p, 6)[0] | int.from_bytes(p[16:16 + p[15]], 'little') << 32
-                    flags = struct.unpack_from('<I', p, 17 + p[15])[0]
-                    state['modes'] = '+'.join(BOX_NAMES.get(b, str(b)) for i, b in enumerate(box_ids) if modes >> i & 1) or '-'
-                    state['flags'] = '+'.join(name for i, name in enumerate(ARMING_DISABLE_FLAGS) if flags >> i & 1) or '-'
-                elif cmd == MSP_RC and len(p) >= 16: # Roll, pitch, yaw, throttle, AUX1-4
-                    v = struct.unpack_from('<8H', p)
-                    state['rc'] = f'roll {v[0]} pitch {v[1]} yaw {v[2]} throttle {v[3]} aux {v[4]} {v[5]} {v[6]} {v[7]}'
-                elif cmd == MSP_ALTITUDE and len(p) >= 6: # Altitude in cm, vertical speed in cm/s
-                    state['alt'] = f"{struct.unpack_from('<i', p, 0)[0] / 100:.2f} m, {struct.unpack_from('<h', p, 4)[0] / 100:+.2f} m/s"
-                elif cmd == MSP_RAW_GPS and len(p) >= 2: # Fix, satellites
-                    state['gps'] = f"{'fix' if p[0] else 'no fix'}, {p[1]} sats"
-        print(f"{time.monotonic() - t0:7.1f} s | modes {state.get('modes', '?')} | arming disable flags {state.get('flags', '?')} | "
-              f"rc {state.get('rc', '?')} | alt {state.get('alt', '?')} | gps {state.get('gps', '?')}", flush=True)
+                    box_names = [BOX_NAMES.get(box_id, str(box_id)) for box_id in payload]
+                elif cmd == MSP_STATUS_EX and len(payload) >= 16 and len(payload) >= 21 + payload[15]: # Active modes (32 bits, then payload[15] more bytes), arming disable flags
+                    extra = payload[15]
+                    active_modes = struct.unpack_from('<I', payload, 6)[0] | (int.from_bytes(payload[16:16 + extra], 'little') << 32)
+                    modes = bit_names(active_modes, box_names)
+                    flags = bit_names(struct.unpack_from('<I', payload, 17 + extra)[0], ARMING_DISABLE_FLAGS)
+                elif cmd == MSP_RC and len(payload) >= 16: # Roll, pitch, yaw, throttle, AUX1-4
+                    v = struct.unpack_from('<8H', payload)
+                    rc = f'roll {v[0]} pitch {v[1]} yaw {v[2]} throttle {v[3]} aux {v[4]} {v[5]} {v[6]} {v[7]}'
+                elif cmd == MSP_ALTITUDE and len(payload) >= 6: # Altitude in cm, vertical speed in cm/s
+                    altitude, vertical_speed = struct.unpack_from('<ih', payload)
+                    alt = f'{altitude / 100:.2f} m, {vertical_speed / 100:+.2f} m/s'
+                elif cmd == MSP_RAW_GPS and len(payload) >= 2: # Fix, satellites
+                    gps = f"{'fix' if payload[0] else 'no fix'}, {payload[1]} sats"
+            left = deadline - time.monotonic()
+        print(f'{time.monotonic() - t0:7.1f} s | modes {modes} | arming disable flags {flags} | rc {rc} | alt {alt} | gps {gps}', flush=True)
 
 if __name__ == '__main__':
     main()
