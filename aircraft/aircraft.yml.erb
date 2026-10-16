@@ -34,7 +34,8 @@
   camera_ids = stereo_cam ? [0, 1] : [0] # In SITL/HITL simulation, these are the UDP streams on ports 5600, 5601; on real drones, these are CSI sensor-id 0, 1
 
   sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tail' => 'swan_k1_hwing'},
-                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' } }
+                 'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' },
+                 'betaflight' => { 'quad' => 'iris_with_betaflight' } }
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
   camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 %>
@@ -51,6 +52,8 @@ windows:
         - ros2 run autopilot_interface px4_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run autopilot_interface ardupilot_interface --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        <% elsif autopilot == 'betaflight' %>
+        - until ros2 run autopilot_interface betaflight_interface --ros-args -r __ns:=/Drone<%= drone_id %> -p device:=<%= simulated_time ? "tcp://#{sim_subnet}.90.#{sim_id}:#{5762 + 10 * (drone_id - 1)}" : '/dev/ttyACM0' %> -p acc_1g:=<%= simulated_time ? 256 : 2048 %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>; do sleep 2; done
         <% end %>
 
   - offboard_stateshare_dtc:
@@ -60,6 +63,8 @@ windows:
         - ros2 run offboard_control px4_offboard --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]" <%= px4_ros2_lib ? '-p px4_ros2_lib:=true' : '' %>
         <% elsif autopilot == 'ardupilot' %>
         - ros2 run offboard_control ardupilot_guided --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
+        <% elsif autopilot == 'betaflight' %>
+        - ros2 run offboard_control betaflight_rc_override --ros-args -r __ns:=/Drone<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %> -p camera_extrinsics:="[<%= camera_extrinsics.join(',') %>]"
         <% end %>
         - ros2 run state_sharing state_sharing_node --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 run drone_traffic_client dtc_client <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
@@ -115,6 +120,10 @@ windows:
           <% else %>
           ros2 launch mavros apm.launch fcu_url:=/dev/ttyTHS1:921600 tgt_system:=<%= drone_id %>
           <% end %>
+  <% elsif autopilot == 'betaflight' %>
+  - zenoh:
+      layout: even-horizontal
+      panes:
   <% end %>
         - >
           erb /aas/aircraft_resources/comms/zenoh_config_air.json5.erb > /aas/aircraft_resources/comms/zenoh_config_air.json5 &&
@@ -163,6 +172,14 @@ windows:
         /mavros/state
         /mavros/local_position/odom
         /mavros/global_position/global
+      ]
+    when 'betaflight'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/attitude
+        /Drone#{drone_id}/global_position
+        /Drone#{drone_id}/local_position
+        /Drone#{drone_id}/velocity
+        /Drone#{drone_id}/rc_override
       ]
     end
   %>

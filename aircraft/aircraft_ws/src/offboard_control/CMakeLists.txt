@@ -21,6 +21,7 @@ find_package(vision_msgs REQUIRED)
 # Add the CMake module path
 set(CMAKE_MODULE_PATH "/usr/share/cmake/geographiclib" ${CMAKE_MODULE_PATH})
 find_package(GeographicLib REQUIRED)
+include_directories(../autopilot_interface/src) # betaflight_stick_constants.hpp, shared with betaflight_interface
 
 add_executable(px4_offboard src/px4_offboard.cpp)
 target_link_libraries(px4_offboard ${GeographicLib_LIBRARIES})
@@ -53,9 +54,22 @@ ament_target_dependencies(ardupilot_guided
                           vision_msgs
                           )
 
+add_executable(betaflight_rc_override src/betaflight_rc_override.cpp)
+target_link_libraries(betaflight_rc_override ${GeographicLib_LIBRARIES})
+ament_target_dependencies(betaflight_rc_override
+                          rclcpp
+                          geometry_msgs
+                          nav_msgs
+                          sensor_msgs
+                          autopilot_interface_msgs
+                          ground_system_msgs
+                          vision_msgs
+                          )
+
 install(TARGETS
   px4_offboard
   ardupilot_guided
+  betaflight_rc_override
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(rosidl_default_runtime)

@@ -4,13 +4,13 @@
 FROM transitional-ros2-image AS ros2-image
 
 ################################################################################
-# Add QGroundControl ###########################################################
+# Add QGroundControl and Betaflight App ########################################
 ################################################################################
-FROM ros2-image AS ros2-qgc-image
+FROM ros2-image AS ros2-gcs-image
 
 # QGroundControl (as qgcuser)
 # Based on https://docs.qgroundcontrol.com/master/en/qgc-user-guide/getting_started/download_and_install.html
-# Pinned to 5.1.4, check the release list: https://github.com/mavlink/qgroundcontrol/releases
+# Pinned to 5.1.5, check the release list: https://github.com/mavlink/qgroundcontrol/releases
 WORKDIR /
 RUN useradd -m -s /bin/bash -u 1000 -o qgcuser \
     && usermod -aG dialout qgcuser
@@ -21,13 +21,21 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* \
     && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /QGroundControl-x86_64.AppImage \
-        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.4/QGroundControl-x86_64.AppImage \
+        https://github.com/mavlink/qgroundcontrol/releases/download/v5.1.5/QGroundControl-x86_64.AppImage \
     && chmod +x /QGroundControl-x86_64.AppImage \
     && /QGroundControl-x86_64.AppImage --appimage-extract \
-    && rm /QGroundControl-x86_64.AppImage
+    && rm /QGroundControl-x86_64.AppImage \
+    && chmod -R a+rX /squashfs-root
 # Run with $ gosu qgcuser /squashfs-root/AppRun
 
-# Install wmctrl and xrandr to resize QGC window
+# Betaflight App 2026.6.2 pin, check the release list: https://github.com/betaflight/betaflight-configurator/releases (socat relays the SITLs to the ground container)
+RUN wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /betaflight-app.deb \
+        https://github.com/betaflight/betaflight-configurator/releases/download/2026.6.2/Betaflight-2026.6.2-amd64.deb \
+    && apt update && apt install -y --no-install-recommends /betaflight-app.deb socat \
+    && rm /betaflight-app.deb && apt clean && rm -rf /var/lib/apt/lists/*
+# Run with $ python3 /aas/ground_resources/scripts/betaflight_app.py tcp://127.0.0.1:5761
+
+# Install wmctrl and xrandr to resize QGC/Betaflight App windows
 RUN apt update \
     && apt install -y --no-install-recommends \
         wmctrl x11-xserver-utils \
@@ -37,7 +45,7 @@ RUN apt update \
 ################################################################################
 # Add GStreamer and MAVLink ####################################################
 ################################################################################
-FROM ros2-qgc-image AS ros2-qgc-gst-mavlink-image
+FROM ros2-gcs-image AS ros2-gcs-gst-mavlink-image
 
 # Add GStreamer packages to receive the camera streams from the aircraft containers
 RUN apt update \
@@ -70,13 +78,13 @@ COPY /_github_clones/c_library_v2 /usr/local/include/mavlink/
 ################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
-FROM ros2-qgc-gst-mavlink-image AS ground-manifests
+FROM ros2-gcs-gst-mavlink-image AS ground-manifests
 
 # Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
 COPY ground/ground_ws/src /src
 RUN find /src -type f ! -name package.xml -delete
 
-FROM ros2-qgc-gst-mavlink-image AS ground-dev-image
+FROM ros2-gcs-gst-mavlink-image AS ground-dev-image
 
 # Install the ROS 2 workspace dependencies
 COPY --from=ground-manifests /src /aas/ground_ws/src

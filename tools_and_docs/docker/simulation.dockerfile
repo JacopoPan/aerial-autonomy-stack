@@ -1,12 +1,12 @@
 ################################################################################
-# Import ROS2 layer from aircraft.dockerfile, QGC layer from ground.dockerfile #
+# Import ROS2 layer from aircraft.dockerfile, GCS layer from ground.dockerfile #
 ################################################################################
-FROM transitional-ros2-qgc-image AS ros2-qgc-image
+FROM transitional-ros2-gcs-image AS ros2-gcs-image
 
 ################################################################################
 # Add Gazebo Sim ###############################################################
 ################################################################################
-FROM ros2-qgc-image AS ros2-qgc-gz-image
+FROM ros2-gcs-image AS ros2-gcs-gz-image
 
 # Gazebo Harmonic
 # Based on https://gazebosim.org/docs/harmonic/install_ubuntu/
@@ -28,7 +28,7 @@ RUN apt update \
 ################################################################################
 # Add PX4 ######################################################################
 ################################################################################
-FROM ros2-qgc-gz-image AS ros2-qgc-gz-px4-image
+FROM ros2-gcs-gz-image AS ros2-gcs-gz-px4-image
 
 # PX4 SITL (NOTE: install PX4 tools first to avoid conflicts with ArduPilot, build later to customize)
 # Based on https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu.html
@@ -41,7 +41,7 @@ RUN bash ./Tools/setup/ubuntu.sh --no-sim-tools \
 ################################################################################
 # Add ArduPilot ################################################################
 ################################################################################
-FROM ros2-qgc-gz-px4-image AS ros2-qgc-gz-px4-ardupilot-image
+FROM ros2-gcs-gz-px4-image AS ros2-gcs-gz-px4-ardupilot-image
 
 # ArduPilot SITL (temporarily as arduuser, then re chown to root)
 # Based on https://ardupilot.org/dev/docs/building-setup-linux.html#building-setup-linux
@@ -90,7 +90,7 @@ RUN find /temp_folder -type f -regex '.*/[0-9]+_.*' -exec cp {} /airframes/ \;
 ################################################################################
 # Build PX4 SITL with AAS airframes using the airframe_filter_stage stage ######
 ################################################################################
-FROM ros2-qgc-gz-px4-ardupilot-image AS ros2-qgc-gz-px4custom-ardupilot-image
+FROM ros2-gcs-gz-px4-ardupilot-image AS ros2-gcs-gz-px4custom-ardupilot-image
 
 # Apply PX4 patch (DDS Agent on custom IP, ...) created with $ git diff > ../px4-v1.17.0.patch
 COPY simulation/simulation_resources/patches/px4-v1.17.0.patch /aas/github_apps/px4-v1.17.0.patch
@@ -116,7 +116,7 @@ RUN make px4_sitl
 ################################################################################
 # Add GStreamer, MAVLink, flight_review, wave simulation, ZeroMQ ###############
 ################################################################################
-FROM ros2-qgc-gz-px4custom-ardupilot-image AS ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image
+FROM ros2-gcs-gz-px4custom-ardupilot-image AS ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-image
 
 # Add GStreamer packages to stream the cameras to the aircraft containers
 RUN apt update \
@@ -167,15 +167,32 @@ RUN apt-get update && \
 RUN pip3 install --no-cache-dir --retries 5 pyzmq
 
 ################################################################################
+# Add Betaflight with Gazebo SITL Plugin #######################################
+################################################################################
+FROM ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image
+
+# Betaflight SITL and its Gazebo plugin
+# Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, simulated GPS noise, MAVLink telemetry, and MSP2_POSITION_ESTIMATE
+COPY /_github_clones/betaflight /aas/github_apps/betaflight
+COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/github_apps/betaflight-2026.6.2.patch
+WORKDIR /aas/github_apps/betaflight
+RUN git apply ../betaflight-2026.6.2.patch && make TARGET=SITL
+COPY /_github_clones/aeroloop_gazebo /aas/github_apps/aeroloop_gazebo
+COPY simulation/simulation_resources/patches/aeroloop_gazebo-gz.patch /aas/github_apps/aeroloop_gazebo-gz.patch
+WORKDIR /aas/github_apps/aeroloop_gazebo
+RUN git apply ../aeroloop_gazebo-gz.patch && mkdir plugins/build && cd plugins/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
+# Run with $ /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf
+
+################################################################################
 # Copy AAS resources and build AAS ROS2 workspace ##############################
 ################################################################################
-FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-manifests
+FROM ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image AS simulation-manifests
 
 # Keep only the package.xml files, so rosdep re-runs only when dependencies change (for offline builds)
 COPY simulation/simulation_ws/src /src
 RUN find /src -type f ! -name package.xml -delete
 
-FROM ros2-qgc-gz-px4custom-ardupilot-gst-logs-waves-zmq-image AS simulation-dev-image
+FROM ros2-gcs-gz-px4custom-ardupilot-gst-logs-waves-zmq-betaflight-image AS simulation-dev-image
 
 # Install the ROS 2 workspace dependencies
 COPY --from=simulation-manifests /src /aas/simulation_ws/src
@@ -190,10 +207,12 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
-RUN chmod +x /aas/simulation_resources/patches/create_ardupilot_drones_and_world.sh
+RUN chmod +x /aas/simulation_resources/patches/create_*_drones_and_world.sh
 
 # Copy QGC configuration (only for GND_CONTAINER=false)
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
+# Copy the Betaflight App launcher (only for AUTOPILOT=betaflight and GND_CONTAINER=false)
+COPY ground/ground_resources/scripts/betaflight_app.py /aas/ground_resources/scripts/betaflight_app.py
 
 # Build gz_gst_bridge
 WORKDIR /aas/simulation_resources/comms/gz_gst_bridge

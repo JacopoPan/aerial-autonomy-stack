@@ -15,7 +15,7 @@
 
 # Configuration (see also quad_counts below)
 MODES=("speedup" "vectorenv-speedup")
-AUTOPILOTS=("px4" "ardupilot")
+AUTOPILOTS=("px4" "ardupilot") # Not supported: "betaflight"
 SENSOR_SCENARIOS=("both" "no_camera" "no_lidar" "none")
 REPETITIONS=1
 MAX_RETRIES=3

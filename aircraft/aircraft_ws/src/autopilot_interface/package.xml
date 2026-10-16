@@ -3,7 +3,7 @@
 <package format="3">
   <name>autopilot_interface</name>
   <version>0.1.0</version>
-  <description>PX4 and ArduPilot ROS2 control interface</description>
+  <description>PX4, ArduPilot, and Betaflight ROS2 control interface</description>
   <maintainer email="jacopo.pan@gmail.com">JacopoPan</maintainer>
   <license>MIT License</license>
 

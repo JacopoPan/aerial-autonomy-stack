@@ -161,7 +161,7 @@ AIR_SUBNET                          # Deployment as well as (optionally) for har
   netmask  255.255.0.0
 ```
 
-## Build and Flash PX4 or ArduPilot Firmware
+## Build and Flash PX4, ArduPilot, or Betaflight Firmware
 
 Build the PX4 firmware in `simulation-image` for Pixhawk 6X
 
@@ -195,7 +195,21 @@ docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/ardupilot && ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
-To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.1/en/qgc-user-guide/setup_view/firmware.html)
+Build the Betaflight firmware in `simulation-image` for the FCU (with [`betaflight-2026.6.2.patch`](/simulation/simulation_resources/patches/betaflight-2026.6.2.patch), required by `betaflight_interface`)
+
+```sh
+# Check available Betaflight targets
+docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/betaflight && make configs && ls src/config/configs/*"
+```
+
+```sh
+# Build Betaflight for KAKUTEH7 with MAVLink Id set by DRONE_ID=1 (saved in the ~/Downloads folder)
+DRONE_ID=1; docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
+  "cd /aas/github_apps/betaflight && sed -i 's/mavlinkSystemId = 1;/mavlinkSystemId = $DRONE_ID;/' src/main/telemetry/mavlink.c \
+  && make arm_sdk_install && make configs && make CONFIG=KAKUTEH7 && cp obj/*.hex /temp/"
+```
+
+To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.1/en/qgc-user-guide/setup_view/firmware.html); flash the `.hex` file with "Load Firmware [Local]" in the [Betaflight App](https://app.betaflight.com/)'s Firmware Flasher tab
 
 ## PX4: Configure 6X's Network and DDS Client
 
@@ -289,6 +303,34 @@ SR2_RC_CHAN      1
 - [Requesting MAVLink data from ArduPilot](https://ardupilot.org/dev/docs/mavlink-requesting-data.html)
 -->
 
+## Betaflight: Configure the FCU for `betaflight_interface`
+
+Connect the FCU's USB port to a computer with the [Betaflight App](https://app.betaflight.com/)
+
+In the App's CLI paste the `aux`, `msp_override_*`, `*_rc_rate`, `alt_hold_deadband`, `min_check`, and `serial_update_rate_hz` lines of [`betaflight-2026.6.cli`](/simulation/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli), then:
+
+```sh
+# Hover throttle of the airframe (measured in ANGLE mode), also the center of ALTHOLD's throttle
+set ap_hover_throttle = <measured>
+# POS HOLD needs a valid heading, Betaflight only trusts the compass with trust_mag ON, mag_declination (in tenths of a degree, east positive) corrects it to true north
+# Calibrate the compass with "Calibrate Magnetometer" in the App's Setup tab
+set trust_mag = ON
+set mag_declination = <local>
+save
+```
+
+Finally, connect the FCU's USB port to the Orin: `./deploy_run.sh` starts `betaflight_interface` on `/dev/ttyACM0`
+
+Before each flight, set the RC as [`betaflight_simulated_rc.py`](/simulation/simulation_resources/scripts/betaflight_simulated_rc.py) does: ARM (CH5) on, flight mode (CH6) high, throttle at hover, MSP OVERRIDE (CH7) on; set the receiver's failsafe to "No pulses" (see [RC Input](#rc-input))
+
+> [!CAUTION]
+> While MSP OVERRIDE is on, `betaflight_interface` drives CH1-6, including ARM for the `takeoff_action` ([Betaflight recommends keeping ARM on the RC](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control))
+> - Turning MSP OVERRIDE off hands CH1-6 back to the RC: if the ARM switch is off, Betaflight disarms in flight
+> - Turning MSP OVERRIDE on in flight, after arming from the RC, disarms the drone (as an idle `betaflight_interface` holds ARM low)
+> - Losing the RC link does not failsafe while MSP OVERRIDE is on (`msp_override_failsafe = ON`, Betaflight holds the switch's last value)
+> - If `betaflight_interface` stops, CH1-6 return to the RC
+> - `betaflight_interface` rejects takeoffs without a valid heading
+
 ## Setup TELEM1 for the Radio Telemetry Link with the Ground Station
 
 TELEM1 is the [bottom-right 6-pin port on the Jetson Baseboard](https://docs.holybro.com/autopilot/pixhawk-baseboards/pixhawk-jetson-baseboard/ports-pinout#tel1-tel3-ports)
@@ -349,6 +391,17 @@ SR1_RAW_SENS     0
 SR1_RC_CHAN      1
 # Tested with "Holybro SiK Telemetry Radio - Long Range; SKU: 17031"
 # Note: on a point-to-multipoint configuration with multiple drones the serial baud rate between the ground radio and GCS computer should be greater than SERIAL1_BAUD, scaling with the number of drones yet capped by the air link (e.g., GND_TELEM_BAUD=230400 in ./deploy_run.sh)
+```
+
+### Betaflight Configuration
+
+```sh
+# MAVLink telemetry (function 512, 57600 baud) on the radio's UART: serial 0 = UART1, 1 = UART2, ...
+serial <UART number - 1> 512 115200 57600 0 115200
+# GLOBAL_POSITION_INT at 10Hz (default 2Hz)
+set mavlink_pos_rate = 10
+save
+# Betaflight's MAVLink system ID is set when building the firmware: match it with the DRONE_ID used to launch ./deploy_run.sh
 ```
 
 ### SiK (point-to-point) and Microhard (point-to-multipoint) Radio Configuration

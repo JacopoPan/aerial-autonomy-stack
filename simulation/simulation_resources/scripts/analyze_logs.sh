@@ -49,6 +49,9 @@ if [[ -n "$NUM_DRONES" && "$NUM_DRONES" =~ ^[0-9]+$ ]]; then
         echo ""
         echo "You can view the imported logs at: http://${SIM_SUBNET}.90.${SIM_ID}:5006/browse"
 
+    elif [ "$AUTOPILOT" == "betaflight" ]; then
+        echo "No SITL flight logs for AUTOPILOT=betaflight"
+
     else
         echo "Unknown AUTOPILOT"
         exit 0

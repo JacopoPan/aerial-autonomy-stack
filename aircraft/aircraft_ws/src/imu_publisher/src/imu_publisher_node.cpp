@@ -41,10 +41,16 @@ public:
             ardupilot_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
                 "/mavros/imu/data_raw",
                 rclcpp::SensorDataQoS(),
-                std::bind(&ImuPublisherNode::ardupilot_callback, this, std::placeholders::_1), subscriber_options);
+                std::bind(&ImuPublisherNode::ardupilot_and_betaflight_callback, this, std::placeholders::_1), subscriber_options);
             RCLCPP_INFO(this->get_logger(), "imu_publisher_node started for ArduPilot (passthrough)");
+        } else if (autopilot == "betaflight") { // Subscribe to betaflight_interface's IMU topic (50Hz)
+            betaflight_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
+                "/Drone" + std::to_string(drone_id_) + "/imu",
+                rclcpp::SensorDataQoS(),
+                std::bind(&ImuPublisherNode::ardupilot_and_betaflight_callback, this, std::placeholders::_1), subscriber_options);
+            RCLCPP_INFO(this->get_logger(), "imu_publisher_node started for Betaflight (passthrough)");
         } else {
-            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4' or 'ardupilot'.", autopilot.c_str());
+            RCLCPP_ERROR(this->get_logger(), "Unknown autopilot parameter: %s. Use 'px4', 'ardupilot', or 'betaflight'.", autopilot.c_str());
         }
     }
 
@@ -57,6 +63,7 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Subscription<px4_msgs::msg::SensorCombined>::SharedPtr px4_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr ardupilot_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr betaflight_sub_;
 
     void px4_callback(const px4_msgs::msg::SensorCombined::SharedPtr msg)
     {     
@@ -75,10 +82,10 @@ private:
         imu_pub_->publish(imu_msg);
     }
 
-    void ardupilot_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
+    void ardupilot_and_betaflight_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
     {
         sensor_msgs::msg::Imu imu_msg; // Reentrant callback with no mutex: use local variable
-        imu_msg = *msg; // Just copy the MAVROS message
+        imu_msg = *msg; // Just copy the MAVROS or betaflight_interface message
 
         imu_msg.header.frame_id = "imu_link";
         imu_pub_->publish(imu_msg);

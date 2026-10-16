@@ -83,21 +83,21 @@ DRONE_ID=0
 for i in $(seq 1 $NUM_QUADS); do
   DRONE_ID=$((DRONE_ID + 1))
   create_model "$QUAD_MODEL_PATH" "$DRONE_ID"
-  MODEL_XML="    <include>\n      <uri>model://iris_with_ardupilot_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( -1 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
+  MODEL_XML="    <include>\n      <uri>model://iris_with_ardupilot_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
   ALL_MODELS_XML+=$MODEL_XML
 done
 # Loop for VTOLs
 for i in $(seq 1 $NUM_VTOLS); do
   DRONE_ID=$((DRONE_ID + 1))
   create_model "$VTOL_MODEL_PATH" "$DRONE_ID"
-  MODEL_XML="    <include>\n      <uri>model://alti_transition_quad_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 2 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
+  MODEL_XML="    <include>\n      <uri>model://alti_transition_quad_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 3 + (i-1) * 2 )) 0.75 0 0 0</pose>\n    </include>\n"
   ALL_MODELS_XML+=$MODEL_XML
 done
 # Loop for tails
 for i in $(seq 1 $NUM_TAILS); do
   DRONE_ID=$((DRONE_ID + 1))
   create_model "$TAIL_MODEL_PATH" "$DRONE_ID"
-  MODEL_XML="    <include>\n      <uri>model://swan_k1_hwing_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 5 + (i-1) * 2 )) 0.75 0 -90 0</pose>\n    </include>\n"
+  MODEL_XML="    <include>\n      <uri>model://swan_k1_hwing_${DRONE_ID}</uri>\n      <pose degrees=\"true\">$(( (i-1) * 2 )) $(( 6 + (i-1) * 2 )) 0.75 0 -90 0</pose>\n    </include>\n"
   ALL_MODELS_XML+=$MODEL_XML
 done
 # Insert the models right before the closing </world> tag

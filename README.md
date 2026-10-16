@@ -2,7 +2,7 @@
 
 *Aerial autonomy stack* (AAS) is a "batteries included", flight-proven, open software and the simplest/fastest way to:
 
-1. **Develop** multi-drone autonomy—with PX4, ArduPilot, and ROS2
+1. **Develop** multi-drone autonomy—with PX4, ArduPilot, Betaflight, and ROS2
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
 3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
@@ -13,8 +13,8 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 <details>
 <summary><b>Features</b> <i>(click to expand)</i></summary>
 
-- **PX4 and ArduPilot multi-vehicle** simulation (**quadrotors, quadplane VTOLs, and tailsitters**)
-- ROS2 action-based autopilot interface (*via* XRCE-DDS or MAVROS)
+- **PX4, ArduPilot, and Betaflight multi-vehicle** simulation (**quadrotors, quadplane VTOLs, and tailsitters**)
+- ROS2 action-based autopilot interface (*via* XRCE-DDS, MAVROS, or MSP)
 - **YOLO** (with ONNX GPU Runtimes) and **LiDAR** Odometry (with [KISS-ICP](https://github.com/PRBonn/kiss-icp))
 - 3D worlds for perception-based simulation
 - **Steppable** [Gymnasium environment](https://gymnasium.farama.org/index.html) and **faster-than-real-time**, **multi-instance** simulation
@@ -28,6 +28,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 Offboard](https://docs.px4.io/main/en/flight_modes/offboard.html) interface (e.g. CTBR/`VehicleRatesSetpoint` for agile, GNSS-denied flight)
 - [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
+- [Betaflight MSP Override](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control) interface (i.e. RC sticks in ACRO, ANGLE, or ALTHOLD + POS HOLD)
 - Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
 </details>
 
@@ -73,17 +74,17 @@ cd aerial-autonomy-stack/tools_and_docs/
 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
 # Simulation options:
-#  AUTOPILOT=px4, ardupilot
+#  AUTOPILOT=px4, ardupilot, betaflight
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
-#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true sets RTF=1)
+#  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true or AUTOPILOT=betaflight set RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
 
-There are **3 different ways** to autonomously fly the drones (plus QGroundControl for operator supervision)
+There are **3 different ways** to autonomously fly the drones (plus QGroundControl/Betaflight App for operator supervision)
 
 1. From the `Ground`'s terminal, fly all drones in a **synchronized formation** with [`dtc_controller_node`](/ground/ground_ws/src/drone_traffic_controller/drone_traffic_controller/dtc_controller_node.py):
 ```sh
@@ -95,7 +96,7 @@ ros2 run drone_traffic_controller dtc_controller --ros-args -p use_sim_time:=tru
 ros2 run mission mission --conops yalla.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
 ```
 
-3. From any `QUAD`/`VTOL`/`TAIL` terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp) controllers:
+3. From any `QUAD`/`VTOL`/`TAIL` terminal, use **ROS2 actions** for [`px4_offboard`](/aircraft/aircraft_ws/src/offboard_control/src/px4_offboard.cpp)/[`ardupilot_guided`](/aircraft/aircraft_ws/src/offboard_control/src/ardupilot_guided.cpp)/[`betaflight_rc_override`](/aircraft/aircraft_ws/src/offboard_control/src/betaflight_rc_override.cpp) controllers:
 ```sh
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
     autopilot_interface_msgs/action/Takeoff '{takeoff_altitude: 30.0}'"
@@ -103,7 +104,7 @@ cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/takeoff_action \
 cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action \
     autopilot_interface_msgs/action/Offboard \
     '{controller_name: att-test, max_duration_sec: 10.0}'"
-# Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`
+# Add or re-implement offboard controllers in `px4_offboard.cpp`, `ardupilot_guided.cpp`, `betaflight_rc_override.cpp`
 ```
 
 AAS also includes [`px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) support, run:
@@ -143,16 +144,16 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > # Land (at home) action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites params RTL_ALT/Q_RTL_ALT
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/land_action autopilot_interface_msgs/action/Land '{landing_altitude: 60.0, vtol_transition_heading: 60.0}'"
 >
-> # Orbit action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites param CIRCLE_RATE
+> # Orbit action (quads and VTOLs/tailsitters), note: on ArduPilot, overwrites param CIRCLE_RATE, not implemented on Betaflight
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/orbit_action autopilot_interface_msgs/action/Orbit '{east: 500.0, north: 0.0, altitude: 150.0, radius: 200.0}'"
 >
 > # Reposition service (quads only)
 > ros2 service call /Drone${DRONE_ID}/set_reposition autopilot_interface_msgs/srv/SetReposition '{east: 50.0, north: 100.0, altitude: 60.0}'
 >
-> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot)
+> # Offboard action (Specify the flight behavior via `controller_name`, e.g., "traj-test" for PX4 or "vel-test" for ArduPilot and Betaflight)
 > cancellable_action "ros2 action send_goal /Drone${DRONE_ID}/offboard_action autopilot_interface_msgs/action/Offboard '{controller_name: traj-test, max_duration_sec: 5.0}'"
 >
-> # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs)
+> # SetSpeed service (ephemeral, limited by the autopilot params, for quads applies from the next command, not effective on ArduPilot VTOLs, not implemented on Betaflight)
 > ros2 service call /Drone${DRONE_ID}/set_speed autopilot_interface_msgs/srv/SetSpeed '{speed: 3.0}'
 >
 > # Gimbal status and position control (in radians)
@@ -218,7 +219,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 >
 > The default quad is a [Holybro X650](https://holybro.com/collections/multicopter-kit/products/x650-kits?variant=43994378240189) with the [IMX219](https://docs.arducam.com/Nvidia-Jetson-Camera/Native-Camera/imx219/) camera and the [Livox Mid-360S](https://www.livoxtech.com/mid-360s/specs) LiDAR
 >
-> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk
+> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk/FCU
 >
 > Read [`SETUP_CHRONY.md`](/tools_and_docs/docs/SETUP_CHRONY.md) to let the Jetson timesync to the `ground-image` computer when w/o internet
 
@@ -243,7 +244,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 
 # Deployment options:
 #  DRONE_TYPE=quad, vtol, tail
-#  AUTOPILOT=px4, ardupilot
+#  AUTOPILOT=px4, ardupilot, betaflight
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false
 #  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
@@ -261,7 +262,7 @@ GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 <details>
 <summary><b>HITL Simulation</b> <i>(click to expand)</i></summary>
 
-> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network. 
+> **Note:** HITL simulation validates the Jetson compute and the inter-vehicle network.
 > Use USB2.0 ASIX AX88772A Ethernet adapters to add network interfaces (besides the one between Orin and 6X on the board).
 > Lock each interface's "MAC Address" under "Network Options" -> "Identity".
 
@@ -350,11 +351,11 @@ python3 gym_run.py --mode vectorenv-speedup           # Vectorized speed-up test
 ## Appendix B: Architecture
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'monospace'}}}%%
+%%{init: {'theme': 'base', 'flowchart': {'wrappingWidth': 200}, 'themeVariables': { 'fontFamily': 'monospace'}}}%%
 flowchart TB
     subgraph aas [" "]
         subgraph sim ["#nbsp;simulation#nbsp;container#nbsp;(amd64)"]
-            sitl("[N x] PX4 || <br/> ArduPilot SITL"):::resource
+            sitl("[N x] PX4 || ArduPilot ||#nbsp;Betaflight#nbsp;SITL"):::resource
             gz(Gazebo Sim):::resource
             subgraph models [Models]
                 drones(aircraft_models/):::resource
@@ -363,15 +364,15 @@ flowchart TB
 
             drones --> gz
             worlds --> gz
-            sitl <--> |"gz_bridge || ardupilot_gazebo"| gz
+            sitl <--> |"gz_bridge || ardupilot_gazebo <br/> || aeroloop_gazebo"| gz
         end
 
         subgraph gnd ["#nbsp;ground#nbsp;container#nbsp;(amd64)"]
-            mlrouter{{mavlink-router}}:::bridge
+            mlrouter{{mavlink_router}}:::bridge
             ground_system(ground_system):::algo
             dtc_controller(dtc_controller):::algo
-            qgc(QGroundControl):::resource
-            zenoh_gnd{{zenoh-bridge}}:::bridge
+            qgc("QGroundControl#nbsp;||#nbsp;Betaflight#nbsp;App"):::resource
+            zenoh_gnd{{zenoh_bridge}}:::bridge
 
             ground_system --> |"/tracks"| zenoh_gnd
             dtc_controller --> |"/dtc_commands"| zenoh_gnd
@@ -385,7 +386,7 @@ flowchart TB
                 kiss_icp(kiss_icp):::algo
                 livo_pkgs(livo_pkgs):::algo
             end
-            zenoh_air{{zenoh-bridge}}:::bridge
+            zenoh_air{{zenoh_bridge}}:::bridge
             subgraph control [Control]
                 dtc_client(dtc_client):::algo
                 mission(mission):::algo
@@ -396,7 +397,7 @@ flowchart TB
             detection_split( ):::splitNode
             track_split( ):::splitNode
 
-            ap_link{{"uxrce_dds <br/> || MAVROS"}}:::bridge
+            ap_link{{"uxrce_dds || MAVROS#nbsp;|| MSP"}}:::bridge
             kiss_icp -.-> |"/TBD"| ap_link
             livo_pkgs <-.-> |"/imu_data <br/> /TBD"| ap_link
             zenoh_air --> |"/tracks <br/> /state_drone_N"| track_split
@@ -412,7 +413,6 @@ flowchart TB
             mission --> |"ros2 action"| autopilot_interface
             dtc_client --> |"ros2 action"| autopilot_interface
             zenoh_air <--> |"/state_drone_n"| state_sharing
-            autopilot_interface ~~~ state_sharing
         end
         lidar_split( ):::splitNode
         camera_split( ):::splitNode
@@ -424,8 +424,8 @@ flowchart TB
     gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| camera_split
     camera_split --> livo_pkgs
     camera_split -->  yolo_py
-    sitl <--> |"UDP <br/> [SIM_SUBNET]"| ap_link
-    sitl <--> |"MAVLink <br/> [SIM_SUBNET]"| mlrouter 
+    sitl <--> |"UDP || TCP [SIM_SUBNET]"| ap_link
+    sitl <--> |"MAVLink [SIM_SUBNET]"| mlrouter
     zenoh_gnd <-.-> |"TCP <br/> [AIR_SUBNET]"| zenoh_air
 
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
@@ -435,7 +435,7 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    linkStyle 23,24,25,26,27,28,29,30 stroke:teal,stroke-width:3px; linkStyle 31 stroke:blue,stroke-width:4px;
+    linkStyle 22,23,24,25,26,27,28,29 stroke:teal,stroke-width:3px; linkStyle 30 stroke:blue,stroke-width:4px;
 ```
 
 <details>
@@ -452,9 +452,9 @@ aerial-autonomy-stack
 ├── aircraft
 │   ├── aircraft_ws
 │   │   └── src
-│   │       ├── autopilot_interface                   # Ardupilot/PX4 high-level actions (Takeoff, Orbit, Offboard, Land)
+│   │       ├── autopilot_interface                   # Ardupilot/PX4/Betaflight high-level actions (Takeoff, Orbit, Offboard, Land)
 │   │       ├── drone_traffic_client                  # Subscriber of topic `/dtc_commands` enforcing high-level actions from the ground
-│   │       ├── imu_publisher                         # Multiplexer between PX4/DDS and ArduPilot/MAVROS sensor topics
+│   │       ├── imu_publisher                         # Multiplexer between PX4/DDS, ArduPilot/MAVROS, and Betaflight/MSP sensor topics
 │   │       ├── mission                               # Orchestrator of the actions in `autopilot_interface`
 │   │       ├── offboard_control                      # Low-level references for the Offboard action in `autopilot_interface`
 │   │       ├── state_sharing                         # Publisher of the `/state_sharing_drone_N` topic broadcasted by Zenoh
@@ -475,6 +475,7 @@ aerial-autonomy-stack
 │   │   ├── aircraft_models
 │   │   │   ├── alti_transition_quad                  # ArduPilot VTOL model
 │   │   │   ├── iris_with_ardupilot                   # ArduPilot quad model
+│   │   │   ├── iris_with_betaflight                  # Betaflight quad model
 │   │   │   ├── swan_k1_hwing                         # ArduPilot tailsitter model
 │   │   │   ├── sensor_camera                         # Camera model
 │   │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
@@ -527,16 +528,21 @@ aerial-autonomy-stack
   - **TODO: upgrade to 4.7.1** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
+- [x] [QGroundControl 5.1.5](https://github.com/mavlink/qgroundcontrol/releases)
+- [x] [Betaflight 2026.6.2](https://github.com/betaflight/betaflight/releases)
+- [x] [Betaflight App 2026.6.2](https://github.com/betaflight/betaflight-configurator/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
 - [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
 
-External repositories:
+External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
 - [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
 - [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
+- [`betaflight/betaflight`](https://github.com/betaflight/betaflight) tag/branch: `2026.6.2`
+- [`betaflight/aeroloop_gazebo`](https://github.com/betaflight/aeroloop_gazebo) tag/branch: `gz`
 - [`srmainwaring/asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) tag/branch: `master`
 - [`mavlink/c_library_v2`](https://github.com/mavlink/c_library_v2) tag/branch: `master`
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
@@ -575,6 +581,9 @@ docker exec -it aircraft-container-inst0_1 tmux attach
 - QGC does not save roll and pitch in the telemetry bar for PX4 VTOLs (MAV_TYPE 22)
 - PX4 quad max tilt is limited by the anti-windup gain (zero it to deactivate it): const float arw_gain = 2.f / _gain_vel_p(0);
 - On Jetson, if yolo_py crashes, try run `sudo systemctl restart nvargus-daemon` on the host
+- `PX4_ROS2_LIB=true` sets RTF=1: PX4 expects each external mode's arming check reply within 50ms of simulated time (`REQUEST_TIMEOUT` in `externalChecks.hpp`), that is 50ms/RTF of wall time for the XRCE-DDS and ROS2 round trip, and flags modes that keep missing it as unresponsive
+- `AUTOPILOT=betaflight` sets RTF=1 and is not supported by `aas-gym` as Betaflight SITL is not lockstepped with Gazebo (its clock is the host's): 1) above 1x its 100 Hz tasks (altitude estimate, ALTHOLD, POS HOLD) fall behind, and 2) it keeps running while Gazebo is paused by `aas-gym`
+- Betaflight SITL's barometer and magnetometer are noise-free (derived from Gazebo's altitude and attitude), its GPS is delayed and noisy (by the changes in `betaflight-2026.6.2.patch`)
 
 ## Docker Basics
 
@@ -619,13 +628,6 @@ Ctrl + b, then d                      # Detach Tmux
 ```
 
 ## Future Work
-
-### Support for Gazebo Sim and Betaflight SITL
-
-- https://www.betaflight.com/docs/development/SITL
-- https://github.com/betaflight/betaloop
-- https://github.com/betaflight/aeroloop_gazebo
-- https://github.com/utiasDSL/gym-pybullet-drones/blob/a8c238c21c7586ee1735bafb358a4d5637402f14/gym_pybullet_drones/envs/BetaAviary.py#L111C1-L172C56
 
 ### Potential for technical spikes/long-term, nice-to-have features
 
