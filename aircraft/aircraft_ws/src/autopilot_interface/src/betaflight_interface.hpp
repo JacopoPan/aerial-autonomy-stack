@@ -64,7 +64,7 @@ public:
 
 private:
     // Parameters - Guidance, through the POS HOLD and ALTHOLD sticks (see betaflight-2026.6.cli)
-    double POSITION_GAIN, ALTITUDE_GAIN, MAX_CLIMB, LAND_SPEED;
+    double POSITION_GAIN, ALTITUDE_GAIN, MAX_CLIMB, LAND_SPEED, YAW_GAIN, MAX_YAW_RATE;
     // Parameters - Action completion and timeouts
     double TOUCHDOWN_TIME, ARRIVAL_DISTANCE, ARRIVAL_SPEED, ARMING_TIMEOUT, RC_OVERRIDE_TIMEOUT;
 
@@ -92,6 +92,7 @@ private:
     bool home_set_; // For the current arming
     double home_altitude_; // m, MSL of the arming point
     std::array<double, 3> target_; // m, east, north, up from home
+    double target_heading_; // rad, clockwise from north, set with target_ (the bearing to it, as PX4 and ArduPilot)
     double takeoff_altitude_; // m
     std::string offboard_controller_;
     double offboard_duration_; // s

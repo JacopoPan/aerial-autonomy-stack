@@ -16,8 +16,8 @@ In ALTHOLD + POS HOLD, once armed with the throttle raised, the sticks are veloc
 
 Actions and services (no orbit or speed), positions are from the arming point, altitudes above it:
     takeoff_action: arm, climb to takeoff_altitude (rejected without a GPS fix, Betaflight's estimate, or a valid heading)
-    set_reposition: fly to east, north, altitude (the service returns once the target is accepted)
-    land_action: fly back over the arming point at landing_altitude, descend, disarm on touchdown
+    set_reposition: fly to east, north, altitude, with yaw alignment (the service returns once the target is accepted)
+    land_action: fly back over the arming point at landing_altitude (with yaw alignment), descend, disarm on touchdown
     offboard_action: fly the sticks and flight mode from rc_override for max_duration_sec, then hover
 
 Use with:
@@ -50,7 +50,7 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
     estimate_read_(false), xy_valid_(false), heading_valid_(false), in_control_(false), arming_disable_flags_(0), hover_pwm_(0),
     position_({0.0, 0.0, 0.0}), velocity_({0.0, 0.0, 0.0}), heading_(0.0),
     state_(State::INIT), state_since_(0, 0, RCL_ROS_TIME), descended_(false), quiet_since_(0, 0, RCL_ROS_TIME), home_set_(false), home_altitude_(0.0),
-    target_({0.0, 0.0, 0.0}), takeoff_altitude_(0.0), offboard_duration_(0.0), rc_override_time_(0, 0, RCL_ROS_TIME)
+    target_({0.0, 0.0, 0.0}), target_heading_(0.0), takeoff_altitude_(0.0), offboard_duration_(0.0), rc_override_time_(0, 0, RCL_ROS_TIME)
 {
     // Parameters
     const std::string device = this->declare_parameter<std::string>("device", "tcp://127.0.0.1:5762");
@@ -59,6 +59,8 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
     ALTITUDE_GAIN = this->declare_parameter<double>("altitude_gain", 0.5); // 1/s, from altitude error to climb rate
     MAX_CLIMB = this->declare_parameter<double>("max_climb", 2.0); // m/s, climb and descent rate limit
     LAND_SPEED = this->declare_parameter<double>("land_speed", 1.0); // m/s, commanded descent rate
+    YAW_GAIN = this->declare_parameter<double>("yaw_gain", 3.0); // 1/s, from heading error to yaw rate
+    MAX_YAW_RATE = this->declare_parameter<double>("max_yaw_rate", 2.1); // rad/s, yaw rate limit (about 120deg/s)
     TOUCHDOWN_TIME = this->declare_parameter<double>("touchdown_time", 1.0); // s, neither descending nor moving, after the landing descent began
     ARRIVAL_DISTANCE = this->declare_parameter<double>("arrival_distance", 1.0); // m, horizontally and vertically
     ARRIVAL_SPEED = this->declare_parameter<double>("arrival_speed", 0.5); // m/s, horizontally and vertically
@@ -404,6 +406,10 @@ std::vector<uint8_t> BetaflightInterface::rc_channels() const // MSP_SET_RAW_RC 
         const double ve = gain * east, vn = gain * north; // m/s
         ch[0] = 1500.0 + 500.0 * (ve * std::cos(heading_) - vn * std::sin(heading_)) / FULL_STICK_SPEED_MS; // Roll (right)
         ch[1] = 1500.0 + 500.0 * (ve * std::sin(heading_) + vn * std::cos(heading_)) / FULL_STICK_SPEED_MS; // Pitch (forward)
+        if (state_ == State::REPOSITIONING && !takeoff_goal_) { // Turn to target_heading_
+            const double error = std::remainder(target_heading_ - heading_, 2.0 * M_PI); // rad, clockwise
+            ch[3] = 1500.0 + 500.0 * std::clamp(YAW_GAIN * error, -MAX_YAW_RATE, MAX_YAW_RATE) / MAX_RATE_RAD_S; // Yaw (clockwise)
+        }
         const double climb = state_ == State::LANDING ? -LAND_SPEED : std::clamp(ALTITUDE_GAIN * up, -MAX_CLIMB, MAX_CLIMB); // m/s
         ch[2] = hold_throttle(climb / FULL_STICK_CLIMB_MS);
     } else if (state_ == State::OFFBOARD && rc_override_valid()) { // The offboard controller's sticks and flight mode
@@ -515,6 +521,8 @@ void BetaflightInterface::land_handle_accepted(const GoalHandle<Land> goal_handl
 {
     land_goal_ = goal_handle;
     target_ = {0.0, 0.0, goal_handle->get_goal()->landing_altitude};
+    const auto [east, north, up] = offset();
+    target_heading_ = std::hypot(east, north) > ARRIVAL_DISTANCE ? std::atan2(east, north) : heading_; // Nose toward the target, as PX4 and ArduPilot, unless straight above/below
     set_state(State::REPOSITIONING);
     feedback(land_goal_, "Returning over the arming point at " + std::to_string(target_[2]) + " m");
 }
@@ -551,6 +559,8 @@ void BetaflightInterface::set_reposition_callback(const std::shared_ptr<SetRepos
         return;
     }
     target_ = {request->east, request->north, request->altitude};
+    const auto [east, north, up] = offset();
+    target_heading_ = std::hypot(east, north) > ARRIVAL_DISTANCE ? std::atan2(east, north) : heading_; // Nose toward the target, as PX4 and ArduPilot, unless straight above/below
     set_state(State::REPOSITIONING);
     response->message = "set_reposition accepted";
     RCLCPP_INFO(this->get_logger(), "Repositioning to East-North %.2f %.2f Alt. %.2f", request->east, request->north, request->altitude);
