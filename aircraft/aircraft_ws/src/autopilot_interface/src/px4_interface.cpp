@@ -552,6 +552,10 @@ rclcpp_action::GoalResponse PX4Interface::offboard_handle_goal(const rclcpp_acti
         RCLCPP_ERROR(this->get_logger(), "Offboard rejected, PX4Interface is not in hover/cruise state");
         return rclcpp_action::GoalResponse::REJECT;
     }
+    if (goal->max_duration_sec <= 0.0) {
+        RCLCPP_ERROR(this->get_logger(), "Offboard rejected, max_duration_sec must be positive");
+        return rclcpp_action::GoalResponse::REJECT;
+    }
     if (active_srv_or_act_flag_.exchange(true)) {
         RCLCPP_ERROR(this->get_logger(), "Another service/action is active");
         return rclcpp_action::GoalResponse::REJECT;

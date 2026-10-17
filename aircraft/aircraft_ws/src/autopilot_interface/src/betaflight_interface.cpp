@@ -527,10 +527,14 @@ void BetaflightInterface::land_handle_accepted(const GoalHandle<Land> goal_handl
     feedback(land_goal_, "Returning over the arming point at " + std::to_string(target_[2]) + " m");
 }
 
-rclcpp_action::GoalResponse BetaflightInterface::offboard_handle_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const Offboard::Goal>)
+rclcpp_action::GoalResponse BetaflightInterface::offboard_handle_goal(const rclcpp_action::GoalUUID &, std::shared_ptr<const Offboard::Goal> goal)
 {
     if (state_ != State::HOVER || takeoff_goal_ || land_goal_ || offboard_goal_) {
         RCLCPP_ERROR(this->get_logger(), "Offboard rejected, BetaflightInterface is not hovering");
+        return rclcpp_action::GoalResponse::REJECT;
+    }
+    if (goal->max_duration_sec <= 0.0) {
+        RCLCPP_ERROR(this->get_logger(), "Offboard rejected, max_duration_sec must be positive");
         return rclcpp_action::GoalResponse::REJECT;
     }
     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
