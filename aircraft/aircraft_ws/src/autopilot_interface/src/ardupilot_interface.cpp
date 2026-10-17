@@ -43,7 +43,7 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     VTOL_LAND_LOITER_EXIT_HEADING_THRESH = this->declare_parameter<double>("vtol_land_loiter_exit_heading_thresh", 10.0); // Threshold (deg) in desired approach heading to exit the pre-landing loiter descent
     LAND_COMPLETED_ALT_THRESH = this->declare_parameter<double>("land_completed_alt_thresh", 2.0); // Altitude (m) from home, for a multicopter or VTOL, to consider the landing action complete
     // Parameters - Offboard
-    OFFBOARD_GUIDED_CONFIRM_SEC = this->declare_parameter<double>("offboard_guided_confirm_sec", 10.0); // Time (s) given to the autopilot to report GUIDED before the offboard action gives up on the mode switch
+    OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC = this->declare_parameter<double>("OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC", 3.0); // Grace period (s) (or max_duration_sec if shorter) for GUIDED MODE to be confirmed at the beginning of an Offboard action, any subsequent mode switch ends the action
     // Parameters - Orbit
     MC_ORBIT_SPEED_MS = this->declare_parameter<double>("mc_orbit_speed_ms", 5.0); // Tangential speed (m/s) of the orbit for quads, converted to CIRCLE_RATE (deg/s) based on the target radius
     // Parameters - Takeoff
@@ -649,6 +649,10 @@ rclcpp_action::GoalResponse ArdupilotInterface::offboard_handle_goal(const rclcp
         RCLCPP_ERROR(this->get_logger(), "Offboard (GUIDED mode) rejected, ArdupilotInterface is not in hover/orbit");
         return rclcpp_action::GoalResponse::REJECT;
     }
+    if (goal->max_duration_sec <= 0.0) {
+        RCLCPP_ERROR(this->get_logger(), "Offboard (GUIDED mode) rejected, max_duration_sec is negative");
+        return rclcpp_action::GoalResponse::REJECT;
+    }
     if (active_srv_or_act_flag_.exchange(true)) {
         RCLCPP_ERROR(this->get_logger(), "Another service/action is active");
         return rclcpp_action::GoalResponse::REJECT;
@@ -672,7 +676,6 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
 
     offboard_flag_count_ = 0;
     bool offboarding = true;
-    bool guided_confirmed = false; // Latched when the autopilot reports GUIDED, see the mode check below
     uint64_t time_of_offboard_start_us = UNSET_TIME_US;
     rclcpp::Rate offboard_loop_rate(ACTION_LOOP_RATE_HZ);
     while (offboarding) {
@@ -720,10 +723,10 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             feedback->message = "Starting offboard control at t=" + std::to_string(time_of_offboard_start_us) + " us";
             goal_handle->publish_feedback(feedback);
         }
-        if (ardupilot_mode == "GUIDED") {
-            guided_confirmed = true; // The mode request went through, from here on another mode means someone else is flying
-        } else if (!ardupilot_mode.empty() && (guided_confirmed || (current_time_us >= (time_of_offboard_start_us + sec_to_us(OFFBOARD_GUIDED_CONFIRM_SEC))))) {
-            // Note: Do not call abort_action() here, its BRAKE/LOITER request would overwrite the mode the RC transmitter or the GCS just selected
+        if (!ardupilot_mode.empty() && ardupilot_mode != "GUIDED" && (current_time_us >= (time_of_offboard_start_us + sec_to_us(std::min(OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC, max_duration_sec))))) {
+            // Put ardupilot_interface in MC_ORBIT or FW_CRUISE if ArduPilot is not in GUIDED mode during an Offboard action
+            // I.e., a pilot triggered a mode switch from the RC or ArduPilot rejected GUIDED mode
+            // Note: Do not call abort_action() here, its BRAKE/LOITER request would overwrite the mode the RC or the GCS just selected
             {
                 std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
                 if (mav_type == 2) { // Multicopter
@@ -736,11 +739,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             goal_handle->publish_feedback(feedback);
             result->success = false;
             goal_handle->abort(result);
-            if (guided_confirmed) {
-                RCLCPP_WARN(this->get_logger(), "Offboard (GUIDED mode) aborted, flight mode changed to %s", ardupilot_mode.c_str());
-            } else {
-                RCLCPP_WARN(this->get_logger(), "Offboard (GUIDED mode) aborted, the autopilot never reported GUIDED (flight mode is %s)", ardupilot_mode.c_str());
-            }
+            RCLCPP_WARN(this->get_logger(), "Offboard (GUIDED mode) aborted, flight mode is %s", ardupilot_mode.c_str());
             active_srv_or_act_flag_.store(false);
             return;
         }
