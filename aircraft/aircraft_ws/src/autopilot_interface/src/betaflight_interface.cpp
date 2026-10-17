@@ -62,8 +62,8 @@ BetaflightInterface::BetaflightInterface() : Node("betaflight_interface"),
     YAW_GAIN = this->declare_parameter<double>("yaw_gain", 3.0); // 1/s, from heading error to yaw rate
     MAX_YAW_RATE = this->declare_parameter<double>("max_yaw_rate", 2.1); // rad/s, yaw rate limit (about 120deg/s)
     TOUCHDOWN_TIME = this->declare_parameter<double>("touchdown_time", 1.0); // s, neither descending nor moving, after the landing descent began
-    ARRIVAL_DISTANCE = this->declare_parameter<double>("arrival_distance", 1.0); // m, horizontally and vertically
-    ARRIVAL_SPEED = this->declare_parameter<double>("arrival_speed", 0.5); // m/s, horizontally and vertically
+    ARRIVAL_DISTANCE = this->declare_parameter<double>("arrival_distance", 1.5); // m, horizontally and vertically
+    ARRIVAL_SPEED = this->declare_parameter<double>("arrival_speed", 0.75); // m/s, horizontally and vertically
     ARMING_TIMEOUT = this->declare_parameter<double>("arming_timeout", 5.0); // s
     RC_OVERRIDE_TIMEOUT = this->declare_parameter<double>("rc_override_timeout", 0.5); // s, older rc_override messages are ignored
 
