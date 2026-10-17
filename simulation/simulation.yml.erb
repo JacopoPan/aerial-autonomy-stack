@@ -155,8 +155,8 @@ windows:
           mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --sysid <%= drone_id %>
-        # Stand-in for the pilot's RC, with the MSP OVERRIDE switch on (UDP RC, 9004 + port offset)
-        - python3 /aas/simulation_resources/scripts/betaflight_simulated_rc.py <%= 9004 + 10 * sitl_instance %> /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli
+        # Stand-in for the pilot's RC, with the MSP OVERRIDE switch on (UDP RC, 9004 + port offset); a USB gamepad connected on /dev/input/js0 can also be used to drive the RC channels of drone 1
+        - python3 /aas/simulation_resources/scripts/betaflight_simulated_rc.py <%= 9004 + 10 * sitl_instance %> /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli <%= drone_id == 1 ? '/dev/input/js0' : '' %>
         <% if gnd_container %>
         # MSP (serial 0/UART1, enabled by default) forwarded to the ground container for the Betaflight App
         - while true; do socat TCP:<%= "#{sim_subnet}.90.#{ground_id}" %>:<%= 15761 + 10 * sitl_instance %>,forever,interval=1 TCP:127.0.0.1:<%= 5761 + 10 * sitl_instance %>; sleep 1; done
