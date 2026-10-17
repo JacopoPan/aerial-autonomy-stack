@@ -58,7 +58,7 @@ public:
     ArdupilotGuided();
 
 private:
-    // Parameters - Offboard flag
+    // Parameters - Offboard
     double OFFBOARD_FLAG_STALE_SEC;
 
     std::shared_mutex node_data_mutex_;

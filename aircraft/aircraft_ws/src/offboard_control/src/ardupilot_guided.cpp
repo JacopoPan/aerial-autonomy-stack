@@ -50,8 +50,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     if (camera_extrinsics_.size() != 6) { camera_extrinsics_.assign(6, 0.0); RCLCPP_ERROR(this->get_logger(), "camera_extrinsics needs 6 values, falling back to a level camera"); }
     RCLCPP_INFO(this->get_logger(), "Camera extrinsics: x %.2f y %.2f z %.2f - roll %.1f pitch %.1f yaw %.1f (deg)",
                 camera_extrinsics_[0], camera_extrinsics_[1], camera_extrinsics_[2], camera_extrinsics_[3], camera_extrinsics_[4], camera_extrinsics_[5]);
-
-    // Parameters - Offboard flag
+    // Parameters - Offboard
     OFFBOARD_FLAG_STALE_SEC = this->declare_parameter<double>("offboard_flag_stale_sec", 2.0); // Time (s) without an /offboard_flag message, published at 10Hz by ardupilot_interface, after which to stop publishing references
 
     // MAVROS Publishers
