@@ -43,7 +43,7 @@ ArdupilotInterface::ArdupilotInterface() : Node("ardupilot_interface"),
     VTOL_LAND_LOITER_EXIT_HEADING_THRESH = this->declare_parameter<double>("vtol_land_loiter_exit_heading_thresh", 10.0); // Threshold (deg) in desired approach heading to exit the pre-landing loiter descent
     LAND_COMPLETED_ALT_THRESH = this->declare_parameter<double>("land_completed_alt_thresh", 2.0); // Altitude (m) from home, for a multicopter or VTOL, to consider the landing action complete
     // Parameters - Offboard
-    OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC = this->declare_parameter<double>("OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC", 3.0); // Grace period (s) (or max_duration_sec if shorter) for GUIDED MODE to be confirmed at the beginning of an Offboard action, any subsequent mode switch ends the action
+    OFFBOARD_GUIDED_CONFIRMATION_GRACE_SEC = this->declare_parameter<double>("offboard_guided_confirmation_grace_sec", 3.0); // Grace period (s) (or max_duration_sec if shorter) for GUIDED MODE to be confirmed at the beginning of an Offboard action, any subsequent mode switch ends the action
     // Parameters - Orbit
     MC_ORBIT_SPEED_MS = this->declare_parameter<double>("mc_orbit_speed_ms", 5.0); // Tangential speed (m/s) of the orbit for quads, converted to CIRCLE_RATE (deg/s) based on the target radius
     // Parameters - Takeoff
@@ -650,7 +650,7 @@ rclcpp_action::GoalResponse ArdupilotInterface::offboard_handle_goal(const rclcp
         return rclcpp_action::GoalResponse::REJECT;
     }
     if (goal->max_duration_sec <= 0.0) {
-        RCLCPP_ERROR(this->get_logger(), "Offboard (GUIDED mode) rejected, max_duration_sec is negative");
+        RCLCPP_ERROR(this->get_logger(), "Offboard (GUIDED mode) rejected, max_duration_sec must be positive");
         return rclcpp_action::GoalResponse::REJECT;
     }
     if (active_srv_or_act_flag_.exchange(true)) {

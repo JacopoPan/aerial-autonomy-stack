@@ -58,9 +58,6 @@ public:
     ArdupilotGuided();
 
 private:
-    // Parameters - Offboard
-    double OFFBOARD_FLAG_STALE_SEC;
-
     std::shared_mutex node_data_mutex_;
     const GeographicLib::Geodesic& geod = GeographicLib::Geodesic::WGS84();
 
