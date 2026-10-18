@@ -653,8 +653,8 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
             }
             feedback->message = "Exiting offboard control at t=" + std::to_string(current_time_us) + "us, returning to loiter/hover (Hold) state";
             goal_handle->publish_feedback(feedback);
-        } else if (!PX4_ROS2_LIB && ((current_time_us >= (time_of_offboard_start_us + 1ULL * 1000000)) && (current_time_us < (time_of_offboard_start_us + 2ULL * 1000000)))) {
-            // Send change mode to Offboard for 1 sec, 1sec after the beginning of the reference stream when PX4_ROS2_LIB=false (i.e., not using custom modes)
+        } else if (!PX4_ROS2_LIB && ((current_time_us >= (time_of_offboard_start_us + sec_to_us(0.5))) && (current_time_us < (time_of_offboard_start_us + sec_to_us(1.5))))) {
+            // Request Offboard for 1s, from 0.5s after the beginning of the reference stream, when PX4_ROS2_LIB=false (i.e., not using custom modes)
             do_set_mode(6, 0); // Offboard (PX4_CUSTOM_MAIN_MODE 6 no sub mode)
         }
     }
@@ -947,7 +947,7 @@ void PX4Interface::do_reposition(double lat, double lon, double alt, double head
 {
     send_vehicle_command(
         192,  // MAV_CMD_DO_REPOSITION
-        0.0, 0.0, 0.0, // Unused parameters
+        0.0, 1.0, 0.0, // Default speed, MAV_DO_REPOSITION_FLAGS_CHANGE_MODE (switch to Hold), unused
         heading, // Heading in radians, only used for quads
         lat,  // Latitude
         lon,  // Longitude

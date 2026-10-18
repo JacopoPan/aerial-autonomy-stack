@@ -84,7 +84,7 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
 ```
 
-There are **3 different ways** to autonomously fly the drones (plus QGroundControl/Betaflight App for operator supervision)
+There are **3 different ways** to autonomously fly the drones (plus USB gamepad for manual flight and QGroundControl/Betaflight App for operator supervision)
 
 1. From the `Ground`'s terminal, fly all drones in a **synchronized formation** with [`dtc_controller_node`](/ground/ground_ws/src/drone_traffic_controller/drone_traffic_controller/dtc_controller_node.py):
 ```sh
@@ -113,7 +113,7 @@ PX4_ROS2_LIB=true ./sim_run.sh
 # Then, take-off using QGroundControl and switch to one of the "AAS <controller>" modes implemented in px4_offboard.cpp
 ```
 
-Standalone custom modes are also supported, from a PX4 `QUAD` terminal run:
+To add and fly more custom modes, from a PX4 `QUAD` terminal run:
 ```sh
 ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/Drone${DRONE_ID} -p use_sim_time:=true -p setpoint_type:=goto # Use setpoint_type:=trajectory, attitude, or rates to fly the same mode with a different PX4 control loop
 # Then, take-off using QGroundControl and switch to mode "AAS Template" (implemented in aircraft/aircraft_ws/src/px4_custom_mode_template/)
