@@ -364,7 +364,7 @@ void ArdupilotInterface::set_reposition_callback(const std::shared_ptr<autopilot
         return;
     }
 
-    // Change mode to GUIDED if in AUTO mode for a orbit
+    // Change mode to GUIDED if not already (MC_ORBIT is the state for AUTO in an orbit, BRAKE after an Offboard action, etc.)
     auto is_orbiting = [this]() { // Use a lambda to lock the variable on read
         std::shared_lock<std::shared_mutex> lock(node_data_mutex_);
         return aircraft_fsm_state_ == ArdupilotInterfaceState::MC_ORBIT;
@@ -373,7 +373,7 @@ void ArdupilotInterface::set_reposition_callback(const std::shared_ptr<autopilot
     while (is_orbiting()) {
         if (mode_change_attempts++ >= REPOSITION_MODE_RETRIES) {
             response->success = false;
-            response->message = "Set reposition failed: could not switch from AUTO to GUIDED";
+            response->message = "Set reposition failed: could not switch to GUIDED";
             RCLCPP_ERROR(this->get_logger(), "%s", response->message.c_str());
             active_srv_or_act_flag_.store(false); // Release the flag
             return;
@@ -730,7 +730,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             {
                 std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
                 if (mav_type == 2) { // Multicopter
-                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // This lets the reposition service change mode when called after offboard
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
                 } else if (mav_type == 1) { // Fixed-wing/VTOL
                     aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
                 }
@@ -764,7 +764,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             {
                 std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Reading data written by subs but also writing the FSM state
                 if (mav_type == 2) { // Multicopter
-                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // This lets the reposition service change mode when called after offboard
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
                 } else if (mav_type == 1) { // Fixed-wing/VTOL
                     aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
                 }
@@ -1215,7 +1215,7 @@ void ArdupilotInterface::abort_action()
 
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     if (mav_type == 2) { // Multicopter
-        aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // This lets the reposition service change mode when called after an abort
+        aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
     } else if (mav_type == 1) { // Fixed-wing/VTOL
         aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
     }
