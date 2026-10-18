@@ -34,6 +34,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
         RCLCPP_INFO(this->get_logger(), "Simulation time is disabled.");
     }
     last_offboard_rate_check_time_ = this->get_clock()->now(); // Monitor the rate of offboard control loop
+    last_offboard_flag_time_ = this->get_clock()->now(); // Monitor the staleness of the offboard flag
     // Initialize the arrays
     position_.fill(NAN);
     q_.fill(NAN);
@@ -187,6 +188,7 @@ void ArdupilotGuided::offboard_flag_callback(const autopilot_interface_msgs::msg
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     offboard_active_ = msg->is_active;
+    last_offboard_flag_time_ = this->get_clock()->now();
     if (offboard_active_) {
         if (active_controller_name_ != msg->controller_name) { // Only perform the map lookup if the requested controller has changed
             active_controller_name_ = msg->controller_name;
@@ -393,6 +395,11 @@ void ArdupilotGuided::offboard_loop_callback()
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
     if (!offboard_active_) {
         return; // Do not publish anything else if not in OFFBOARD state
+    }
+    constexpr double OFFBOARD_FLAG_STALE_S = 3.0; // s, timeout after which to stop if /offboard_flag goes silent, i.e., ardupilot_interface stopped
+    if ((this->get_clock()->now() - last_offboard_flag_time_).seconds() > OFFBOARD_FLAG_STALE_S) {
+        RCLCPP_WARN(get_logger(), "Topic /offboard_flag has gone silent, no reference will be published");
+        return; // Do not keep commanding the vehicle if ardupilot_interface stopped publishing the flag
     }
     if (active_controller_func_ != nullptr) {
         active_controller_func_(); // If offboard is active AND we have a valid controller, run it
