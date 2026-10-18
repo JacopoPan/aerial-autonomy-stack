@@ -73,6 +73,8 @@ private:
     double LAND_INIT_DIST_THRESH, VTOL_LAND_LOITER_DIST, VTOL_LAND_LOITER_RADIUS, VTOL_LAND_LOITER_ALT_HIGH, VTOL_LAND_LOITER_ALT_LOW;
     double VTOL_LAND_LOITER_STARTED_DIST_THRESH, VTOL_LAND_LOITER_EXIT_DIST_THRESH, VTOL_LAND_LOITER_EXIT_ALT_THRESH, VTOL_LAND_FAKE_REPOSITION_DISTANCE;
     double VTOL_LAND_TRANSITION_START_DISTANCE, TAIL_LAND_TRANSITION_START_DISTANCE;
+    // Parameters - Offboard
+    double OFFBOARD_MODE_CONFIRMATION_GRACE_SEC;
     // Parameters - Orbit
     double MC_ORBIT_SPEED_MS;
     // Parameters - Takeoff
@@ -117,7 +119,7 @@ private:
 
     // Subscribers variables
     std::atomic<int> target_system_id_;
-    int arming_state_, vehicle_type_;
+    int arming_state_, vehicle_type_, nav_state_;
     bool is_vtol_, is_vtol_tailsitter_, in_transition_mode_, in_transition_to_fw_, pre_flight_checks_pass_;
     double lat_, lon_, alt_, alt_ellipsoid_;
     bool xy_valid_, z_valid_, v_xy_valid_, v_z_valid_, xy_global_, z_global_;

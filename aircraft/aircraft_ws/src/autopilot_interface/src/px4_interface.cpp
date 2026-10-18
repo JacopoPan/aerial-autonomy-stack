@@ -3,7 +3,7 @@
 PX4Interface::PX4Interface() : Node("px4_interface"),
     active_srv_or_act_flag_(false), aircraft_fsm_state_(PX4InterfaceState::STARTED),
     active_offboard_controller_name_(""), offboard_flag_frequency(10), offboard_flag_count_(0), last_offboard_flag_count_(0),
-    target_system_id_(-1), arming_state_(-1), vehicle_type_(-1),
+    target_system_id_(-1), arming_state_(-1), vehicle_type_(-1), nav_state_(-1),
     is_vtol_(false), is_vtol_tailsitter_(false), in_transition_mode_(false), in_transition_to_fw_(false), pre_flight_checks_pass_(false),
     lat_(NAN), lon_(NAN), alt_(NAN), alt_ellipsoid_(NAN),
     xy_valid_(false), z_valid_(false), v_xy_valid_(false), v_z_valid_(false), xy_global_(false), z_global_(false),
@@ -41,6 +41,8 @@ PX4Interface::PX4Interface() : Node("px4_interface"),
     VTOL_LAND_FAKE_REPOSITION_DISTANCE = this->declare_parameter<double>("vtol_land_fake_reposition_distance", 600.0); // Reposition point (m) behind home, must be greater than NAV_LOITER_RAD (e.g. 500m). NOTE: it will not be reached because the VTOL will transition and land at home
     VTOL_LAND_TRANSITION_START_DISTANCE = this->declare_parameter<double>("vtol_land_transition_start_distance", 120.0); // Distance (m) from home to start the transition, affected by the platforms's cruise speed, mass, wind
     TAIL_LAND_TRANSITION_START_DISTANCE = this->declare_parameter<double>("tail_land_transition_start_distance", 60.0); // Distance (m) from home to start the transition, affected by the platforms's cruise speed, mass, wind
+    // Parameters - Offboard
+    OFFBOARD_MODE_CONFIRMATION_GRACE_SEC = this->declare_parameter<double>("offboard_mode_confirmation_grace_sec", 3.0); // Grace period (s) (or max_duration_sec if shorter) for Offboard mode (or a px4_ros2_lib mode) to be confirmed at the beginning of an Offboard action, any subsequent mode switch ends the action
     // Parameters - Orbit
     MC_ORBIT_SPEED_MS = this->declare_parameter<double>("mc_orbit_speed_ms", 5.0); // Tangential speed (m/s) of the orbit for quads
     // Parameters - Takeoff
@@ -188,6 +190,7 @@ void PX4Interface::status_callback(const VehicleStatus::SharedPtr msg)
     }
     arming_state_ = msg->arming_state; // DISARMED = 1, ARMED = 2
     vehicle_type_ = msg->vehicle_type; // ROTARY_WING = 1, FIXED_WING = 2 (ROVER = 3)
+    nav_state_ = msg->nav_state; // OFFBOARD = 14, EXTERNAL1-8 = 23-30 (px4_ros2_lib modes)
     is_vtol_ = msg->is_vtol; // bool
     is_vtol_tailsitter_ = msg->is_vtol_tailsitter; // bool
     in_transition_mode_ = msg->in_transition_mode; // bool
@@ -585,9 +588,11 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
         offboard_loop_rate.sleep();
 
         bool is_vtol = false; // Snapshot variables overwritten by locked read below
+        int nav_state = -1;
         {
             std::shared_lock<std::shared_mutex> lock(node_data_mutex_);
             is_vtol = is_vtol_;
+            nav_state = nav_state_;
         }
 
         if (goal_handle->is_canceling()) { // Check if there is a cancel request
@@ -612,6 +617,31 @@ void PX4Interface::offboard_handle_accepted(const std::shared_ptr<rclcpp_action:
             time_of_offboard_start_us = current_time_us;
             feedback->message = "Starting offboard control at t=" + std::to_string(time_of_offboard_start_us) + " us";
             goal_handle->publish_feedback(feedback);
+        }
+        bool in_offboard_nav_state = false;
+        if (PX4_ROS2_LIB) {
+            // This if branch only covers the case in which PX4_ROS2_LIB is True (thus registering the controllers in px4_offboard.cpp as external modes)
+            // but a controller is triggered as a ROS2 Offboard action from this file (px4_interface.cpp) instead - NOTE: this is a non-standard use case
+            in_offboard_nav_state = (nav_state >= VehicleStatus::NAVIGATION_STATE_EXTERNAL1) && (nav_state <= VehicleStatus::NAVIGATION_STATE_EXTERNAL8);
+        } else {
+            // The standard Offboard mode that this action requests with do_set_mode(6, 0) below
+            in_offboard_nav_state = (nav_state == VehicleStatus::NAVIGATION_STATE_OFFBOARD);
+        }
+        if (nav_state >= 0 && !in_offboard_nav_state && (current_time_us >= (time_of_offboard_start_us + sec_to_us(std::min(OFFBOARD_MODE_CONFIRMATION_GRACE_SEC, max_duration_sec))))) {
+            // Put px4_interface in MC_HOVER or FW_CRUISE if PX4 is not in Offboard mode (or a px4_ros2_lib mode) during an Offboard action
+            // I.e., a pilot triggered a mode switch from the RC or PX4 rejected the mode
+            // Note: Do not call abort_action() here, its reposition request would overwrite the mode the RC or the GCS just selected
+            {
+                std::unique_lock<std::shared_mutex> lock(node_data_mutex_);
+                aircraft_fsm_state_ = is_vtol ? PX4InterfaceState::FW_CRUISE : PX4InterfaceState::MC_HOVER;
+            }
+            feedback->message = "Exiting offboard control at t=" + std::to_string(current_time_us) + "us, nav_state is " + std::to_string(nav_state);
+            goal_handle->publish_feedback(feedback);
+            result->success = false;
+            goal_handle->abort(result);
+            RCLCPP_WARN(this->get_logger(), "Offboard aborted, nav_state is %d", nav_state);
+            active_srv_or_act_flag_.store(false);
+            return;
         }
         if (current_time_us >= time_of_offboard_start_us + sec_to_us(max_duration_sec)) {
             time_of_offboard_start_us = UNSET_TIME_US;

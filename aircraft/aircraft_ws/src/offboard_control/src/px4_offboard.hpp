@@ -85,6 +85,7 @@ private:
     std::atomic<int> offboard_loop_count_;
     std::atomic<int> last_offboard_loop_count_;
     rclcpp::Time last_offboard_rate_check_time_;
+    rclcpp::Time last_offboard_flag_time_;
     int own_id_;
 
     // Callback groups

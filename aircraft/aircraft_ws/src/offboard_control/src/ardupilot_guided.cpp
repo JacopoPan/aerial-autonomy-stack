@@ -396,7 +396,7 @@ void ArdupilotGuided::offboard_loop_callback()
     if (!offboard_active_) {
         return; // Do not publish anything else if not in OFFBOARD state
     }
-    constexpr double OFFBOARD_FLAG_STALE_S = 2.0; // s, timeout after which to stop if /offboard_flag goes silent, i.e., ardupilot_interface stopped
+    constexpr double OFFBOARD_FLAG_STALE_S = 3.0; // s, timeout after which to stop if /offboard_flag goes silent, i.e., ardupilot_interface stopped
     if ((this->get_clock()->now() - last_offboard_flag_time_).seconds() > OFFBOARD_FLAG_STALE_S) {
         RCLCPP_WARN(get_logger(), "Topic /offboard_flag has gone silent, no reference will be published");
         return; // Do not keep commanding the vehicle if ardupilot_interface stopped publishing the flag
