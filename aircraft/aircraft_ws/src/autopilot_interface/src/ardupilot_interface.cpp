@@ -730,7 +730,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             {
                 std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
                 if (mav_type == 2) { // Multicopter
-                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so the next set_reposition request GUIDED before sending its setpoint
                 } else if (mav_type == 1) { // Fixed-wing/VTOL
                     aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
                 }
@@ -764,7 +764,7 @@ void ArdupilotInterface::offboard_handle_accepted(const std::shared_ptr<rclcpp_a
             {
                 std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Reading data written by subs but also writing the FSM state
                 if (mav_type == 2) { // Multicopter
-                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
+                    aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so the next set_reposition request GUIDED before sending its setpoint
                 } else if (mav_type == 1) { // Fixed-wing/VTOL
                     aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
                 }
@@ -1215,7 +1215,7 @@ void ArdupilotInterface::abort_action()
 
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     if (mav_type == 2) { // Multicopter
-        aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so a next set_reposition request GUIDED before sending its setpoint
+        aircraft_fsm_state_ = ArdupilotInterfaceState::MC_ORBIT; // MC_ORBIT, not MC_HOVER, so the next set_reposition request GUIDED before sending its setpoint
     } else if (mav_type == 1) { // Fixed-wing/VTOL
         aircraft_fsm_state_ = ArdupilotInterfaceState::FW_CRUISE;
     }
