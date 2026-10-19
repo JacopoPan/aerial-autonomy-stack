@@ -113,11 +113,12 @@ private:
     rclcpp_action::Server<Land>::SharedPtr land_server_;
     rclcpp_action::Server<Offboard>::SharedPtr offboard_server_;
     rclcpp::Service<SetReposition>::SharedPtr reposition_service_;
-    rclcpp::TimerBase::SharedPtr timer_, offboard_flag_timer_;
+    rclcpp::TimerBase::SharedPtr timer_, offboard_flag_timer_, printout_timer_;
 
     // Callbacks
     void rc_override_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
     void offboard_flag_callback();
+    void printout_callback();
 
     // MSP link
     static int open_device(const std::string &device);
