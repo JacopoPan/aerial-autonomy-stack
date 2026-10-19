@@ -31,8 +31,8 @@ MAX_AXIS_TRAVEL = 32767
 JS_EVENT_BUTTON, JS_EVENT_AXIS, JS_EVENT_INIT = 0x01, 0x02, 0x80 # Event types of the Linux joystick API (linux/joystick.h)
 BUTTON_A, BUTTON_X, BUTTON_Y, BUTTON_VIEW, BUTTON_MENU = 0, 2, 3, 6, 7
 DEADBAND = 0.1 # Of the stick travel, gamepad sticks do not center exactly
-FULL_STICK_YAW = 120 / 670 # 120 deg/s at full stick, Betaflight's linear yaw rate is 670 deg/s (yaw_rc_rate in betaflight-2026.6.cli)
-FULL_STICK_ACRO = 200 / 670 # 200 deg/s at full roll or pitch stick in ACRO, from Betaflight's linear 670 deg/s
+FULL_STICK_YAW = 120 / 670 # Re-scale full yaw stick from 670 to 120deg/s in ALL modes (yaw_rc_rate in betaflight-2026.6.cli)
+FULL_STICK_ACRO = 200 / 670 # Re-scale full roll/pitch sticks from 670 to 200deg/s in ACRO mode only (roll/pitch_rc_rate in betaflight-2026.6.cli)
 
 port = int(sys.argv[1])
 with open(sys.argv[2]) as cli_file:

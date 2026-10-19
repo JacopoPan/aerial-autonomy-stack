@@ -43,4 +43,8 @@ set mag_declination = 20
 set min_check = 1050
 # Hover throttle measured in Gazebo (ANGLE mode), also the center of ALTHOLD's throttle deadband
 set ap_hover_throttle = 1595
+# For simulation only: decrease the drag coefficient (default: 50) for the Iris model
+set ap_velocity_drag_coeff = 40
+# For simulation only: increase the velocity damping (default: 30) to limit POS HOLD overshoots
+set ap_position_d = 50
 save
