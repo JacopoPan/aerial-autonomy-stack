@@ -23,7 +23,7 @@ jobs:
     uses: ./.github/workflows/simulation-amd64-build.yml
 
   integration-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [build-aircraft, build-ground, build-simulation]
     timeout-minutes: 150
     permissions:
@@ -71,7 +71,7 @@ jobs:
           sudo mkdir -p /mnt/docker
           echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
           sudo systemctl start docker
-          docker info | grep "Docker Root Dir"
+          docker info | grep -E "Docker Root Dir|Storage Driver"
 
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -111,9 +111,13 @@ jobs:
           docker tag ghcr.io/jacopopan/simulation-image:${{ env.DOCKER_TAG }} simulation-image:latest
           docker images | grep latest
 
+      - name: Check disk space after pulling the images
+        run: df -h
+
       - name: Set up Conda with Python 3.12
         uses: conda-incubator/setup-miniconda@v3
         with:
+          miniconda-version: latest
           activate-environment: aas
           python-version: 3.12
           auto-activate: true

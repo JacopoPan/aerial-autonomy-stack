@@ -10,7 +10,7 @@ on:
 
 jobs:
   install-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     permissions:
       contents: read
@@ -42,6 +42,7 @@ jobs:
       - name: Set up Conda with Python 3.12
         uses: conda-incubator/setup-miniconda@v3
         with:
+          miniconda-version: latest
           activate-environment: aas
           python-version: 3.12
           auto-activate: true

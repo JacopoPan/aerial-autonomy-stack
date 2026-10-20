@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 90
     permissions:
       contents: read
@@ -50,7 +50,7 @@ jobs:
           sudo mkdir -p /mnt/docker
           echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
           sudo systemctl start docker
-          docker info | grep "Docker Root Dir"
+          docker info | grep -E "Docker Root Dir|Storage Driver"
 
       - name: Check out the repository
         uses: actions/checkout@v4
