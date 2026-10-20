@@ -65,14 +65,6 @@ jobs:
       - name: Check disk space
         run: df -h
 
-      - name: Move Docker to /mnt
-        run: |
-          sudo systemctl stop docker
-          sudo mkdir -p /mnt/docker
-          echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
-          sudo systemctl start docker
-          docker info | grep -E "Docker Root Dir|Storage Driver"
-
       - name: Checkout the repository
         uses: actions/checkout@v4
 

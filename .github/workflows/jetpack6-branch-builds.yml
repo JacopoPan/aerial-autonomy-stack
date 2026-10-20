@@ -44,14 +44,6 @@ jobs:
       - name: Check disk space
         run: df -h
 
-      - name: Move Docker to /mnt
-        run: |
-          sudo systemctl stop docker
-          sudo mkdir -p /mnt/docker
-          echo '{"data-root": "/mnt/docker"}' | sudo tee /etc/docker/daemon.json
-          sudo systemctl start docker
-          docker info | grep -E "Docker Root Dir|Storage Driver"
-
       - name: Check out jetpack6 branch
         uses: actions/checkout@v4
         with:
@@ -71,12 +63,12 @@ jobs:
 
       - name: Build all amd64 images
         run: |
-          docker buildx build --target ros2-image --output type=oci,dest=/tmp/transitional-ros2-image,tar=false -f ./tools_and_docs/docker/aircraft.dockerfile .
-          docker buildx build --target ros2-qgc-image --build-context transitional-ros2-image=oci-layout:///tmp/transitional-ros2-image --output type=oci,dest=/tmp/transitional-ros2-qgc-image,tar=false -f ./tools_and_docs/docker/ground.dockerfile .
+          docker buildx build --target ros2-image --output type=oci,dest=$RUNNER_TEMP/transitional-ros2-image,tar=false -f ./tools_and_docs/docker/aircraft.dockerfile .
+          docker buildx build --target ros2-qgc-image --build-context transitional-ros2-image=oci-layout://$RUNNER_TEMP/transitional-ros2-image --output type=oci,dest=$RUNNER_TEMP/transitional-ros2-qgc-image,tar=false -f ./tools_and_docs/docker/ground.dockerfile .
           df -h
-          docker buildx build --build-context transitional-ros2-image=oci-layout:///tmp/transitional-ros2-image -f ./tools_and_docs/docker/ground.dockerfile .
+          docker buildx build --build-context transitional-ros2-image=oci-layout://$RUNNER_TEMP/transitional-ros2-image -f ./tools_and_docs/docker/ground.dockerfile .
           df -h
-          docker buildx build --build-context transitional-ros2-qgc-image=oci-layout:///tmp/transitional-ros2-qgc-image -f ./tools_and_docs/docker/simulation.dockerfile .
+          docker buildx build --build-context transitional-ros2-qgc-image=oci-layout://$RUNNER_TEMP/transitional-ros2-qgc-image -f ./tools_and_docs/docker/simulation.dockerfile .
           df -h
           docker buildx build --build-arg BUILD_ADVANCED_ODOM=true -f ./tools_and_docs/docker/aircraft.dockerfile .
           df -h
