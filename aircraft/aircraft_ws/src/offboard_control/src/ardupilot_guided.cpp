@@ -126,6 +126,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     // Lemniscate trajectories
     controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {55.0, 60.0}, 8.0}); }; // ENU {min, max}, speed ceiling
     controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {55.0, 65.0}, 13.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-x8"] = [this]() { vel_ref_lemniscate({{-90.0, -10.0}, {30.0, 400.0}, {55.0, 70.0}, 18.5, 10.0}); }; // ENU {min, max}, speed ceiling, CCW rotation
     // Vision-based guidance
     controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
     controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
@@ -711,10 +712,12 @@ void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
     const double r_min_m = std::min(north_amplitude_m * north_amplitude_m / (8.0 * east_amplitude_m),
                                     4.0 * east_amplitude_m * east_amplitude_m / north_amplitude_m);
     const double v_ceiling_ms = std::min(loop.v_max_ms, SPEED_RATIO * std::sqrt(A_LAT_MAX_MS2 * r_min_m));
-    // The path: phase 0 is the south tip, east cycles twice per lap and that is the crossing
+    const double cos_rot = std::cos(loop.rotation_deg * (M_PI / 180.0)), sin_rot = std::sin(loop.rotation_deg * (M_PI / 180.0)); // Path rotation, CCW
+    // The path: phase 0 is the south tip (before rotation), east cycles twice per lap and that is the crossing
     auto path_point = [&](double phase_rad) {
-        return std::array<double, 3>{east_center_m + east_amplitude_m * std::sin(2.0 * phase_rad),
-                                     north_center_m - north_amplitude_m * std::cos(phase_rad),
+        double e = east_amplitude_m * std::sin(2.0 * phase_rad), n = -north_amplitude_m * std::cos(phase_rad); // Offsets from the center, before rotation
+        return std::array<double, 3>{east_center_m + (e * cos_rot) - (n * sin_rot),
+                                     north_center_m + (e * sin_rot) + (n * cos_rot),
                                      alt_center_m + alt_amplitude_m * std::sin(phase_rad)};
     };
 
