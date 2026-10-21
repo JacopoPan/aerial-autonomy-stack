@@ -70,7 +70,7 @@ class YoloInferenceNode(Node):
         self.bridge = CvBridge()
 
         # Create subscribers
-        if self.remote_video_streams: # Only instances launched with --remote-video-streams (i.e. cam_id 0) subscribe to the stream toggle
+        if self.is_jetson and self.camera_id == 0: # Only cam 0 on Jetson can stream, subscribe even without --remote-video-streams to allow turning it on at runtime
             self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
         
         self.get_logger().info("YOLO inference started.")
@@ -296,6 +296,7 @@ class YoloInferenceNode(Node):
 
             # Only on Jetson, stream to the ground station via UDP using GStreamer
             # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
+            # To turn the stream on: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: true}'
             # To turn the stream off: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: false}'
             if self.remote_video_streams and self.is_jetson: # Use cached boolean flag in loops
                 if not hasattr(self, 'gnd_stream_writer'):

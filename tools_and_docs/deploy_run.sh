@@ -29,6 +29,7 @@ DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 #
 RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 RECORD_VIDEO="${RECORD_VIDEO:-false}" # Options: true, false (default)
+REMOTE_VIDEO_STREAMS="${REMOTE_VIDEO_STREAMS:-true}" # Options: true (default), false
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
@@ -49,7 +50,7 @@ check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
-for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
+for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO REMOTE_VIDEO_STREAMS DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
 if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$DRONE_TYPE" != "quad" || "$HITL" == "true" ]]; then abort "AUTOPILOT=betaflight supports DRONE_TYPE=quad only, no HITL"; fi
 for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
 [[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"
@@ -123,7 +124,7 @@ docker run $DOCKER_RUN_FLAGS \
   --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \
   --env GND_CONTAINER=$GND_CONTAINER \
   --env ROS_DOMAIN_ID=$DRONE_ID \
-  --env REMOTE_VIDEO_STREAMS=true \
+  --env REMOTE_VIDEO_STREAMS=$REMOTE_VIDEO_STREAMS \
   --env RECORD_ROSBAG=$RECORD_ROSBAG --env RECORD_VIDEO=$RECORD_VIDEO \
   --net=host \
   --privileged \

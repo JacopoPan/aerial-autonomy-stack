@@ -247,6 +247,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  AUTOPILOT=px4, ardupilot, betaflight
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false (recordings are saved on the host's ~/Downloads/ folder)
+#  REMOTE_VIDEO_STREAMS=true, false (cam_0 stream to the ground container, toggle at runtime with topic /enable_remote_video_streams)
 #  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 ```
 
