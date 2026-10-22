@@ -120,7 +120,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
     // Custom controllers
-    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 15.0, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
+    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 20.0, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
