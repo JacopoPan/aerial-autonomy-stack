@@ -31,10 +31,12 @@ RUN apt update \
 FROM ros2-gcs-gz-image AS ros2-gcs-gz-px4-image
 
 # PX4 SITL (NOTE: install PX4 tools first to avoid conflicts with ArduPilot, build later to customize)
-# Based on https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu.html
+# Based on https://docs.px4.io/v1.17/en/dev_setup/dev_env_linux_ubuntu
 COPY /_github_clones/PX4-Autopilot /aas/github_apps/PX4-Autopilot
 WORKDIR /aas/github_apps/PX4-Autopilot
-RUN bash ./Tools/setup/ubuntu.sh --no-sim-tools \
+# pandas>=3.1 requires numpy>=2, constraining numpy<2 installs pandas 3.0.6, keeping system apt numpy 1.26.4 (revise after Ubuntu 24)
+RUN echo "numpy<2.0.0" > /etc/pip_constraints.txt \
+    && PIP_CONSTRAINT=/etc/pip_constraints.txt bash ./Tools/setup/ubuntu.sh --no-sim-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
