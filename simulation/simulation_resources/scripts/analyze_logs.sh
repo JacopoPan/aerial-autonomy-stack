@@ -15,7 +15,7 @@ if [[ -n "$NUM_DRONES" && "$NUM_DRONES" =~ ^[0-9]+$ ]]; then
             logfile="${LOGS_BASE_DIR}/$filename"
             if [ -f "$logfile" ]; then
                 echo "Opening log for drone $i: $logfile"
-                MAVExplorer.py "$logfile"  &
+                /home/arduuser/venv-ardupilot/bin/MAVExplorer.py "$logfile" &
             else
                 echo "Log file not found for drone $i: $logfile"
             fi

@@ -17,12 +17,13 @@ RUN apt update \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null \
     && apt update \
     && apt install -y --no-install-recommends \
-        gz-harmonic ros-jazzy-ros-gz \
-        ros-jazzy-ros-gz-bridge ros-jazzy-ros-gz-sim \
+        gz-harmonic ros-jazzy-ros-gz-bridge \
         libgz-transport13-* libgz-msgs10-dev \
         python3-gz-transport13 python3-gz-msgs10 \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
+# Keep OSRF's gz sim visible after sourcing ROS (gz_tools_vendor replaces the default config path)
+ENV GZ_CONFIG_PATH=/usr/share/gz
 # Run with $ gz sim
 
 ################################################################################
@@ -47,6 +48,7 @@ FROM ros2-gcs-gz-px4-image AS ros2-gcs-gz-px4-ardupilot-image
 
 # ArduPilot SITL (temporarily as arduuser, then re chown to root)
 # Based on https://ardupilot.org/dev/docs/building-setup-linux.html#building-setup-linux
+# matplotlib<3.11 because MAVExplorer's graphs (MAVProxy 1.8.75 grapher.py) still call Axes.plot_date, removed in matplotlib 3.11
 COPY /_github_clones/ardupilot /aas/github_apps/ardupilot
 WORKDIR /aas/github_apps/ardupilot
 RUN useradd -m -s /bin/bash arduuser \
@@ -54,6 +56,7 @@ RUN useradd -m -s /bin/bash arduuser \
     && gosu arduuser git config --global --add safe.directory /aas/github_apps/ardupilot \
     && chown -R arduuser:arduuser /aas/github_apps/ardupilot \
     && USER=arduuser gosu arduuser bash ./Tools/environment_install/install-prereqs-ubuntu.sh -y \
+    && gosu arduuser /home/arduuser/venv-ardupilot/bin/pip install --no-cache-dir "matplotlib<3.11" \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN gosu arduuser bash -c "cd /aas/github_apps/ardupilot && ./waf configure --board sitl && ./waf build" \
