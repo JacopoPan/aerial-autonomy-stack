@@ -223,7 +223,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
-./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~1.5h to build onnxruntime-gpu with TensorRT support from source
+./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~50' to build onnxruntime-gpu with TensorRT support from source
 
 # Build options:
 #  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
@@ -529,7 +529,7 @@ aerial-autonomy-stack
 - [x] [Betaflight 2026.6.2](https://github.com/betaflight/betaflight/releases)
 - [x] [Betaflight App 2026.6.2](https://github.com/betaflight/betaflight-configurator/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
-- [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
+- [x] [ONNX Runtime 1.31.0](https://github.com/microsoft/onnxruntime/releases)
 
 External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
@@ -544,7 +544,7 @@ External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
 - [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
-- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.30.0`
+- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.31.0`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>

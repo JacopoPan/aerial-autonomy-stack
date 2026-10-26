@@ -36,8 +36,10 @@ FROM ros2-gcs-gz-image AS ros2-gcs-gz-px4-image
 COPY /_github_clones/PX4-Autopilot /aas/github_apps/PX4-Autopilot
 WORKDIR /aas/github_apps/PX4-Autopilot
 # pandas>=3.1 requires numpy>=2, constraining numpy<2 installs pandas 3.0.6, keeping system apt numpy 1.26.4 (revise after Ubuntu 24)
+# ubuntu.sh also unpacks ~700MB for Xtensa toolchain, removed here
 RUN echo "numpy<2.0.0" > /etc/pip_constraints.txt \
     && PIP_CONSTRAINT=/etc/pip_constraints.txt bash ./Tools/setup/ubuntu.sh --no-sim-tools \
+    && rm -rf /opt/xtensa-esp-elf Tools/setup/xtensa-esp-elf-*.tar.xz \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -46,23 +48,22 @@ RUN echo "numpy<2.0.0" > /etc/pip_constraints.txt \
 ################################################################################
 FROM ros2-gcs-gz-px4-image AS ros2-gcs-gz-px4-ardupilot-image
 
-# ArduPilot SITL (temporarily as arduuser, then re chown to root)
+# ArduPilot SITL (prerequisites as arduuser, as install-prereqs-ubuntu.sh refuses root; build as root)
 # Based on https://ardupilot.org/dev/docs/building-setup-linux.html#building-setup-linux
 # PIP_ONLY_BINARY=wxpython keeps apt's python3-wxgtk4.0 (for MAVProxy's console and map) instead of compiling wxPython from source (PyPI has no Linux wheels)
+# SKIP_AP_GIT_CHECK=1 skips the script's git submodule update, as the clone is already recursive
 COPY /_github_clones/ardupilot /aas/github_apps/ardupilot
 WORKDIR /aas/github_apps/ardupilot
 RUN useradd -m -s /bin/bash arduuser \
     && echo "arduuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/arduuser && chmod 0440 /etc/sudoers.d/arduuser \
-    && gosu arduuser git config --global --add safe.directory /aas/github_apps/ardupilot \
-    && chown -R arduuser:arduuser /aas/github_apps/ardupilot \
-    && USER=arduuser PIP_ONLY_BINARY=wxpython gosu arduuser bash ./Tools/environment_install/install-prereqs-ubuntu.sh -y \
+    && USER=arduuser SKIP_AP_GIT_CHECK=1 PIP_ONLY_BINARY=wxpython gosu arduuser bash ./Tools/environment_install/install-prereqs-ubuntu.sh -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN gosu arduuser bash -c "cd /aas/github_apps/ardupilot && ./waf configure --board sitl && ./waf copter plane" \
-    && chown -R root:root /aas/github_apps/ardupilot
+RUN ./waf configure --board sitl && ./waf copter plane
 # Run with $ /aas/github_apps/ardupilot/build/sitl/bin/arducopter
-# Link the MAVProxy installed by install-prereqs-ubuntu.sh in ArduPilot's venv (isolated from the system numpy/OpenCV), e.g. to attach a console and map to a running SITL
+# Link the MAVProxy installed by install-prereqs-ubuntu.sh in ArduPilot's venv (isolated from the system numpy/OpenCV)
 RUN ln -s /home/arduuser/venv-ardupilot/bin/mavproxy.py /usr/local/bin/mavproxy.py
+# Attach it to a running SITL with $ mavproxy.py --master tcp:127.0.0.1:5760 --console --map (5760 + 10 * the SITL instance)
 
 # ArduPilot Gazebo Plugin
 # Based on https://ardupilot.org/dev/docs/sitl-with-gazebo.html
