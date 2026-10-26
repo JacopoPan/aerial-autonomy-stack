@@ -29,9 +29,11 @@ This is the challenge—and good sport—of **vertical/full-stack integration** 
 
 ## Presentations and Papers
 
-- Open Robotics Aerial Robotics Meeting: ["On the System Design Reality Gap"](https://docs.google.com/presentation/d/1Sz0d7WPWNwgCM3Q49Nnq1mvkSwPyK_CCQ7viHxO_Ucs) (January 22, 2026)
-- Paper: ["aerial-autonomy-stack—a Faster-than-real-time, Autopilot-agnostic, ROS2 Framework to Simulate and Deploy Perception-based Drones"](https://arxiv.org/abs/2602.07264) (2026) International Conference on Unmanned Aircraft Systems (ICUAS), Corfu, Greece
-- Slides: [`aerial-autonomy-stack`](https://www.dropbox.com/scl/fi/2gzki29sqrd67k3g0ctbz/icuas2026.pptx?rlkey=chflf9twnk1n6dptfx2huxa7o&st=kglsygkk&dl=0) in ICUAS 2026 regular session on "UAS Testbeds" (June 17, 2026)
+- Open Robotics Aerial Robotics Meeting: ["On the System Design Reality Gap"](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/22-01-2026-aerial-robotics-meeting.pdf) (Online, January 22, 2026)
+- Conference Paper: ["aerial-autonomy-stack—a Faster-than-real-time, Autopilot-agnostic, ROS2 Framework to Simulate and Deploy Perception-based Drones"](https://arxiv.org/abs/2602.07264) (2026) International Conference on Unmanned Aircraft Systems (ICUAS), Corfu, Greece
+  - Slides: [`aerial-autonomy-stack`](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/17-06-2026-icuas.pdf) in ICUAS 2026 regular session on "UAS Testbeds" (June 17, 2026)
+- [ROSCon Global 2026 Lightning Talk](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/24-09-2026-roscon.pdf) (Toronto, ON, Canada, September 24, 2026)
+- [ArduPilot Developer Conference 2026](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/25-10-2026-ardupilot-developer-conference.pdf) (Ottawa, ON, Canada, October 25, 2026)
 
 ## Related Work
 
