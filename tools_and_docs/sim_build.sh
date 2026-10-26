@@ -37,7 +37,6 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/betaflight/betaflight.git;2026.6.2;betaflight"
   "https://github.com/betaflight/aeroloop_gazebo.git;gz;aeroloop_gazebo"
   "https://github.com/srmainwaring/asv_wave_sim.git;master;asv_wave_sim"
-  "https://github.com/PX4/flight_review.git;main;flight_review"
   # Ground image
   "https://github.com/mavlink/c_library_v2.git;master;c_library_v2"
   "https://github.com/mavlink-router/mavlink-router.git;master;mavlink-router"

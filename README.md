@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - [Betaflight MSP Override](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control) interface (i.e. RC sticks in ACRO, ANGLE, or ALTHOLD + POS HOLD)
-- Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
+- Logs analysis with [`plot_logs.py`](/tools_and_docs/plot_logs.py) (`.ulg`, `.bin`); SITL logs and MCAP `rosbag`s (`RECORD_ROSBAG=true`) are copied to the host at the end of each simulation
 </details>
 
 ## 1. Installation
@@ -159,10 +159,6 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > # Gimbal status and position control (in radians)
 > ros2 topic echo /gimbal_state
 > ros2 topic pub -1 /gimbal_pitch_cmd std_msgs/msg/Float64 "{data: 1.57}"
-> ```
-> To analyze the flight logs, in the `Simulation`'s terminal:
-> ```sh
-> /aas/simulation_resources/scripts/analyze_logs.sh                                           # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
 > ```
 > </details>
 > <details>
@@ -539,7 +535,6 @@ External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
 - [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
-- [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
 - [`betaflight/betaflight`](https://github.com/betaflight/betaflight) tag/branch: `2026.6.2`

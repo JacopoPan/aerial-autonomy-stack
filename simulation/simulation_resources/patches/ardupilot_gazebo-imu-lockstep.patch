@@ -1,0 +1,22 @@
+diff --git a/src/ArduPilotPlugin.cc b/src/ArduPilotPlugin.cc
+index 8309c37..b9fc11e 100755
+--- a/src/ArduPilotPlugin.cc
++++ b/src/ArduPilotPlugin.cc
+@@ -1201,6 +1201,17 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
+         if (!_info.paused && _info.simTime >
+             this->dataPtr->lastControllerUpdateTime)
+         {
++            // Wait for the first IMU message before exchanging packets with
++            // ArduPilot: CreateStateJSON() cannot build a state without it and,
++            // in lock-step, ArduPilot would wait forever for that first state
++            {
++                std::lock_guard<std::mutex> lock(this->dataPtr->imuMsgMutex);
++                if (!this->dataPtr->imuMsgValid)
++                {
++                    return;
++                }
++            }
++
+             if (this->dataPtr->isLockStep)
+             {
+                 while (!this->ReceiveServoPacket() &&

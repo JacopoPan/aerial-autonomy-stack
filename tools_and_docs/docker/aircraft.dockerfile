@@ -167,7 +167,7 @@ RUN apt update && \
         libpython3.12-dev python3-pip python3-dev python3-setuptools python3-wheel && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
-        --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
+        --use_tensorrt --enable_cuda_minimal_build --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
@@ -390,12 +390,12 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 ################################################################################
 FROM advanced-odom-${BUILD_ADVANCED_ODOM} AS ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image
 
-# Add pymavlink and PlotJuggler for debugging, testing, and analysis
+# Add pymavlink for debugging and MAVROS's Python tools
 RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
+# Add the MCAP storage plugin for the rosbags
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ros-jazzy-plotjuggler \
-    ros-jazzy-plotjuggler-ros ros-jazzy-rosbag2-storage-mcap \
+    apt-get install -y --no-install-recommends ros-jazzy-rosbag2-storage-mcap \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -450,10 +450,10 @@ RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/c
 # Copy sensor configuration
 COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
-# Source the workspaces
-RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \
-    && echo "source /aas/mimosa_custom_gtsam_ws/install/setup.bash" >> /root/.bashrc \
-    && echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
+# Source the workspaces (mimosa_custom_gtsam_ws first, as github_ws builds rovio on it, and only if BUILD_ADVANCED_ODOM=true)
+RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \
+    && echo "source /aas/github_ws/install/local_setup.bash" >> /root/.bashrc \
+    && echo "source /aas/aircraft_ws/install/local_setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
 
 # Final config

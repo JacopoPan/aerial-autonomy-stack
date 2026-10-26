@@ -260,7 +260,7 @@ cleanup() {
   mkdir -p "$PLOT_DIR" 2>/dev/null || echo "Could not create $PLOT_DIR"
   for i in $(seq 1 $NUM_DRONES); do
     if [ "$AUTOPILOT" == "ardupilot" ]; then
-      LOG_GLOB="/aas/ardu_sitl_${i}/logs/*.BIN" # sim_vehicle.py runs in /aas/ardu_sitl_${i}, see simulation.yml.erb
+      LOG_GLOB="/aas/ardu_sitl_${i}/logs/*.BIN" # The SITL runs in /aas/ardu_sitl_${i}, see simulation.yml.erb
     elif [ "$AUTOPILOT" == "px4" ]; then
       LOG_GLOB="/aas/github_apps/PX4-Autopilot/build/px4_sitl_default/rootfs/$((i - 1))/log/*/*.ulg" # px4 -i is 0-based
     elif [ "$AUTOPILOT" == "betaflight" ]; then

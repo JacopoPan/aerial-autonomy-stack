@@ -103,7 +103,7 @@ COPY ground/ground_resources/ /aas/ground_resources
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
 
 # Source the workspaces
-RUN echo "source /aas/ground_ws/install/setup.bash" >> /root/.bashrc
+RUN echo "source /aas/ground_ws/install/local_setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/ground_ws/install/setup.bash
 
 # Final config
