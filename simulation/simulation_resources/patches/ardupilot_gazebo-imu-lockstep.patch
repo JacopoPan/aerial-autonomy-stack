@@ -1,22 +1,39 @@
+ArduPilotPlugin: do not deadlock lock-step before the first state
+From https://github.com/ArduPilot/ardupilot_gazebo/pull/183 (commit 74c3ace by dougamann), drop once merged upstream
+
 diff --git a/src/ArduPilotPlugin.cc b/src/ArduPilotPlugin.cc
-index 8309c37..b9fc11e 100755
+index 8309c37..7fbb167 100755
 --- a/src/ArduPilotPlugin.cc
 +++ b/src/ArduPilotPlugin.cc
-@@ -1201,6 +1201,17 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
-         if (!_info.paused && _info.simTime >
-             this->dataPtr->lastControllerUpdateTime)
+@@ -1203,8 +1203,17 @@ void gz::sim::systems::ArduPilotPlugin::PreUpdate(
          {
-+            // Wait for the first IMU message before exchanging packets with
-+            // ArduPilot: CreateStateJSON() cannot build a state without it and,
-+            // in lock-step, ArduPilot would wait forever for that first state
-+            {
-+                std::lock_guard<std::mutex> lock(this->dataPtr->imuMsgMutex);
-+                if (!this->dataPtr->imuMsgValid)
-+                {
-+                    return;
-+                }
-+            }
-+
              if (this->dataPtr->isLockStep)
              {
++                // Do not hold the step for ArduPilot until there is a state
++                // to answer it with. CreateStateJSON() produces none until
++                // the first IMU message has arrived; if the first servo
++                // packet lands before that, blocking here waits on an
++                // ArduPilot that is itself waiting on us -- it resends the
++                // same frame, the duplicate is answered with the empty
++                // state, and since PostUpdate never runs again no state is
++                // ever made: both sides wait forever.
                  while (!this->ReceiveServoPacket() &&
+-                    this->dataPtr->arduPilotOnline)
++                    this->dataPtr->arduPilotOnline &&
++                    !this->dataPtr->json_str.empty())
+                 {
+                     // SIGNINT should interrupt this loop.
+                     if (this->dataPtr->signal != 0)
+@@ -2025,6 +2034,12 @@ void gz::sim::systems::ArduPilotPlugin::CreateStateJSON(
+ /////////////////////////////////////////////////
+ void gz::sim::systems::ArduPilotPlugin::SendState() const
+ {
++    // No state yet (no IMU message received): an empty datagram is not a
++    // state, and ArduPilot reads it as nothing at all.
++    if (this->dataPtr->json_str.empty())
++    {
++        return;
++    }
+ #if DEBUG_JSON_IO
+     auto bytes_sent =
+ #endif

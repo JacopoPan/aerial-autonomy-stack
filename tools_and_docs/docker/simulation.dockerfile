@@ -66,7 +66,7 @@ RUN ln -s /home/arduuser/venv-ardupilot/bin/mavproxy.py /usr/local/bin/mavproxy.
 
 # ArduPilot Gazebo Plugin
 # Based on https://ardupilot.org/dev/docs/sitl-with-gazebo.html
-# Patched to wait for the first IMU message before the lock-step exchange (otherwise a SITL connected before Gazebo's first step deadlocks)
+# Patched with https://github.com/ArduPilot/ardupilot_gazebo/pull/183 (no lock-step deadlock when a SITL connects before Gazebo's first step), drop once merged
 COPY /_github_clones/ardupilot_gazebo /aas/github_apps/ardupilot_gazebo
 COPY simulation/simulation_resources/patches/ardupilot_gazebo-imu-lockstep.patch /aas/github_apps/ardupilot_gazebo-imu-lockstep.patch
 WORKDIR /aas/github_apps/ardupilot_gazebo
