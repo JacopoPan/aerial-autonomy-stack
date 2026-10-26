@@ -47,6 +47,8 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/Livox-SDK/Livox-SDK2.git;master;Livox-SDK2"
   "https://github.com/Livox-SDK/livox_ros_driver2.git;master;livox_ros_driver2"
   "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
+)
+ODOM_REPOS=( # Only used by the advanced-odom-true stage of aircraft.dockerfile
   "https://github.com/rpng/open_vins.git;master;open_vins"
   "https://github.com/MIT-SPARK/spark-fast-lio.git;main;spark-fast-lio"
   "https://github.com/MIT-SPARK/KISS-Matcher.git;main;KISS-Matcher"
@@ -54,6 +56,7 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/ntnu-arl/mimosa.git;dev/ros2;mimosa"
   "https://github.com/JacopoPan/rovio_ros2.git;main;rovio"
 )
+if [ "$BUILD_ADVANCED_ODOM" = "true" ]; then REPOS+=("${ODOM_REPOS[@]}"); fi
 
 for repo_info in "${REPOS[@]}"; do
   IFS=';' read -r url branch dir <<< "$repo_info" # Split the string into URL, BRANCH, and DIR
