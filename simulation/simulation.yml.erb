@@ -56,8 +56,10 @@
   camera_streams = stereo_cam ? [{name: '_left', port: 5600}, {name: '_right', port: 5601}] : [{name: '', port: 5600}]
 
   if autopilot == 'ardupilot'
+    # ArduPilot SITL --home (lat,lon,alt,heading) from the world's spherical coordinates
     world_sdf = File.read("/aas/simulation_resources/simulation_worlds/#{world}.sdf")
-    world_sdf_home = %w[latitude_deg longitude_deg elevation].map { |tag| world_sdf[/<#{tag}>([^<]*)</, 1] || '0' }.join(',') + ',0'
+    lat, lon, alt = %w[latitude_deg longitude_deg elevation].map { |tag| world_sdf[/<#{tag}>([^<]*)</, 1] || '0' }
+    world_sdf_home = "#{lat},#{lon},#{alt},0"
   end
 %>
 
@@ -126,20 +128,18 @@ windows:
     elsif autopilot == 'betaflight'
       model_name = "iris_with_betaflight_#{drone_id}"
     end
-    # One ROS-Gazebo bridge per drone for the gimbal and LiDAR
+    # One ROS-Gazebo bridge per drone for the gimbal and LiDAR, types are ROS_TYPE[GZ_TYPE (Gazebo to ROS) or ROS_TYPE]GZ_TYPE (ROS to Gazebo)
     bridges, remaps = [], []
+    add_bridge = ->(gz_topic, types, ros_topic) { bridges << "#{gz_topic}@#{types}"; remaps << "-r #{gz_topic}:=#{ros_topic}" }
     if camera
-      bridges << "/world/#{world}/model/#{model_name}/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model"
-      remaps << "-r /world/#{world}/model/#{model_name}/joint_state:=/gimbal_state"
+      add_bridge.call("/world/#{world}/model/#{model_name}/joint_state", 'sensor_msgs/msg/JointState[gz.msgs.Model', '/gimbal_state')
       %w[pitch roll yaw].each do |axis|
-        bridges << "/model/#{model_name}/gimbal_3d/#{axis}_cmd@std_msgs/msg/Float64]gz.msgs.Double"
-        remaps << "-r /model/#{model_name}/gimbal_3d/#{axis}_cmd:=gimbal_#{axis}_cmd"
+        add_bridge.call("/model/#{model_name}/gimbal_3d/#{axis}_cmd", 'std_msgs/msg/Float64]gz.msgs.Double', "gimbal_#{axis}_cmd")
       end
     end
     if lidar
-      lidar_points = "/world/#{world}/model/#{model_name}/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points"
-      bridges << "#{lidar_points}@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked"
-      remaps << "-r #{lidar_points}:=/lidar_points"
+      add_bridge.call("/world/#{world}/model/#{model_name}/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points",
+                      'sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked', '/lidar_points')
     end
   %>
   <% if autopilot == 'px4' %>
