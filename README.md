@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - [Betaflight MSP Override](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control) interface (i.e. RC sticks in ACRO, ANGLE, or ALTHOLD + POS HOLD)
-- Logs analysis with [`flight_review`](https://github.com/PX4/flight_review) (`.ulg`), MAVExplorer (`.bin`), and [PlotJuggler](https://github.com/facontidavide/PlotJuggler) (MCAP `rosbag`)
+- Logs analysis with [`plot_logs.py`](/tools_and_docs/plot_logs.py) (`.ulg`, `.bin`); SITL logs and MCAP `rosbag`s (`RECORD_ROSBAG=true`) are copied to the host at the end of each simulation
 </details>
 
 ## 1. Installation
@@ -160,10 +160,6 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > ros2 topic echo /gimbal_state
 > ros2 topic pub -1 /gimbal_pitch_cmd std_msgs/msg/Float64 "{data: 1.57}"
 > ```
-> To analyze the flight logs, in the `Simulation`'s terminal:
-> ```sh
-> /aas/simulation_resources/scripts/analyze_logs.sh                                           # Analyze the flight logs at http://10.42.90.100:5006/browse or in MAVExplorer
-> ```
 > </details>
 > <details>
 > <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s terminal <i>(click to expand)</i></summary>
@@ -227,7 +223,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
 cd aerial-autonomy-stack/tools_and_docs/
 
-./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~1.5h to build onnxruntime-gpu with TensorRT support from source
+./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~50' to build onnxruntime-gpu with TensorRT support from source
 
 # Build options:
 #  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
@@ -533,13 +529,12 @@ aerial-autonomy-stack
 - [x] [Betaflight 2026.6.2](https://github.com/betaflight/betaflight/releases)
 - [x] [Betaflight App 2026.6.2](https://github.com/betaflight/betaflight-configurator/releases)
 - [x] [Ultralytics 8.4/YOLO26](https://github.com/ultralytics/ultralytics/releases)
-- [x] [ONNX Runtime 1.30.0](https://github.com/microsoft/onnxruntime/releases)
+- [x] [ONNX Runtime 1.31.0](https://github.com/microsoft/onnxruntime/releases)
 
 External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`PX4/PX4-Autopilot`](https://github.com/PX4/PX4-Autopilot) tag/branch: `v1.17.0`
 - [`PX4/px4_msgs`](https://github.com/PX4/px4_msgs) tag/branch: `release/1.17`
 - [`Auterion/px4-ros2-interface-lib`](https://github.com/Auterion/px4-ros2-interface-lib) tag/branch: `release/1.17`
-- [`PX4/flight_review`](https://github.com/PX4/flight_review) tag/branch: `main`
 - [`ArduPilot/ardupilot`](https://github.com/ArduPilot/ardupilot) tag/branch: `Copter-4.6.3`
 - [`ArduPilot/ardupilot_gazebo`](https://github.com/ArduPilot/ardupilot_gazebo) tag/branch: `main`
 - [`betaflight/betaflight`](https://github.com/betaflight/betaflight) tag/branch: `2026.6.2`
@@ -549,7 +544,7 @@ External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
 - [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
-- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.30.0`
+- [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.31.0`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
 </details>

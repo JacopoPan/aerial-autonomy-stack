@@ -1,7 +1,7 @@
 require 'yaml'
 require 'erb'
 
-# This script automatically generates the SDF files for all vehicles based on the content of sensor_config.yaml
+# This script generates the sensor SDFs and the SDFs of the vehicles given as arguments (all if none) based on the content of sensor_config.yaml
 
 MODELS_DIR = '/aas/simulation_resources/aircraft_models'
 
@@ -30,6 +30,8 @@ render_and_save('sensor_lidar/model.sdf.erb', 'sensor_lidar/model.sdf', binding)
 
 # Generate aircraft SDFs
 config['aircraft_models'].each do |model_name, extrinsics|
+  # Skip the vehicles not given as arguments (simulation.yml.erb passes the ones in use), without arguments generate them all
+  next unless ARGV.empty? || ARGV.include?(model_name)
   camera_ext = extrinsics['camera_extrinsics']
   lidar_ext  = extrinsics['lidar_extrinsics']
   

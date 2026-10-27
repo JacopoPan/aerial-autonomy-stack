@@ -20,6 +20,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Ubuntu 24 blocks system-wide pip installs by default, --break-system-packages allows global pip installs
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
+# Keep pip's download cache (used in PX4's and ArduPilot's setup scripts) out of the image layers, as with --no-cache-dir
+ENV PIP_NO_CACHE_DIR=1
+
+# Keep ccache (used by PX4's CMake and Betaflight's Makefile in simulation-image) out of the image layers
+ENV CCACHE_DISABLE=1
+
 # Install general use tools
 RUN apt update \
     && apt install -y --no-install-recommends \
@@ -133,9 +139,13 @@ RUN apt update \
 
 # Install YOLO and ONNX in virtual environment /yolo-env/
 # See https://github.com/ultralytics/ultralytics/blob/main/README.md and https://onnxruntime.ai/getting-started
+# --extra-index-url installs PyTorch's CPU-only build (pip prefers its +cpu versions to PyPI's CUDA build, which adds ~5GB)
+# The CPU build is enough for the ONNX export of yolo26n.pt; to install GPU PyTorch in the container, drop --extra-index-url
 RUN python3 -m venv /yolo-env \
     && /yolo-env/bin/pip3 install --no-cache-dir --upgrade pip && \
-    /yolo-env/bin/pip3 install --no-cache-dir --retries 5 ultralytics onnx
+    /yolo-env/bin/pip3 install --no-cache-dir --retries 5 \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    ultralytics onnx
 # Check YOLO with $ /yolo-env/bin/python3 -c "import ultralytics; print(ultralytics.__version__)"
 # NOTE: the venv avoids shadowing the system Python's OpenCV (with GStreamer support) with a newer one without GStreamer support
 # Check with $ python3 -c "import cv2; print(cv2.getBuildInformation())"
@@ -157,9 +167,12 @@ RUN pip3 install --no-cache-dir --retries 5 onnxruntime-gpu
 FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm64
 # Build ONNX Runtime from source with Jetson (TensorRT) support for system Python
 # Based on https://onnxruntime.ai/docs/build/eps.html#nvidia-jetson-tx1tx2nanoxavierorin
-# CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, see: https://developer.nvidia.com/cuda-gpus)
-# Use CMAKE_CUDA_ARCHITECTURES=native if running within the container
-# WARNING: this step takes ~1.5h, increase the /swapfile size to avoid out-of-memory process kills
+# CMAKE_CUDA_ARCHITECTURES=87 (Compute Capability 8.7, i.e., Jetson Orin, see: https://developer.nvidia.com/cuda-gpus)
+# CMAKE_CUDA_ARCHITECTURES=native detects the GPU instead, but only works when building inside a container with GPU access
+# --enable_cuda_minimal_build keeps only the CUDA provider's memory-copy kernels, which is all the TensorRT provider/yolo_py use
+# Remove --enable_cuda_minimal_build to enable providers=["CUDAExecutionProvider"], at the cost of a much longer build
+# NOTE: onnxruntime_USE_FPA_INTB_GEMM=OFF works around a v1.31.0 bug with --enable_cuda_minimal_build (fixed in https://github.com/microsoft/onnxruntime/pull/33313)
+# WARNING: this step takes ~50', increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
     apt install -y --no-install-recommends \
@@ -167,12 +180,13 @@ RUN apt update && \
         libpython3.12-dev python3-pip python3-dev python3-setuptools python3-wheel && \
     cd /aas/github_apps/onnxruntime/ && \
     CUDACXX="/usr/local/cuda/bin/nvcc" ./build.sh --config Release --update --build --parallel --build_wheel \
-        --use_tensorrt --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
+        --use_tensorrt --enable_cuda_minimal_build --cuda_home /usr/local/cuda --cudnn_home /usr/lib/aarch64-linux-gnu \
         --tensorrt_home /usr/lib/aarch64-linux-gnu \
         --skip_tests --cmake_extra_defines 'CMAKE_CUDA_ARCHITECTURES=87' \
         'onnxruntime_BUILD_UNIT_TESTS=OFF' \
         'onnxruntime_USE_FLASH_ATTENTION=OFF' \
         'onnxruntime_USE_MEMORY_EFFICIENT_ATTENTION=OFF' \
+        'onnxruntime_USE_FPA_INTB_GEMM=OFF' \
         --allow_running_as_root && \
     cd /aas/github_apps/onnxruntime/build/Linux/Release/dist && \
     pip3 install onnxruntime_gpu-*-linux_aarch64.whl && \
@@ -390,12 +404,12 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 ################################################################################
 FROM advanced-odom-${BUILD_ADVANCED_ODOM} AS ros2-px4msgs-dds-mavros-yolo-ort-odom-analysis-models-image
 
-# Add pymavlink and PlotJuggler for debugging, testing, and analysis
+# Add pymavlink for debugging and MAVROS's Python tools
 RUN pip3 install --no-cache-dir --retries 5 pymavlink pyserial
 # Check with $ python3 -c "import pymavlink; print(pymavlink.__version__)"
+# Add the MCAP storage plugin for the rosbags
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ros-jazzy-plotjuggler \
-    ros-jazzy-plotjuggler-ros ros-jazzy-rosbag2-storage-mcap \
+    apt-get install -y --no-install-recommends ros-jazzy-rosbag2-storage-mcap \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -450,10 +464,10 @@ RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/c
 # Copy sensor configuration
 COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
-# Source the workspaces
-RUN echo "source /aas/github_ws/install/setup.bash" >> /root/.bashrc \
-    && echo "source /aas/mimosa_custom_gtsam_ws/install/setup.bash" >> /root/.bashrc \
-    && echo "source /aas/aircraft_ws/install/setup.bash" >> /root/.bashrc
+# Source the workspaces (mimosa_custom_gtsam_ws first, as github_ws builds rovio on it, and only if BUILD_ADVANCED_ODOM=true)
+RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \
+    && echo "source /aas/github_ws/install/local_setup.bash" >> /root/.bashrc \
+    && echo "source /aas/aircraft_ws/install/local_setup.bash" >> /root/.bashrc
 # If needed (but already in .bashrc) $ source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && source /aas/aircraft_ws/install/setup.bash
 
 # Final config
