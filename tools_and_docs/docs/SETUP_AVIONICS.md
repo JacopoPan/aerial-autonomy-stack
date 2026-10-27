@@ -171,7 +171,7 @@ docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/P
 ```
 
 ```sh
-# Build PX4 for Pixhawk 6X (saved in the ~/Downloads folder) with Ubuntu's newer arm-none-eabi GCC (in /usr/bin)
+# Build PX4 for Pixhawk 6X (saved in the ~/Downloads folder) with Ubuntu's newer arm-none-eabi GCC 13 (in /usr/bin)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/PX4-Autopilot && export PATH=/usr/bin:\$PATH && \
   make px4_fmu-v6x_default && cp build/px4_fmu-v6x_default/*.px4 /temp/"
@@ -185,14 +185,14 @@ docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/a
 ```
 
 ```sh
-# Build ArduCopter (quads) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC (in /opt)
+# Build ArduCopter (quads) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC 10 (in /opt)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/ardupilot && export PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:\$PATH && \
   ./waf configure --board Pixhawk6X && ./waf copter && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
 ```sh
-# Build ArduPlane (VTOLs) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC (in /opt)
+# Build ArduPlane (VTOLs) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC 10 (in /opt)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
   "cd /aas/github_apps/ardupilot && export PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:\$PATH && \
   ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
