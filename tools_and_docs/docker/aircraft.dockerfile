@@ -171,7 +171,7 @@ FROM ros2-px4msgs-dds-mavros-yolo-image AS image-with-hardware-specific-ort_arm6
 # CMAKE_CUDA_ARCHITECTURES=native detects the GPU instead, but only works when building inside a container with GPU access
 # --enable_cuda_minimal_build keeps only the CUDA provider's memory-copy kernels, which is all the TensorRT provider/yolo_py use
 # Remove --enable_cuda_minimal_build to enable providers=["CUDAExecutionProvider"], at the cost of a much longer build
-# NOTE: onnxruntime_USE_FPA_INTB_GEMM=OFF works around a v1.31.0 bug with --enable_cuda_minimal_build (fixed in https://github.com/microsoft/onnxruntime/pull/33313)
+# NOTE: onnxruntime_USE_FPA_INTB_GEMM=OFF works around a v1.31.1 bug with --enable_cuda_minimal_build (fixed in https://github.com/microsoft/onnxruntime/pull/33313)
 # WARNING: this step takes ~50', increase the /swapfile size to avoid out-of-memory process kills
 COPY /_github_clones/onnxruntime /aas/github_apps/onnxruntime
 RUN apt update && \
