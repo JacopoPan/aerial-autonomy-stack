@@ -1,6 +1,6 @@
 # aerial-autonomy-stack
 
-*Aerial autonomy stack* (AAS) is a "batteries included", flight-proven, open software and the simplest/fastest way to:
+*Aerial autonomy stack* (AAS) is a "batteries included", flight-proven, open software and the simplest way to:
 
 1. **Develop** multi-drone autonomy—with PX4, ArduPilot, Betaflight, and ROS2
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
@@ -368,7 +368,8 @@ flowchart TB
             mlrouter{{mavlink_router}}:::bridge
             ground_system(ground_system):::algo
             dtc_controller(dtc_controller):::algo
-            qgc("QGroundControl#nbsp;||#nbsp;Betaflight#nbsp;App"):::resource
+            qgc(QGroundControl):::resource
+            bf_app("Betaflight#nbsp;App"):::resource
             zenoh_gnd{{zenoh_bridge}}:::bridge
 
             ground_system --> |"/tracks"| zenoh_gnd
@@ -415,15 +416,16 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz --> |"/lidar_points <br/> [SIM_SUBNET]"| lidar_split
+    gz --> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
     lidar_split --> kiss_icp
     lidar_split --> livo_pkgs
-    gz --> |"gz_gst_bridge <br/> [SIM_SUBNET]"| camera_split
+    gz --> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
     camera_split --> livo_pkgs
     camera_split -->  yolo_py
-    sitl <--> |"UDP || TCP [SIM_SUBNET]"| ap_link
-    sitl <--> |"MAVLink [SIM_SUBNET]"| mlrouter
-    zenoh_gnd <-.-> |"TCP <br/> [AIR_SUBNET]"| zenoh_air
+    sitl <--> |"XRCE-DDS/UDP || MAVLink/UDP <br/> || MSP/TCP [SIM_SUBNET]"| ap_link
+    sitl <--> |"MAVLink/UDP [SIM_SUBNET]"| mlrouter
+    sitl <--> |"MSP/TCP [SIM_SUBNET]"| bf_app
+    zenoh_gnd <-.-> |"Zenoh/TCP <br/> [AIR_SUBNET]"| zenoh_air
 
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
     classDef algo fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
@@ -432,7 +434,7 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    linkStyle 22,23,24,25,26,27,28,29 stroke:teal,stroke-width:3px; linkStyle 30 stroke:blue,stroke-width:4px;
+    linkStyle 22,23,24,25,26,27,28,29,30 stroke:teal,stroke-width:3px; linkStyle 31 stroke:blue,stroke-width:4px;
 ```
 
 <details>
