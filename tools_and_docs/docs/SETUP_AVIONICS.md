@@ -414,7 +414,7 @@ groups                              # Check 'dialout' is in the list otherwise r
 sudo apt install -y picocom         # Install picocom
 ```
 
-For the [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w), set `NETID` to use multiple pairs in point-to-point configuration simultaneously
+For the [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w), set `NETID` to use multiple pairs in **point-to-point configuration** simultaneously
 
 ```sh
 ls /dev/ttyUSB*                     # List devices
@@ -454,7 +454,7 @@ ATO                                 # Press Enter, exits Command Mode/returns to
 # - S4:TXPOWER - set to 30 for 1W if supported/allowed
 ```
 
-For the [Holybro Microhard V2 P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2), use the point-to-multipoint configuration
+For the [Holybro Microhard V2 P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2), use the **point-to-multipoint** configuration
 
 ```sh
 ls /dev/ttyUSB*                     # List devices
@@ -518,26 +518,49 @@ ATS105=3                            # Press Enter, set the unit address, MUST be
 
 ## Doodle Labs Configuration
 
-- Connect and login to the radio's address: https://10.223.xx.xx
-- On the "Simple Configuration" page:
-```sh
-# Note that option names often vary across firmware versions
+For models `DoodleLabs SmartRadio MB-1700v4-1L-X` / `DoodleLabs SmartRadio MB-0004v4-1L-X` on firmware `Mesh Rider firmware-2026-03.1`
 
-Select Profiles                        General
-Active Frequency Band                  [pick]
-Select Scenario                        Mesh on radio0
+- Connect and login (default or set password) to the radio's address: https://10.223.xx.xx
+- On the "Setup Wizard" page:
+```sh
+Profile                                General
+Active Frequency Band                  2455v4 MHz
+Select Scenario                        Mesh
 Mesh ID                                [pick]
-...
-Channel                                [pick]
-Bandwidth                              [pick]
-...
-Optimize for Latency                   [uncheck]
-TCP                                    [check]
-Aggressive TCP                         [uncheck]
-Use VLAN for internal messaging        [uncheck]
-Add ETH1 to br-wan                     [check]
-...
+Wireless Password                      [pick]
+Channel                                101 (2500Mhz)
+Bandwidth                              10Mhz
+Operating Distance (m)                 [pick]
+Number of Devices                      [pick]
+Additional Static IPv4 on BR-WAN       [none]
+Additional Static IPv4 netmask         [none]
+DHCP on BR-WAN                         Client enabled
 Enable Automatic C&C Queue Detection   [uncheck]
+```
+- On the "Link Optimization" -> "Traffic Prioritization" page, add 3 rules:
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                TCP
+Port(s)                                 7447
+DSCP                                    Voice, Command & Control (CS6)
+Comment                                 Zenoh
+```
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                UDP
+Port(s)                                 7446
+DSCP                                    Voice, Command & Control (CS6)
+Comment                                 Zenoh
+```
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                TCP
+Port(s)                                 22
+DSCP                                    Video (CS5)
+Comment                                 SSH
 ```
 
 <!--
