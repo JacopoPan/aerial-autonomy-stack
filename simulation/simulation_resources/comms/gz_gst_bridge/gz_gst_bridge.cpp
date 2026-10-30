@@ -87,22 +87,27 @@ int main(int argc, char **argv) {
     gz::transport::Node node;
 
     // Build Pipeline String
+    // Encode with H.264 rather than using rtpvrawpay so that yolo_py reads width/height from the stream (sensor_config.yaml changes need no edit)
+    // The raw pipeline also needs a larger buffer-size in yolo_py and uses too much bandwidth for HITL
+    // raw_pipeline_str = "appsrc name=gz_source ! queue max-size-buffers=1 leaky=downstream ! rtpvrawpay mtu=64000 ! udpsink sync=false " + ip_port;
     std::string pipeline_str;
     std::string ip_port = "host=" + TARGET_IP + " port=" + std::to_string(TARGET_PORT);
     if (check_nvidia_encoder()) {
-        std::cout << "Using NVIDIA GPU Encoder (nvh264enc)\n";
+        std::cout << "Using NVIDIA GPU Encoder (nvcudah264enc)\n";
         pipeline_str = "appsrc name=gz_source ! queue max-size-buffers=1 leaky=downstream ! "
                         "videoconvert ! "
-                        "nvcudah264enc preset=p3 tune=low-latency rate-control=cbr bitrate=2048 gop-size=30 ! "
+                        "nvcudah264enc preset=p3 tune=low-latency rate-control=cbr bitrate=2048 gop-size=" + std::to_string(2 * FRAMERATE) + " ! "
                         "rtph264pay config-interval=1 mtu=1400 ! udpsink sync=false " + ip_port;
+        // Note: once GStreamer >= 1.26 (Ubuntu 26.04 has 1.28, 24.04 has 1.24): replace "videoconvert ! " with "videoconvert ! video/x-raw, format=RGBx ! "
+        // The CPU then only pads RGB to RGBx and nvcudah264enc converts to YUV on the GPU
     } else {
         std::cout << "Using CPU Encoder (x264enc)\n";
         pipeline_str = "appsrc name=gz_source ! queue max-size-buffers=1 leaky=downstream ! "
                         "videoconvert ! "
-                        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=30 ! "
+                        "x264enc speed-preset=ultrafast tune=zerolatency bitrate=2048 key-int-max=" + std::to_string(2 * FRAMERATE) + " ! "
                         "rtph264pay config-interval=1 mtu=1400 ! udpsink sync=false " + ip_port;
     }
-    // Note: re-send full frame every 30 frames
+    // Note: re-send full frame every 2 seconds
 
     // Launch Pipeline
     GError *error = nullptr;
