@@ -1,0 +1,10 @@
+<CycloneDDS xmlns="https://cdds.io/config">
+  <Domain>
+    <General>
+      <Interfaces>
+        <!-- Zenoh bridge: loopback only; its DDS side only talks to the ROS2 nodes on this host, Zenoh carries the topics between hosts -->
+        <NetworkInterface address="127.0.0.1" multicast="true"/>
+      </Interfaces>
+    </General>
+  </Domain>
+</CycloneDDS>

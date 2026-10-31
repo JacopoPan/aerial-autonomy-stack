@@ -110,8 +110,9 @@ windows:
         autostart = 5142
         model_name = "quadtailsitter_#{sitl_instance}"
       end
-      # Env var parameter injection (using prefix PX4_PARAM_*) of https://docs.px4.io/v1.17/en/advanced_config/parameter_reference#UXRCE_DDS_AG_IP
-      signed_32bit_ip = "#{sim_subnet}.90.#{drone_id}".split('.').map(&:to_i).pack('C*').unpack1('l>')
+      # PX4 parameters, injected below as PX4_PARAM_<name> env vars (https://docs.px4.io/v1.17/en/advanced_config/parameter_reference)
+      uxrce_dds_ag_ip = "#{sim_subnet}.90.#{drone_id}".split('.').map(&:to_i).pack('C*').unpack1('l>') # Agent IP as a signed 32-bit integer
+      uxrce_dds_ptcfg = 2 # Custom participant, defined in the aircraft container to keep DDS off the radio
     elsif autopilot == 'ardupilot'
       ap_params = '/aas/github_apps/ardupilot/Tools/autotest'
       case drone_type
@@ -150,7 +151,7 @@ windows:
           sleep <%= sitl_instance * 0.5 %> &&
           PX4_GZ_STANDALONE=1 PX4_GZ_WORLD=<%= world %> PX4_GZ_MODEL_NAME=<%= model_name %>
           PX4_SYS_AUTOSTART=<%= autostart %> ROS_DOMAIN_ID=<%= drone_id %> <%= gnd_container ? "AAS_GROUND_IP=#{sim_subnet}.90.#{ground_id}" : "" %>
-          PX4_UXRCE_DDS_NS="Drone<%= drone_id %>" PX4_PARAM_UXRCE_DDS_AG_IP=<%= signed_32bit_ip %> PX4_UXRCE_DDS_PORT=8888
+          PX4_UXRCE_DDS_NS="Drone<%= drone_id %>" PX4_PARAM_UXRCE_DDS_AG_IP=<%= uxrce_dds_ag_ip %> PX4_PARAM_UXRCE_DDS_PTCFG=<%= uxrce_dds_ptcfg %> PX4_UXRCE_DDS_PORT=8888
           /aas/github_apps/PX4-Autopilot/build/px4_sitl_default/bin/px4 -i <%= sitl_instance %>
   <% elsif autopilot == 'ardupilot' %>
   - ardu_sitl_<%= drone_id %>:

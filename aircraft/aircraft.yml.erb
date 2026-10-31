@@ -42,6 +42,13 @@
 
 name: drone
 
+# Keep DDS off AIR_SUBNET: topics cross it only through the Zenoh bridge
+on_project_start:
+  - erb /aas/aircraft_resources/comms/fastdds_profile.xml.erb > /aas/aircraft_resources/comms/fastdds_profile.xml # Fills in this container's AIR_SUBNET/mesh radio address
+  - export FASTRTPS_DEFAULT_PROFILES_FILE=/aas/aircraft_resources/comms/fastdds_profile.xml # ROS2 (Jazzy, FastDDS 2.14)
+  - export FASTDDS_DEFAULT_PROFILES_FILE=/aas/aircraft_resources/comms/fastdds_profile.xml # MicroXRCEAgent (master branch, FastDDS 3), px4_participant for UXRCE_DDS_PTCFG=2
+  - export CYCLONEDDS_URI=file:///aas/aircraft_resources/comms/cyclonedds.xml # zenoh-bridge-ros2dds (Eclipse apt repo, CycloneDDS)
+
 windows:
 
   - ap_interface:

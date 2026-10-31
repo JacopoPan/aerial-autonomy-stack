@@ -180,7 +180,7 @@ if [[ "$HITL" == "false" ]]; then
       --env VTOL_IDS=$(seq -s, $((NUM_QUADS + 1)) $((NUM_QUADS + NUM_VTOLS))) \
       --env TAIL_IDS=$(seq -s, $((NUM_QUADS + NUM_VTOLS + 1)) $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))) \
       --env SIMULATED_TIME=true \
-      --env ROS_DOMAIN_ID=$GROUND_ID \
+      --env ROS_DOMAIN_ID=$GROUND_ID --env AIR_SUBNET=$AIR_SUBNET \
       --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
       --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.${GROUND_ID} \
       --privileged \

@@ -257,6 +257,7 @@ ifconfig
 # Set vehicle/MAV_SYS_ID (for multiple QGC connections) and UXRCE_DDS_DOM_ID/ROS_DOMAIN_ID
 param set MAV_SYS_ID 1
 param set UXRCE_DDS_DOM_ID 1
+param set UXRCE_DDS_PTCFG 2         # Use the custom "px4_participant" (set in the aircraft container's fastdds_profile.xml) to keep DDS off radios
 
 # Optionally
 param set MAV_2_CONFIG 0            # Disable MAVLINK on Ethernet (so Ethernet is used for XRCE-DDS only), if needed, also check params MAV_0_CONFIG, MAV_1_CONFIG

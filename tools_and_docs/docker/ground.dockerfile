@@ -101,6 +101,8 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/
 # Copy resources and configuration files from this repository
 COPY ground/ground_resources/ /aas/ground_resources
 COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
+# DDS interface configuration shared with the aircraft image
+COPY aircraft/aircraft_resources/comms/fastdds_profile.xml.erb aircraft/aircraft_resources/comms/cyclonedds.xml /aas/ground_resources/comms/
 
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/local_setup.bash" >> /root/.bashrc

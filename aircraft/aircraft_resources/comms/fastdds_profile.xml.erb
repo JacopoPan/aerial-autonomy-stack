@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dds xmlns="http://www.eprosima.com/XMLSchemas/fastRTPS_Profiles">
+  <profiles>
+    <transport_descriptors>
+      <transport_descriptor>
+        <transport_id>udp</transport_id>
+        <type>UDPv4</type>
+        <!-- All interfaces except the mesh radios (AIR_SUBNET): in SITL/HITL the SIM_SUBNET still carries /clock and /lidar_points -->
+        <interfaces>
+          <blocklist>
+            <interface name="<%= ENV.fetch('AIR_SUBNET', '10.22') %>.90.<%= ENV.fetch('ROS_DOMAIN_ID') %>"/>
+          </blocklist>
+        </interfaces>
+      </transport_descriptor>
+      <transport_descriptor>
+        <transport_id>shm</transport_id>
+        <type>SHM</type>
+      </transport_descriptor>
+    </transport_descriptors>
+    <!-- ROS2 nodes, used by default: UDP without the radio, plus shared memory as in ROS2's default -->
+    <participant profile_name="aas" is_default_profile="true">
+      <rtps>
+        <userTransports>
+          <transport_id>udp</transport_id>
+          <transport_id>shm</transport_id>
+        </userTransports>
+        <useBuiltinTransports>false</useBuiltinTransports>
+      </rtps>
+    </participant>
+    <!-- PX4's custom participant via MicroXRCEAgent (with UXRCE_DDS_PTCFG=2): UDP only (no SHM), like the agent's default build -->
+    <participant profile_name="px4_participant">
+      <rtps>
+        <userTransports>
+          <transport_id>udp</transport_id>
+        </userTransports>
+        <useBuiltinTransports>false</useBuiltinTransports>
+      </rtps>
+    </participant>
+  </profiles>
+</dds>
