@@ -107,13 +107,13 @@ RUN apt-get update && \
     ros-jazzy-mavros ros-jazzy-mavros-extras ros-jazzy-mavros-msgs \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
-# Re-try install_geographiclib_datasets.sh if egm96-5.pgm was not downloaded (timeout is ~10x the time needed on a healthy link)
+# GeoidEval prints the geoid height at a lat/lon with egm96-5, its default model/the one MAVROS loads; it fails if the download is missing/truncated
 RUN for i in 1 2 3; do \
         rm -f /usr/share/GeographicLib/geoids/egm96-5*; \
         timeout 180 /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh; \
-        test -r /usr/share/GeographicLib/geoids/egm96-5.pgm && break; \
+        GeoidEval --input-string "45.5477 8.9389" && break; \
         sleep 5; \
-    done && test -r /usr/share/GeographicLib/geoids/egm96-5.pgm
+    done && GeoidEval --input-string "45.5477 8.9389"
 # Run with $ ros2 launch mavros apm.launch fcu_url:=[URI]
 
 ################################################################################

@@ -55,8 +55,8 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_e
     rng_.seed(std::random_device()());
 
     // Publishers
-    tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", 10);
-    telemetry_tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", 10);
+    tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", rclcpp::SensorDataQoS()); // Best effort: over the radio, the Zenoh bridge drops stale tracks instead of queuing them
+    telemetry_tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", 10); // Reliable: external subscribers may be reliable or best effort, a best-effort publisher would not reach reliable ones
 
     // Subscribers
     external_tracks_sub_ = this->create_subscription<ground_system_msgs::msg::SwarmObs>("/external_tracks", rclcpp::SensorDataQoS(),

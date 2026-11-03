@@ -27,7 +27,7 @@ public:
             RCLCPP_INFO(this->get_logger(), "Simulation time is disabled.");
         }
 
-        publisher_ = this->create_publisher<state_sharing::msg::SharedState>("/state_sharing_drone_" + std::to_string(drone_id_), 10);
+        publisher_ = this->create_publisher<state_sharing::msg::SharedState>("/state_sharing_drone_" + std::to_string(drone_id_), rclcpp::SensorDataQoS());
 
         callback_group_timer_ = this->create_callback_group(rclcpp::CallbackGroupType::Reentrant); // Timed callbacks in parallel
         timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::seconds(1), std::bind(&StateSharingNode::publish_timer_callback, this), callback_group_timer_);
