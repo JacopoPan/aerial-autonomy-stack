@@ -1,6 +1,6 @@
 # Rationale
 
-This project aims to speed up the ideation-development-simulation-deployment cycle of PX4/ArduPilot-based applications.
+This project aims to speed up the ideation-development-simulation-deployment cycle of PX4/ArduPilot/Betaflight-based applications.
 
 ## The Many Facets of the Sim2real Gap
 
@@ -17,21 +17,23 @@ This is the challenge—and good sport—of **vertical/full-stack integration** 
 ## Design Manifesto
 
 - **Simplicity** (["simple is better than complex"](https://peps.python.org/pep-0020/), ["worse is better"](https://www.dreamsongs.com/RiseOfWorseIsBetter.html), and ["no fat software"](https://people.inf.ethz.ch/wirth/Articles/LeanSoftware.pdf) are the 3 slogans of the AAS)
-- [おまかせ](https://dhh.dk/2012/rails-is-omakase.html) **end-to-end**ness (from camera frames, to autopilot uORB/MAVLink commands)
+- [おまかせ](https://dhh.dk/2012/rails-is-omakase.html) **end-to-end**ness (from camera frames, to autopilot uORB/MAVLink/MSP commands)
 - **Recentness** (break and fix, rather than carrying technical [debt](https://c2.com/doc/oopsla92.html))
 - **Deployment** focus
     - Clear, Dockerized split between aircraft, ground, and simulation software
     - ROS2 intra-companion board messaging
-    - XRCE-DDS (PX4), MAVROS (ArduPilot) autopilot-to-companion board ROS2 bridge
+    - XRCE-DDS (PX4), MAVROS (ArduPilot), MSP (Betaflight) autopilot-to-companion board ROS2 bridge
     - GStreamer camera-to-companion board acquisition pipelines
     - Zenoh inter-vehicle ROS2 bridge, with networking over LAN (HITL) or emulated by `docker network` (SITL)
     - Dual network—in both SITL and HITL—to separate synthetic sensor data from inter-vehicle communication
 
 ## Presentations and Papers
 
-- Open Robotics Aerial Robotics Meeting: ["On the System Design Reality Gap"](https://docs.google.com/presentation/d/1Sz0d7WPWNwgCM3Q49Nnq1mvkSwPyK_CCQ7viHxO_Ucs) (January 22, 2026)
-- Paper: ["aerial-autonomy-stack—a Faster-than-real-time, Autopilot-agnostic, ROS2 Framework to Simulate and Deploy Perception-based Drones"](https://arxiv.org/abs/2602.07264) (2026) International Conference on Unmanned Aircraft Systems (ICUAS), Corfu, Greece
-- Slides: [`aerial-autonomy-stack`](https://www.dropbox.com/scl/fi/2gzki29sqrd67k3g0ctbz/icuas2026.pptx?rlkey=chflf9twnk1n6dptfx2huxa7o&st=kglsygkk&dl=0) in ICUAS 2026 regular session on "UAS Testbeds" (June 17, 2026)
+- Open Robotics Aerial Robotics Meeting: ["On the System Design Reality Gap"](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/22-01-2026-aerial-robotics-meeting.pdf) (Online, January 22, 2026)
+- Conference Paper: ["aerial-autonomy-stack—a Faster-than-real-time, Autopilot-agnostic, ROS2 Framework to Simulate and Deploy Perception-based Drones"](https://arxiv.org/abs/2602.07264) (2026) International Conference on Unmanned Aircraft Systems (ICUAS), Corfu, Greece
+  - Slides: [`aerial-autonomy-stack`](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/17-06-2026-icuas.pdf) in ICUAS 2026 regular session on "UAS Testbeds" (June 17, 2026)
+- [ROSCon Global 2026 Lightning Talk](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/24-09-2026-roscon.pdf) (Toronto, ON, Canada, September 24, 2026)
+- [ArduPilot Developer Conference 2026](https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v0.1.0/25-10-2026-ardupilot-developer-conference.pdf) (Ottawa, ON, Canada, October 25, 2026)
 
 ## Related Work
 

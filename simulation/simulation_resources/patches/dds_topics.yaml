@@ -5,10 +5,16 @@
 #####
 publications:
 
-  - topic: /fmu/out/register_ext_component_reply
+  # The in-line comments are the native uORB rates on PX4 1.17, as "SITL / hardware", where they differ (check with uorb top in QGC's MAVLink Console)
+  # sensor_combined runs at the IMU rate: 250 Hz in SITL (Gazebo IMU update_rate), IMU_INTEG_RATE (default: 200 Hz) on hardware; the EKF2 topics every EKF2_PREDICT_US (10 ms), in whole IMU samples
+
+  # rate_limit (Hz) is set on topics that can exceed 100 Hz
+  # PX4's default cap is 100 Hz in 1.17 ("#define UXRCE_DEFAULT_POLL_INTERVAL_MS 10" in "dds_topics.h.em"), raised to 250 Hz in 1.18
+
+  - topic: /fmu/out/register_ext_component_reply # on each px4_ros2_lib mode registration
     type: px4_msgs::msg::RegisterExtComponentReply
 
-  - topic: /fmu/out/arming_check_request
+  - topic: /fmu/out/arming_check_request # every 300 ms while px4_ros2_lib modes are registered (PX4 polls their arming checks)
     type: px4_msgs::msg::ArmingCheckRequest
 
   # - topic: /fmu/out/mode_completed
@@ -29,14 +35,15 @@ publications:
   # - topic: /fmu/out/manual_control_setpoint
   #   type: px4_msgs::msg::ManualControlSetpoint
 
-  - topic: /fmu/out/message_format_response
+  - topic: /fmu/out/message_format_response # on each request (px4_ros2_lib message check at mode registration)
     type: px4_msgs::msg::MessageFormatResponse
 
   # - topic: /fmu/out/position_setpoint_triplet
   #   type: px4_msgs::msg::PositionSetpointTriplet
 
-  - topic: /fmu/out/sensor_combined
+  - topic: /fmu/out/sensor_combined # 250 / 200 Hz, IMU rate
     type: px4_msgs::msg::SensorCombined
+    rate_limit: 100.
 
   # - topic: /fmu/out/timesync_status
   #   type: px4_msgs::msg::TimesyncStatus
@@ -53,25 +60,28 @@ publications:
   # - topic: /fmu/out/vehicle_control_mode
   #   type: px4_msgs::msg::VehicleControlMode
 
-  - topic: /fmu/out/vehicle_command_ack
+  - topic: /fmu/out/vehicle_command_ack # on each handled command
     type: px4_msgs::msg::VehicleCommandAck
 
-  - topic: /fmu/out/vehicle_global_position
+  - topic: /fmu/out/vehicle_global_position # 125 / 100 Hz, EKF2
     type: px4_msgs::msg::VehicleGlobalPosition
+    rate_limit: 100.
 
   # - topic: /fmu/out/vehicle_gps_position
   #   type: px4_msgs::msg::SensorGps
 
-  - topic: /fmu/out/vehicle_local_position
+  - topic: /fmu/out/vehicle_local_position # 125 / 100 Hz, EKF2
     type: px4_msgs::msg::VehicleLocalPosition
+    rate_limit: 100.
 
-  - topic: /fmu/out/vehicle_odometry
+  - topic: /fmu/out/vehicle_odometry # 125 / 100 Hz, EKF2
     type: px4_msgs::msg::VehicleOdometry
+    rate_limit: 100.
 
-  - topic: /fmu/out/vehicle_status
+  - topic: /fmu/out/vehicle_status # 2 Hz, and on each change
     type: px4_msgs::msg::VehicleStatus
 
-  - topic: /fmu/out/airspeed_validated
+  - topic: /fmu/out/airspeed_validated # 10 Hz, fixed-wing and VTOL only
     type: px4_msgs::msg::AirspeedValidated
 
   # - topic: /fmu/out/vtol_vehicle_status

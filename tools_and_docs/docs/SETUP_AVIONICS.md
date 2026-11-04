@@ -161,7 +161,7 @@ AIR_SUBNET                          # Deployment as well as (optionally) for har
   netmask  255.255.0.0
 ```
 
-## Build and Flash PX4 or ArduPilot Firmware
+## Build and Flash PX4, ArduPilot, or Betaflight Firmware
 
 Build the PX4 firmware in `simulation-image` for Pixhawk 6X
 
@@ -171,9 +171,10 @@ docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/P
 ```
 
 ```sh
-# Build PX4 for Pixhawk 6X (saved in the ~/Downloads folder)
+# Build PX4 for Pixhawk 6X (saved in the ~/Downloads folder) with Ubuntu's newer arm-none-eabi GCC 13 (in /usr/bin)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
-  "cd /aas/github_apps/PX4-Autopilot && make px4_fmu-v6x_default && cp build/px4_fmu-v6x_default/*.px4 /temp/"
+  "cd /aas/github_apps/PX4-Autopilot && export PATH=/usr/bin:\$PATH && \
+  make px4_fmu-v6x_default && cp build/px4_fmu-v6x_default/*.px4 /temp/"
 ```
 
 Build the ArduPilot firmware in `simulation-image` for Pixhawk 6X
@@ -184,18 +185,34 @@ docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/a
 ```
 
 ```sh
-# Build ArduCopter (quads) for Pixhawk 6X (saved in the ~/Downloads folder)
+# Build ArduCopter (quads) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC 10 (in /opt)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
-  "cd /aas/github_apps/ardupilot && ./waf configure --board Pixhawk6X && ./waf copter && cp build/Pixhawk6X/bin/*.apj /temp/"
+  "cd /aas/github_apps/ardupilot && export PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:\$PATH && \
+  ./waf configure --board Pixhawk6X && ./waf copter && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
 ```sh
-# Build ArduPlane (VTOLs) for Pixhawk 6X (saved in the ~/Downloads folder)
+# Build ArduPlane (VTOLs) for Pixhawk 6X (saved in the ~/Downloads folder) with its own arm-none-eabi GCC 10 (in /opt)
 docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
-  "cd /aas/github_apps/ardupilot && ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
+  "cd /aas/github_apps/ardupilot && export PATH=/opt/gcc-arm-none-eabi-10-2020-q4-major/bin:\$PATH && \
+  ./waf configure --board Pixhawk6X && ./waf plane && cp build/Pixhawk6X/bin/*.apj /temp/"
 ```
 
-To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.1/en/qgc-user-guide/setup_view/firmware.html)
+Build the Betaflight firmware in `simulation-image` for the FCU (with [`betaflight-2026.6.2.patch`](/simulation/simulation_resources/patches/betaflight-2026.6.2.patch), required by `betaflight_interface`)
+
+```sh
+# Check available Betaflight targets
+docker run -it --rm --entrypoint bash simulation-image -c "cd /aas/github_apps/betaflight && make configs && ls src/config/configs/*"
+```
+
+```sh
+# Build Betaflight for KAKUTEH7 with MAVLink Id set by DRONE_ID=1 (saved in the ~/Downloads folder)
+DRONE_ID=1; docker run -it --rm --entrypoint bash -v ~/Downloads:/temp simulation-image -c \
+  "cd /aas/github_apps/betaflight && sed -i 's/mavlinkSystemId = 1;/mavlinkSystemId = $DRONE_ID;/' src/main/telemetry/mavlink.c \
+  && make arm_sdk_install && make configs && make CONFIG=KAKUTEH7 && cp obj/*.hex /temp/"
+```
+
+To flash the newly created `.px4` or `.apj` file to your autopilot board, follow [QGC's User Guide](https://docs.qgroundcontrol.com/Stable_V5.1/en/qgc-user-guide/setup_view/firmware.html); flash the `.hex` file with "Load Firmware [Local]" in the [Betaflight App](https://app.betaflight.com/)'s Firmware Flasher tab
 
 ## PX4: Configure 6X's Network and DDS Client
 
@@ -240,6 +257,7 @@ ifconfig
 # Set vehicle/MAV_SYS_ID (for multiple QGC connections) and UXRCE_DDS_DOM_ID/ROS_DOMAIN_ID
 param set MAV_SYS_ID 1
 param set UXRCE_DDS_DOM_ID 1
+param set UXRCE_DDS_PTCFG 2         # Use the custom "px4_participant" (set in the aircraft container's fastdds_profile.xml) to keep DDS off radios
 
 # Optionally
 param set MAV_2_CONFIG 0            # Disable MAVLINK on Ethernet (so Ethernet is used for XRCE-DDS only), if needed, also check params MAV_0_CONFIG, MAV_1_CONFIG
@@ -288,6 +306,34 @@ SR2_RC_CHAN      1
 - [MAVROS connection](https://github.com/mavlink/mavros/blob/ros2/mavros/README.md)
 - [Requesting MAVLink data from ArduPilot](https://ardupilot.org/dev/docs/mavlink-requesting-data.html)
 -->
+
+## Betaflight: Configure the FCU for `betaflight_interface`
+
+Connect the FCU's USB port to a computer with the [Betaflight App](https://app.betaflight.com/)
+
+In the App's CLI paste the `aux`, `msp_override_*`, `*_rc_rate`, `alt_hold_deadband`, `min_check`, and `serial_update_rate_hz` lines of [`betaflight-2026.6.cli`](/simulation/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli), then:
+
+```sh
+# Hover throttle of the airframe (measured in ANGLE mode), also the center of ALTHOLD's throttle
+set ap_hover_throttle = <measured>
+# POS HOLD needs a valid heading, Betaflight only trusts the compass with trust_mag ON, mag_declination (in tenths of a degree, east positive) corrects it to true north
+# Calibrate the compass with "Calibrate Magnetometer" in the App's Setup tab
+set trust_mag = ON
+set mag_declination = <local>
+save
+```
+
+Finally, connect the FCU's USB port to the Orin: `./deploy_run.sh` starts `betaflight_interface` on `/dev/ttyACM0`
+
+Before each flight, set the RC as [`betaflight_simulated_rc.py`](/simulation/simulation_resources/scripts/betaflight_simulated_rc.py) does: ARM (CH5) on, flight mode (CH6) high, throttle at hover, MSP OVERRIDE (CH7) on; set the receiver's failsafe to "No pulses" (see [RC Input](#rc-input))
+
+> [!CAUTION]
+> While MSP OVERRIDE is on, `betaflight_interface` drives CH1-6, including ARM for the `takeoff_action` ([Betaflight recommends keeping ARM on the RC](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control))
+> - Turning MSP OVERRIDE off hands CH1-6 back to the RC: if the ARM switch is off, Betaflight disarms in flight
+> - Turning MSP OVERRIDE on in flight, after arming from the RC, disarms the drone (as an idle `betaflight_interface` holds ARM low)
+> - Losing the RC link does not failsafe while MSP OVERRIDE is on (`msp_override_failsafe = ON`, Betaflight holds the switch's last value)
+> - If `betaflight_interface` stops, CH1-6 return to the RC
+> - `betaflight_interface` rejects takeoffs without a valid heading
 
 ## Setup TELEM1 for the Radio Telemetry Link with the Ground Station
 
@@ -351,6 +397,17 @@ SR1_RC_CHAN      1
 # Note: on a point-to-multipoint configuration with multiple drones the serial baud rate between the ground radio and GCS computer should be greater than SERIAL1_BAUD, scaling with the number of drones yet capped by the air link (e.g., GND_TELEM_BAUD=230400 in ./deploy_run.sh)
 ```
 
+### Betaflight Configuration
+
+```sh
+# MAVLink telemetry (function 512, 57600 baud) on the radio's UART: serial 0 = UART1, 1 = UART2, ...
+serial <UART number - 1> 512 115200 57600 0 115200
+# GLOBAL_POSITION_INT at 10Hz (default 2Hz)
+set mavlink_pos_rate = 10
+save
+# Betaflight's MAVLink system ID is set when building the firmware: match it with the DRONE_ID used to launch ./deploy_run.sh
+```
+
 ### SiK (point-to-point) and Microhard (point-to-multipoint) Radio Configuration
 
 ```sh
@@ -358,7 +415,7 @@ groups                              # Check 'dialout' is in the list otherwise r
 sudo apt install -y picocom         # Install picocom
 ```
 
-For the [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w), set `NETID` to use multiple pairs in point-to-point configuration simultaneously
+For the [Holybro 1W SiK telemetry](https://holybro.com/collections/telemetry-radios/products/sik-telemetry-radio-1w), set `NETID` to use multiple pairs in **point-to-point configuration** simultaneously
 
 ```sh
 ls /dev/ttyUSB*                     # List devices
@@ -398,7 +455,7 @@ ATO                                 # Press Enter, exits Command Mode/returns to
 # - S4:TXPOWER - set to 30 for 1W if supported/allowed
 ```
 
-For the [Holybro Microhard V2 P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2), use the point-to-multipoint configuration
+For the [Holybro Microhard V2 P900 telemetry](https://holybro.com/collections/telemetry-radios/products/microhard-telemetry-radio-v2), use the **point-to-multipoint** configuration
 
 ```sh
 ls /dev/ttyUSB*                     # List devices
@@ -462,26 +519,49 @@ ATS105=3                            # Press Enter, set the unit address, MUST be
 
 ## Doodle Labs Configuration
 
-- Connect and login to the radio's address: https://10.223.xx.xx
-- On the "Simple Configuration" page:
-```sh
-# Note that option names often vary across firmware versions
+For models `DoodleLabs SmartRadio MB-1700v4-1L-X` / `DoodleLabs SmartRadio MB-0004v4-1L-X` on firmware `Mesh Rider firmware-2026-03.1`
 
-Select Profiles                        General
-Active Frequency Band                  [pick]
-Select Scenario                        Mesh on radio0
+- Connect and login (default or set password) to the radio's address: https://10.223.xx.xx
+- On the "Setup Wizard" page:
+```sh
+Profile                                General
+Active Frequency Band                  2455v4 MHz
+Select Scenario                        Mesh
 Mesh ID                                [pick]
-...
-Channel                                [pick]
-Bandwidth                              [pick]
-...
-Optimize for Latency                   [uncheck]
-TCP                                    [check]
-Aggressive TCP                         [uncheck]
-Use VLAN for internal messaging        [uncheck]
-Add ETH1 to br-wan                     [check]
-...
+Wireless Password                      [pick]
+Channel                                101 (2500Mhz)
+Bandwidth                              10Mhz
+Operating Distance (m)                 [pick]
+Number of Devices                      [pick]
+Additional Static IPv4 on BR-WAN       [none]
+Additional Static IPv4 netmask         [none]
+DHCP on BR-WAN                         Client enabled
 Enable Automatic C&C Queue Detection   [uncheck]
+```
+- On the "Link Optimization" -> "Traffic Prioritization" page, add 3 rules:
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                TCP
+Port(s)                                 7447
+DSCP                                    Voice, Command & Control (CS6)
+Comment                                 Zenoh
+```
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                UDP
+Port(s)                                 7446
+DSCP                                    Voice, Command & Control (CS6)
+Comment                                 Zenoh
+```
+```sh
+Source host                             All
+Destination host                        All
+Protocol                                TCP
+Port(s)                                 22
+DSCP                                    Video (CS5)
+Comment                                 SSH
 ```
 
 <!--

@@ -16,7 +16,7 @@
 | 6   | RadioMaster R86C V2 Receiver          | Receiver for the radio controller                      | 28         | [URL][rec]
 | 7   | Matek Power Module PM12S-4A           | 5V and 12V supply for Doodle and Jetson                | 20         | [URL][matek]
 | 8   | Tattu G-Tech 6S 8000mAh 25C 22.2V     | Lipo battery pack with XT60                            | 162        | [URL][batt]
-| 9   | Pixhawk Jetson Baseboard Bundle       | NVIDIA Orin NX 16GB + SSD + Pixhawk 6X + CSI ArduCam   | 1450       | [URL][jetson]
+| 9   | Pixhawk Jetson Baseboard Bundle       | NVIDIA Orin NX 16GB + SSD + Pixhawk 6X + CSI IMX-219   | 1450       | [URL][jetson]
 | 10  | ASIX AX88772A USB2.0 Ethernet Adapter | 1 for `AIR_SUBNET`, 1 for `SIM_SUBNET` (for HITL only) | 18         | [URL][eth]
 | 11  | Doodle Labs RM-2450-11N3              | 2.4GHz Nano radio module (1 ground + 1 per drone)      | 1700       | [URL][doot1]
 | 12  | Doodle Labs EK-2450-11N3              | Nano carrier/evaluation kit (1 ground + 1 per drone)   | 290        | [URL][doot2]
@@ -28,11 +28,11 @@
 > **LiDAR sensor, optional for a camera-only solution
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'fontFamily': 'monospace'}}}%%
+%%{init: {'theme': 'base', 'flowchart': {'wrappingWidth': 200}, 'themeVariables': { 'fontFamily': 'monospace'}}}%%
 flowchart TB
     Batt[6S Battery]
-    PDB[Holybro X650 Power Distribution Board]
-    Matek[Matek Power Module]
+    PDB[Holybro X650 Power#nbsp;Distribution#nbsp;Board]
+    Matek[Matek#nbsp;Power#nbsp;Module]
 
     subgraph Jetson_Baseboard ["Jetson Baseboard"]
         direction TB
@@ -43,7 +43,7 @@ flowchart TB
     
     subgraph Doodle_Lab_Radio ["Doodle Lab Radio"]
         direction TB
-        EvalKit[Evaluation Kit]
+        EvalKit[Evaluation#nbsp;Kit]
         RadioMod[Radio Module]
         EvalKit <-->|" "| RadioMod
     end
@@ -56,7 +56,7 @@ flowchart TB
 
     GPS[GPS Module]
     Lidar[Livox Mid-360S]
-    Camera[CSI IMX219 ArduCam]
+    Camera[CSI IMX219]
 
     RC_Rx[R86C Receiver]
     RC[RadioMaster Boxer RC]

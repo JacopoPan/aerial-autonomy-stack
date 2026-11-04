@@ -70,7 +70,7 @@ class YoloInferenceNode(Node):
         self.bridge = CvBridge()
 
         # Create subscribers
-        if self.remote_video_streams: # Only instances launched with --remote-video-streams (i.e. cam_id 0) subscribe to the stream toggle
+        if self.is_jetson and self.camera_id == 0: # Only cam 0 on Jetson can stream, subscribe even without --remote-video-streams to allow turning it on at runtime
             self.create_subscription(Bool, 'enable_remote_video_streams', self.enable_remote_video_streams_callback, 1)
         
         self.get_logger().info("YOLO inference started.")
@@ -82,28 +82,20 @@ class YoloInferenceNode(Node):
     def run_inference_loop(self):
         # Acquire video stream
         if self.architecture == 'x86_64':
-            # # GPU pipeline: TODO NOT WORKING
-            # gst_pipeline_string = (
-            #     f"udpsrc port={self.udp_port} ! "
-            #     "application/x-rtp, media=(string)video, encoding-name=(string)H264 ! "
-            #     "rtph264depay ! "
-            #     "h264parse ! "
-            #     "nvh264dec ! "
-            #     "nvvidconv ! "  # Use NVIDIA's GPU-accelerated converter
-            #     "video/x-raw(memory:NVMM), format=BGRx ! "
-            #     "videoconvert ! "
-            #     "video/x-raw, format=BGR ! appsink"
-            # )
-            # CPU pipeline
+            # GPU pipeline:
+            decoder = "h264parse ! nvh264dec"
             gst_pipeline_string = (
                 f"udpsrc port={self.udp_port} ! "
                 "application/x-rtp, media=(string)video, encoding-name=(string)H264 ! "
                 "rtph264depay ! "
-                "avdec_h264 ! " # Use CPU decoder
+                f"{decoder} ! "
                 "videoconvert ! "
-                "video/x-raw, format=BGR ! appsink"
+                "video/x-raw, format=BGR ! "
+                "appsink drop=true max-buffers=1 sync=false"
             )
             cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
+            if not cap.isOpened(): # No NVIDIA GPU decoder (nvh264dec), fall back to the CPU one
+                cap = cv2.VideoCapture(gst_pipeline_string.replace(decoder, "avdec_h264"), cv2.CAP_GSTREAMER)
         elif self.architecture == 'aarch64':
             if self.hitl: # For HITL, acquire UDP stream from gz-sim
                 # GPU pipeline:
@@ -118,7 +110,7 @@ class YoloInferenceNode(Node):
                     "video/x-raw, format=I420 ! " # If needed, add "queue max-size-buffers=2 leaky=downstream ! " to mitigate EGL crashes
                     "videoconvert ! "      # CPU Color Conversion: I420 to BGR
                     "video/x-raw, format=BGR ! "
-                    "appsink drop=true max-buffers=1 sync=false "
+                    "appsink drop=true max-buffers=1 sync=false"
                 )
                 # # CPU pipeline:
                 # gst_pipeline_string = (
@@ -127,7 +119,8 @@ class YoloInferenceNode(Node):
                 #     "rtph264depay ! "
                 #     "avdec_h264 ! "      # Generic CPU H.264 decoder
                 #     "videoconvert ! "
-                #     "video/x-raw, format=BGR ! appsink"
+                #     "video/x-raw, format=BGR ! "
+                #     "appsink drop=true max-buffers=1 sync=false"
                 # )
                 cap = cv2.VideoCapture(gst_pipeline_string, cv2.CAP_GSTREAMER)
             else: # Default, acquire CSI camera 
@@ -296,6 +289,7 @@ class YoloInferenceNode(Node):
 
             # Only on Jetson, stream to the ground station via UDP using GStreamer
             # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
+            # To turn the stream on: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: true}'
             # To turn the stream off: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: false}'
             if self.remote_video_streams and self.is_jetson: # Use cached boolean flag in loops
                 if not hasattr(self, 'gnd_stream_writer'):

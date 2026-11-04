@@ -1,5 +1,6 @@
 import os, json, math, rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import String
 from ground_system_msgs.msg import SwarmObs
 from geographiclib.geodesic import Geodesic
@@ -29,7 +30,7 @@ class DTCController(Node):
         self.enforcement_timer = 0
 
         self.pub = self.create_publisher(String, '/dtc_commands', 10)
-        self.sub = self.create_subscription(SwarmObs, '/tracks', self.track_cb, 10)
+        self.sub = self.create_subscription(SwarmObs, '/tracks', self.track_cb, qos_profile_sensor_data)
         self.timer = self.create_timer(1.0, self.loop)
 
         self.quad_ids = [int(i) for i in os.environ.get('QUAD_IDS', '1').split(',') if i]

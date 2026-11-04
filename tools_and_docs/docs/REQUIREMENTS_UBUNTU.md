@@ -15,14 +15,14 @@
     - If failing to refresh, run: `killall snap-store; sudo snap refresh snap-store` 
   - Update and restart for "Device Firmware", if necessary
 - On Ubuntu 24, in "Software & Updates"'s "Ubuntu Software" panel, check box "Proprietary drivers for devices (restricted)"
-  - Restart "Software & Updates", then, in the "Additional Drivers" panel, select "Using NVIDIA driver metapackage from `nvidia-driver-610` (proprietary)"
-- On Ubuntu 26, use `sudo ubuntu-drivers install nvidia-driver-610`
+  - Restart "Software & Updates", then, in the "Additional Drivers" panel, select "Using NVIDIA driver (open kernel) metapackage from `nvidia-driver-615-open` (proprietary)"
+- On Ubuntu 26, use `sudo ubuntu-drivers install nvidia-driver-615-open`
 - (optional) Go to "Settings" -> "Power", select the "Performance" "Power Mode" and disable all "Power Saving Options"
 
 ```sh
 sudo apt update && sudo apt upgrade
 
-nvidia-smi                          # Should report something like "Driver Version: XXX.YY.ZZ, CUDA Version: XX.Y"
+nvidia-smi                          # Should report something like "KMD Version: XXX.YY.ZZ, CUDA UMD Version: XX.Y"
 
 sudo apt install -y mesa-utils
 glxinfo -B                          # (optional) Check OpenGL renderer, to force GPU rendering, use $ sudo prime-select nvidia

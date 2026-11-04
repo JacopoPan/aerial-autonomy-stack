@@ -32,6 +32,10 @@ aircraft_models:
     camera_extrinsics: ".155 0 -0.05 0 20 0"
     lidar_extrinsics: "0 0 .08 0 15 0"
 
+  iris_with_betaflight:
+    camera_extrinsics: ".155 0 -0.05 0 20 0"
+    lidar_extrinsics: "0 0 .08 0 15 0"
+
   swan_k1_hwing:
     camera_extrinsics: "0.18 0 -0.1 0 0 0"
     lidar_extrinsics: "0.22 0 0 0 90 0"

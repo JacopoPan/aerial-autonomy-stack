@@ -10,7 +10,7 @@ on:
 
 jobs:
   install-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
     permissions:
       contents: read
@@ -21,11 +21,9 @@ jobs:
     steps:
       - name: Free disk space
         run: |
+          df -h /
           sudo rm -rf /usr/share/dotnet &
           sudo rm -rf /usr/local/lib/android &
-          sudo rm -rf /opt/ghc &
-          sudo rm -rf /opt/hostedtoolcache/CodeQL &
-          sudo rm -rf /usr/local/share/boost &
           sudo rm -rf /usr/share/swift &
           sudo rm -rf "$AGENT_TOOLSDIRECTORY" &
           wait
@@ -42,6 +40,7 @@ jobs:
       - name: Set up Conda with Python 3.12
         uses: conda-incubator/setup-miniconda@v3
         with:
+          miniconda-version: latest
           activate-environment: aas
           python-version: 3.12
           auto-activate: true

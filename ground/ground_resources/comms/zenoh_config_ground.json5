@@ -4,7 +4,8 @@
       allow: {
         publishers: ["/tracks", "/dtc_commands"],
         subscribers: []
-      }
+      },
+      pub_priorities: ["/dtc_commands=2"], // /dtc_commands go out before /tracks (default priority=5)
     }
   },
   scouting: {

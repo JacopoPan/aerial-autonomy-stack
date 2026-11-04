@@ -34,6 +34,7 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
         RCLCPP_INFO(this->get_logger(), "Simulation time is disabled.");
     }
     last_offboard_rate_check_time_ = this->get_clock()->now(); // Monitor the rate of offboard control loop
+    last_offboard_flag_time_ = this->get_clock()->now(); // Monitor the staleness of the offboard flag
     // Initialize the arrays
     position_.fill(NAN);
     q_.fill(NAN);
@@ -119,12 +120,13 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
     // Custom controllers
-    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 15.0, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
+    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 22.5, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
     controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {55.0, 60.0}, 8.0}); }; // ENU {min, max}, speed ceiling
     controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {55.0, 65.0}, 13.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-x8"] = [this]() { vel_ref_lemniscate({{-90.0, -10.0}, {30.0, 400.0}, {55.0, 70.0}, 18.5, 10.0}); }; // ENU {min, max}, speed ceiling, CCW rotation
     // Vision-based guidance
     controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
     controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
@@ -187,6 +189,7 @@ void ArdupilotGuided::offboard_flag_callback(const autopilot_interface_msgs::msg
 {
     std::unique_lock<std::shared_mutex> lock(node_data_mutex_); // Use unique_lock for data writes
     offboard_active_ = msg->is_active;
+    last_offboard_flag_time_ = this->get_clock()->now();
     if (offboard_active_) {
         if (active_controller_name_ != msg->controller_name) { // Only perform the map lookup if the requested controller has changed
             active_controller_name_ = msg->controller_name;
@@ -393,6 +396,11 @@ void ArdupilotGuided::offboard_loop_callback()
     std::shared_lock<std::shared_mutex> lock(node_data_mutex_); // Use shared_lock for data reads
     if (!offboard_active_) {
         return; // Do not publish anything else if not in OFFBOARD state
+    }
+    constexpr double OFFBOARD_FLAG_STALE_S = 3.0; // s, timeout after which to stop if /offboard_flag goes silent, i.e., ardupilot_interface stopped
+    if ((this->get_clock()->now() - last_offboard_flag_time_).seconds() > OFFBOARD_FLAG_STALE_S) {
+        RCLCPP_WARN(get_logger(), "Topic /offboard_flag has gone silent, no reference will be published");
+        return; // Do not keep commanding the vehicle if ardupilot_interface stopped publishing the flag
     }
     if (active_controller_func_ != nullptr) {
         active_controller_func_(); // If offboard is active AND we have a valid controller, run it
@@ -704,10 +712,12 @@ void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
     const double r_min_m = std::min(north_amplitude_m * north_amplitude_m / (8.0 * east_amplitude_m),
                                     4.0 * east_amplitude_m * east_amplitude_m / north_amplitude_m);
     const double v_ceiling_ms = std::min(loop.v_max_ms, SPEED_RATIO * std::sqrt(A_LAT_MAX_MS2 * r_min_m));
-    // The path: phase 0 is the south tip, east cycles twice per lap and that is the crossing
+    const double cos_rot = std::cos(loop.rotation_deg * (M_PI / 180.0)), sin_rot = std::sin(loop.rotation_deg * (M_PI / 180.0)); // Path rotation, CCW
+    // The path: phase 0 is the south tip (before rotation), east cycles twice per lap and that is the crossing
     auto path_point = [&](double phase_rad) {
-        return std::array<double, 3>{east_center_m + east_amplitude_m * std::sin(2.0 * phase_rad),
-                                     north_center_m - north_amplitude_m * std::cos(phase_rad),
+        double e = east_amplitude_m * std::sin(2.0 * phase_rad), n = -north_amplitude_m * std::cos(phase_rad); // Offsets from the center, before rotation
+        return std::array<double, 3>{east_center_m + (e * cos_rot) - (n * sin_rot),
+                                     north_center_m + (e * sin_rot) + (n * cos_rot),
                                      alt_center_m + alt_amplitude_m * std::sin(phase_rad)};
     };
 

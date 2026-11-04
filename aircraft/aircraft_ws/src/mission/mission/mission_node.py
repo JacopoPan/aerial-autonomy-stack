@@ -6,6 +6,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from rclpy.callback_groups import ReentrantCallbackGroup
 
 import os
+import math
 import argparse
 import threading
 import yaml
@@ -15,6 +16,7 @@ import py_trees_ros
 from mission import tree_builder
 
 from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import Vector3Stamped
 from mavros_msgs.msg import VfrHud
 from vision_msgs.msg import Detection2DArray
 from px4_msgs.msg import VehicleGlobalPosition, AirspeedValidated
@@ -95,6 +97,13 @@ class MissionNode(Node):
         self.create_subscription( # 10Hz
             VfrHud, '/mavros/vfr_hud', self.vfr_hud_callback,
             self.qos_profile, callback_group=self.subscriber_callback_group)
+        # Betaflight subscribers (betaflight_interface)
+        self.create_subscription( # 50Hz
+            NavSatFix, 'global_position', self.betaflight_global_position_callback,
+            self.qos_profile, callback_group=self.subscriber_callback_group)
+        self.create_subscription( # 50Hz
+            Vector3Stamped, 'attitude', self.betaflight_attitude_callback,
+            self.qos_profile, callback_group=self.subscriber_callback_group)
         # Perception subscribers
         self.create_subscription( # 15Hz
             Detection2DArray, '/detections', self.yolo_detections_callback,
@@ -162,6 +171,16 @@ class MissionNode(Node):
             self.blackboard.set("alt_msl", msg.altitude)
             self.blackboard.set("heading", msg.heading)
             self.blackboard.set("airspeed", msg.airspeed)
+
+    def betaflight_global_position_callback(self, msg): # Mutually exclusive with px4_global_position_callback and mavros_global_position_callback
+        with self.data_lock:
+            self.blackboard.set("lat", msg.latitude)
+            self.blackboard.set("lon", msg.longitude)
+            self.blackboard.set("alt_msl", msg.altitude)
+
+    def betaflight_attitude_callback(self, msg): # Mutually exclusive with vfr_hud_callback
+        with self.data_lock:
+            self.blackboard.set("heading", math.degrees(msg.vector.z))
 
     def yolo_detections_callback(self, msg):
         if msg.header.frame_id == "camera_frame_0": # Only process the primary camera
@@ -256,7 +275,7 @@ class MissionNode(Node):
             for drone_id, (state_msg, last_seen_time) in sorted(states_copy.items()):
                 seconds_ago = now_seconds - (last_seen_time.nanoseconds / 1e9)
                 output += (f"  Id {drone_id}, lat: {state_msg.latitude_deg:.5f} lon: {state_msg.longitude_deg:.5f}, "
-                        f"alt: {state_msg.altitude_m:.2f} (px4: msl, ap: ell.), hdg: {state_msg.heading_deg:.1f}deg, "
+                        f"alt: {state_msg.altitude_m:.2f} (px4: msl, ap: ell., bf: msl), hdg: {state_msg.heading_deg:.1f}deg, "
                         f"vel: [{state_msg.vx:.1f}, {state_msg.vy:.1f}, {state_msg.vz:.1f}]"
                         f"(seen {seconds_ago:.1f}s ago)\n")
 

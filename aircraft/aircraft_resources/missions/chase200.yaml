@@ -1,0 +1,63 @@
+# Lemniscate vs Stalker (vel-sk) with the LARGE figure-8 (vel-l8)
+# Start the same command on both drones at the same time, DRONE_ID selects the branch
+# Start Drone 1 closer to the field as it will move first
+type: Selector
+name: "200m chase"
+children:
+  - type: Sequence
+    name: "Drone 1: figure-8"
+    children:
+      - action: check_blackboard
+        name: "Check DRONE_ID is 1"
+        params:
+          key: "own_drone_id"
+          expression: "data == 1"
+
+      - action: takeoff
+        name: "Takeoff to 40m"
+        params:
+          takeoff_altitude: 40.0
+
+      - action: offboard
+        name: "Large figure-8 for 3'45'' (~36'' per lap = ~6 laps)"
+        params:
+          controller_name: vel-l8
+          max_duration_sec: 225.0
+
+      - action: land
+        name: "Return to land"
+        params:
+          landing_altitude: 40.0 # Overwrites autopilot parameter RTL_ALT, persists across reboots
+
+  - type: Sequence
+    name: "Drone 2: stalker"
+    children:
+      - action: check_blackboard
+        name: "Check DRONE_ID is 2"
+        params:
+          key: "own_drone_id"
+          expression: "data == 2"
+
+      - action: takeoff
+        name: "Takeoff to 40m"
+        params:
+          takeoff_altitude: 40.0
+
+      - action: wait
+        name: "Wait one figure-8, until Drone 1 approaches the nearest point"
+        params:
+          duration: 40.0 # Wait for Drone 1 to start its second lap
+
+      - action: offboard
+        name: "Stalk for 3', i.e. about 5 loops"
+        params:
+          controller_name: vel-sk
+          max_duration_sec: 180.0
+
+      - action: land
+        name: "Return to land"
+        params:
+          landing_altitude: 40.0 # Overwrites autopilot parameter RTL_ALT, persists across reboots
+
+run_with:
+  ros2 run mission mission --conops chase200.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=$SIMULATED_TIME
