@@ -277,7 +277,7 @@ Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.
 First, start the ground container:
 ```sh
 # On the computer with IPs ending in 90.101
-HITL=true GROUND=true QUAD_IDS=1,2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+HITL=true GROUND=true QUAD_IDS=1,2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
 
 Then, start all aircraft containers, one on each Jetson (e.g. *via* SSH from the ground container):

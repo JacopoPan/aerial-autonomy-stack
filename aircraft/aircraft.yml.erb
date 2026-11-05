@@ -134,16 +134,23 @@ windows:
   <% end %>
         - >
           erb /aas/aircraft_resources/comms/zenoh_config_air.json5.erb > /aas/aircraft_resources/comms/zenoh_config_air.json5 &&
-          <% # Always add the ground station endpoint
+          <% # Zenoh bridge options: -e = connect to this address, -l = accept connections only on this address (without -l: every interface)
+            # Every drone connects to the ground container (or the simulation container if GND_CONTAINER=false)
             endpoints = "-e tcp/#{gnd_container ? "#{air_subnet}.90.#{ground_id}" : "#{sim_subnet}.90.#{sim_id}"}:7447"
-            if hitl || !simulated_time # For HITL or real-life, explicitly dial up other drones
-              (1..10).each do |peer_id| # Up to 10 other drones
-                next if peer_id == drone_id # Do not self-dial
+            # SITL (and HITL without a ground container) stops here for simplicity (i.e. star configuration of all drones around the ground or sim container)
+            # HITL (with ground container) and real flights: also connect to every other drone over the radio (i.e. mesh configuration), so drones keep talking if one loses the ground
+            if (hitl && gnd_container) || !simulated_time
+              (1..10).each do |peer_id| # Drone IDs from 1 up to 10: a missing drone is retried every 4 s, silently (a few ARP requests on the radio each time)
+                next if peer_id == drone_id # Skip itself
                 endpoints += " -e tcp/#{air_subnet}.90.#{peer_id}:7447"
               end
+              # Accept the other drones' connections only on the air_subnet/radio address (not on other interfaces like Wi-Fi, etc.)
+              endpoints += " -l tcp/#{air_subnet}.90.#{drone_id}:7447"
+            else
+              endpoints += " -l tcp/127.0.0.1:7447" # SITL (and HITL without a ground container): star configuration, do not accept connections from other computers
             end
           %>
-          zenoh-bridge-ros2dds <%= endpoints %> -c /aas/aircraft_resources/comms/zenoh_config_air.json5
+          until zenoh-bridge-ros2dds <%= endpoints %> -c /aas/aircraft_resources/comms/zenoh_config_air.json5; do sleep 1; done
 
   <% if lidar && !simulated_time %>
   - livox_driver:

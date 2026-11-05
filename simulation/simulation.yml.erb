@@ -5,6 +5,7 @@
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
 
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
+  sim_id = ENV.fetch('ROS_DOMAIN_ID', '100')
   ground_id = ENV.fetch('GROUND_ID', '101')
 
   num_quads = ENV.fetch('NUM_QUADS', 1).to_i
@@ -204,7 +205,7 @@ windows:
       layout: even-horizontal
       pre: if [ -n "$HOST_INPUT_GID" ]; then groupadd -g "$HOST_INPUT_GID" host_input 2>/dev/null || true; usermod -aG host_input qgcuser; fi
       panes:
-        - zenoh-bridge-ros2dds
+        - until zenoh-bridge-ros2dds -l tcp/<%= sim_subnet %>.90.<%= sim_id %>:7447; do sleep 1; done
         <% if headless %>
         - echo "Headless mode, not launching QGroundControl."
         <% elsif autopilot == 'betaflight' %>
