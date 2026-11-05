@@ -20,7 +20,8 @@ sensors:
     min_range: 0.1
     max_range: 70.0
     range_resolution: 0.01
-    update_rate: 4
+    update_rate: 4 # Frames per second published by livox_sim
+    time_slices: 5 # Gazebo renders per frame (gpu_lidar runs at update_rate * time_slices), livox_sim stamps each point with its render's time
 
 aircraft_models:
 
