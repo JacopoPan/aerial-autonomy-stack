@@ -194,12 +194,12 @@ RC_FS_TIMEOUT       5               # The timeout before the RC failsafe engages
 FS_GCS_ENABLE       1               # Commands an RTL if the QGC link is lost
 FS_GCS_TIMEOUT      5               # The timeout before the GCS failsafe engages
 FS_OPTIONS          0               # Never ignore the failsafes (not in AUTO/GUIDED, nor in pilot-controlled modes)
-BATT_LOW_VOLT       22.0            # Triggers the low failsafe at 3.6V per cell (Tattu G-Tech 6S 8000mAh 25C 22.2V)
+BATT_LOW_VOLT       21.6            # Triggers the low failsafe at 3.6V per cell (Tattu G-Tech 6S 8000mAh 25C 22.2V)
 BATT_LOW_MAH        1600            # Triggers the low failsafe when 20% of 8000mAh (Tattu G-Tech 6S 8000mAh 25C 22.2V)
 BATT_FS_LOW_ACT     2               # Commands an RTL when either of the low thresholds is breached
 BATT_CRT_VOLT       21.0            # Triggers the critical failsafe at 3.5V per cell (Tattu G-Tech 6S 8000mAh 25C 22.2V)
 BATT_CRT_MAH        800             # Triggers the critical failsafe when 10% of 8000mAh (Tattu G-Tech 6S 8000mAh 25C 22.2V)
-BATT_FS_CRT_ACT     1               # Commands an immediate LAND when either of the low thresholds is breached
+BATT_FS_CRT_ACT     1               # Commands an immediate LAND when either of the critical thresholds is breached
 RSSI_TYPE           2               # Sets the Received Signal Strength Indicator (RSSI) source to an RC Channel PWM value
 RSSI_CHANNEL        16              # Tells the flight controller to read Channel 16 for the RSSI data (when using the FrSky X D16 protocol)
 
