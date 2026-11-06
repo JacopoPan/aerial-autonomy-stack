@@ -3,6 +3,7 @@
   headless = ENV.fetch('HEADLESS', 'false') == 'true'
   camera = ENV.fetch('CAMERA', 'true') == 'true'
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
+  odom = ENV.fetch('ODOM', 'none')
 
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   sim_id = ENV.fetch('ROS_DOMAIN_ID', '100')
@@ -53,8 +54,12 @@
   sensor_config = YAML.load_file('/aas/simulation_resources/aircraft_models/sensor_config.yaml')
   cam_update_rate = sensor_config['sensors']['camera_intrinsics']['update_rate']
   stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
+  lidar_time_slices = sensor_config['sensors']['lidar_intrinsics']['time_slices']
 
   camera_streams = stereo_cam ? [{name: '_left', port: 5600}, {name: '_right', port: 5601}] : [{name: '', port: 5600}]
+
+  # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
+  livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0
 
   if autopilot == 'ardupilot'
     # ArduPilot SITL --home (lat,lon,alt,heading) from the world's spherical coordinates
@@ -130,7 +135,7 @@ windows:
     elsif autopilot == 'betaflight'
       model_name = "iris_with_betaflight_#{drone_id}"
     end
-    # One ROS-Gazebo bridge per drone for the gimbal and LiDAR, types are ROS_TYPE[GZ_TYPE (Gazebo to ROS) or ROS_TYPE]GZ_TYPE (ROS to Gazebo)
+    # One ROS-Gazebo bridge per drone for the gimbal, types are ROS_TYPE[GZ_TYPE (Gazebo to ROS) or ROS_TYPE]GZ_TYPE (ROS to Gazebo)
     bridges, remaps = [], []
     add_bridge = ->(gz_topic, types, ros_topic) { bridges << "#{gz_topic}@#{types}"; remaps << "-r #{gz_topic}:=#{ros_topic}" }
     if camera
@@ -139,10 +144,7 @@ windows:
         add_bridge.call("/model/#{model_name}/gimbal_3d/#{axis}_cmd", 'std_msgs/msg/Float64]gz.msgs.Double', "gimbal_#{axis}_cmd")
       end
     end
-    if lidar
-      add_bridge.call("/world/#{world}/model/#{model_name}/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points",
-                      'sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked', '/lidar_points')
-    end
+    lidar_gz_topic = "/world/#{world}/model/#{model_name}/model/simple_lidar/link/lidar/base_link/sensor/lidar3d/scan/points"
   %>
   <% if autopilot == 'px4' %>
   - px4_sitl_<%= drone_id %>:
@@ -158,8 +160,12 @@ windows:
   - ardu_sitl_<%= drone_id %>:
       layout: main-horizontal
       panes:
+        # At boot, ArduPilot reads message-intervals-chanN.txt from its working directory (microSD root on the 6X, see SETUP_AVIONICS.md)
+        # One "<MAVLink message id> <interval in ms>" per line, no comments
+        # "105 5" streams HIGHRES_IMU (id 105, float gyro and accelerometer) every 5 ms (200 Hz) on channel 2 (--serial2, MAVROS) for imu_publisher's /imu_data
         - >
           sleep <%= sitl_instance * 0.5 %> && mkdir -p /aas/ardu_sitl_<%= drone_id %> && cd /aas/ardu_sitl_<%= drone_id %> &&
+          echo "105 5" > message-intervals-chan2.txt &&
           /aas/github_apps/ardupilot/build/sitl/bin/<%= ardu_bin %> -S --model JSON
           -I <%= sitl_instance %> --sysid <%= drone_id %>
           --speedup <%= speedup %>
@@ -196,6 +202,9 @@ windows:
         <% unless bridges.empty? %>
         - >
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge <%= bridges.join(' ') %> --ros-args <%= remaps.join(' ') %>
+        <% end %>
+        <% if lidar %>
+        - ROS_DOMAIN_ID=<%= drone_id %> ros2 run livox_sim livox_sim --ros-args -p use_sim_time:=true -p xfer_format:=<%= livox_xfer_format %> -p time_slices:=<%= lidar_time_slices %> -p gz_topic:=<%= lidar_gz_topic %>
         <% end %>
         - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
   <% end %>

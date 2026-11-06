@@ -65,7 +65,7 @@
           </noise>
         </lidar>
         <always_on>1</always_on>
-        <update_rate><%= lidar_intrinsics['update_rate'] %></update_rate>
+        <update_rate><%= lidar_intrinsics['update_rate'] * lidar_intrinsics['time_slices'] %></update_rate> <!-- livox_sim builds each frame from time_slices renders -->
         <visualize>true</visualize>
         <!-- <topic>lidar3d</topic> -->
       </sensor>

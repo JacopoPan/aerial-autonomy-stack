@@ -38,6 +38,9 @@
                  'betaflight' => { 'quad' => 'iris_with_betaflight' } }
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
   camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
+
+  # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
+  livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0
 %>
 
 name: drone
@@ -85,7 +88,7 @@ windows:
         <% end %>
         <% end %>
         <% if lidar %>
-        - ros2 launch kiss_icp odometry.launch.py topic:=/lidar_points <%= headless ? 'visualize:=false' : '' %>
+        - ros2 launch kiss_icp odometry.launch.py topic:=/livox/lidar use_sim_time:=<%= simulated_time %> <%= headless ? 'visualize:=false' : '' %>
         <% end %>
 
   <% if odom != 'none' %>
@@ -153,16 +156,17 @@ windows:
           until zenoh-bridge-ros2dds <%= endpoints %> -c /aas/aircraft_resources/comms/zenoh_config_air.json5; do sleep 1; done
 
   <% if lidar && !simulated_time %>
+  # The Mid-360's driver publishes /livox/lidar (xfer_format 0: sensor_msgs/PointCloud2, 1: livox_ros_driver2/CustomMsg), as livox_sim does in simulation
   - livox_driver:
       layout: tiled
       panes:
-        - ros2 launch livox_ros_driver2 msg_MID360_launch.py
+        - ros2 run livox_ros_driver2 livox_ros_driver2_node --ros-args -p xfer_format:=<%= livox_xfer_format %> -p frame_id:=livox_frame -p user_config_path:=/aas/github_ws/src/livox_ros_driver2/config/MID360_config.json
   <% end %>
 
   <% if record_rosbag %>
   <%
     # Topics recorded when record_rosbag is true (opt-in: add the names of the topics to save)
-    # Omitted for size: /lidar_points, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
+    # Omitted for size: /livox/lidar, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
     rosbag_topics = %W[
       /tf
       /tf_static

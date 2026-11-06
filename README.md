@@ -416,7 +416,7 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz --> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
+    gz --> |"livox_sim, /livox/lidar <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
     lidar_split --> kiss_icp
     lidar_split --> livo_pkgs
     gz --> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
@@ -490,6 +490,11 @@ aerial-autonomy-stack
 │   │       ├── shibuya_crossing.sdf
 │   │       ├── swiss_town.sdf
 │   │       └── waterworld.sdf
+│   │
+│   ├── simulation_ws
+│   │   └── src
+│   │       ├── livox_sim                             # Publisher of `/livox/lidar`, the Gazebo's LiDAR sensor in Mid-360 driver's format
+│   │       └── zmq_bridge_cpp                        # ZeroMQ bridge stepping Gazebo for `aas_env.py`
 │   │
 │   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
