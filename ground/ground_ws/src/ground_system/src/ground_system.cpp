@@ -185,6 +185,7 @@ void GroundSystem::mavlink_listener(int drone_id, int port, int thread_idx)
                                     } else if (t >= next->second) { // Outage starts now: fix its duration, schedule the following one
                                         sim_outage_until_[current_id] = t + rclcpp::Duration::from_seconds(simulated_link_unif(simulated_link_rng) * simulated_link_outage_duration_s_);
                                         sim_next_outage_[current_id] = sim_outage_until_[current_id] + rclcpp::Duration::from_seconds(simulated_link_fade_gap(simulated_link_rng));
+                                        RCLCPP_WARN(this->get_logger(), "Simulated link outage: drone %d silent for %.1fs", current_id, (sim_outage_until_[current_id] - t).seconds());
                                         continue; // This message is the first dropped by the outage
                                     }
                                 }
