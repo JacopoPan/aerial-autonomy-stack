@@ -39,8 +39,9 @@
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
   camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 
-  # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
-  livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0
+  livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0 # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
+  gz_instantaneous_lidar = simulated_time && sensor_config['sensors']['lidar_intrinsics']['sim_time_slices'] == 1 # In SITL/HITL, with sim_time_slices == 1, all points in a LiDAR frame have the same time
+  odom_uses_camera = %w[openvins mimosa].include?(odom) # mimosa through rovio
 %>
 
 name: drone
@@ -84,11 +85,11 @@ windows:
       panes:
         <% if camera %>
         <% camera_ids.each do |cam_id| %>
-        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom != 'none' %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
+        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom_uses_camera %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
         <% end %>
         <% end %>
-        <% if lidar %>
-        - ros2 launch kiss_icp odometry.launch.py topic:=/livox/lidar use_sim_time:=<%= simulated_time %> <%= headless ? 'visualize:=false' : '' %>
+        <% if lidar && !headless && odom == 'none' %>
+        - ros2 run rviz2 rviz2 -d /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
         <% end %>
 
   <% if odom != 'none' %>
@@ -96,6 +97,8 @@ windows:
       layout: even-horizontal
       panes:
         <% case odom %>
+        <% when 'kissicp' %>
+        - ros2 launch kiss_icp odometry.launch.py topic:=/livox/lidar use_sim_time:=<%= simulated_time %> <%= headless ? 'visualize:=false' : '' %> <%= gz_instantaneous_lidar ? 'config_file:=/aas/github_ws/src/kiss-icp/ros/config/no_deskew.yaml' : '' %>
         <% when 'openvins' %>
         - >
           CONFIG_NAME=euroc_mav && CONFIG_DIR=/aas/github_ws/install/ov_msckf/share/ov_msckf/config/$CONFIG_NAME &&
@@ -103,8 +106,8 @@ windows:
           ros2 launch ov_msckf subscribe.launch.py config:=$CONFIG_NAME <%= headless ? '' : 'rviz_enable:=true' %>
           <%= stereo_cam ? '' : 'use_stereo:=false max_cameras:=1' %> <%= simulated_time ? 'use_sim_time:=true' : '' %>
         <% when 'fastlio' %>
-        - ros2 launch spark_fast_lio mapping_vbr_colosseo.launch.yaml
-        - ros2 launch kiss_matcher_ros run_kiss_matcher_sam.launch.yaml
+        - ros2 launch spark_fast_lio mapping_vbr_colosseo.launch.yaml start_rviz:=<%= !headless %>
+        - ros2 launch kiss_matcher_ros run_kiss_matcher_sam.launch.yaml start_rviz:=<%= !headless %>
         <% when 'superodom' %>
         - ros2 launch super_odometry livox_mid360.launch.py
         <% when 'mimosa' %>

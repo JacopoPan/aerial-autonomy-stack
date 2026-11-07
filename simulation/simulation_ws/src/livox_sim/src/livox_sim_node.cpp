@@ -40,8 +40,11 @@ T read_field(const char * point, uint32_t offset) // Unaligned read of one field
 // Gazebo input (gpu_lidar fields x, y, z, intensity, ring): https://github.com/gazebosim/gz-sensors/blob/6d74c1fe96d7277c7dec96a54bbc79d5c752e63c/src/GpuLidarSensor.cc#L138-L141
 // Output formats: https://github.com/Livox-SDK/livox_ros_driver2#32-livox-ros-driver-2-internal-main-parameter-configuration-instructions
 // Livox PointCloud2 offsets (Lddc::InitPointcloud2MsgHeader): https://github.com/Livox-SDK/livox_ros_driver2/blob/21445540f0d100dc86a7e6df312dd70bbdb4afdf/src/lddc.cpp#L262
-// Time slices, as in https://github.com/mathaimp/livox_gz_sim: a frame takes one band of rows from each of time_slices + 1 consecutive renders (top band first),
-// with the points stamped at their render's time; the render closing a frame (bottom band) also opens the next (top band), so a frame spans one period
+// A frame is built from sim_time_slices renders of Gazebo's gpu_lidar (which renders at sim_time_slices * update_rate):
+// - sim_time_slices = 1, Gazebo's idealized LiDAR: each render is a frame, and all its points have the same time (thus, nothing to deskew)
+// - sim_time_slices > 1, based on https://github.com/mathaimp/livox_gz_sim: a frame takes one band of rows from each of sim_time_slices + 1 consecutive renders (top band first),
+//   with the points stamped at their render's time; the render closing a frame (bottom band) also opens the next (top band), so a frame spans one period,
+//   like the real Mid-360's, whose points are spread over the frame (and motion during the frame skews it)
 class LivoxSimNode : public rclcpp::Node
 {
 public:
@@ -49,10 +52,13 @@ public:
     {
         this->declare_parameter<std::string>("gz_topic", ""); // gpu_lidar's gz.msgs.PointCloudPacked topic
         this->declare_parameter<int>("xfer_format", 0); // As in livox_ros_driver2: 0 for PointCloud2, 1 for CustomMsg
-        this->declare_parameter<int>("time_slices", 1); // Renders per frame (the gpu_lidar's update rate is time_slices times the frame rate)
+        this->declare_parameter<int>("sim_time_slices", 1); // Renders per frame: 1 for Gazebo's idealized LiDAR, more to spread the points' times over the frame
+
         const std::string gz_topic = this->get_parameter("gz_topic").as_string();
         xfer_format_ = static_cast<int>(this->get_parameter("xfer_format").as_int());
-        bands_ = static_cast<uint32_t>(std::max<int64_t>(this->get_parameter("time_slices").as_int(), 1)) + 1;
+        const auto sim_time_slices = static_cast<uint32_t>(std::max<int64_t>(this->get_parameter("sim_time_slices").as_int(), 1));
+
+        bands_ = sim_time_slices == 1 ? 1 : sim_time_slices + 1; // One band (all rows), or one per render, the boundary render giving a frame's bottom band and the next's top
 
         if (xfer_format_ == 1) {
             custom_pub_ = this->create_publisher<livox_ros_driver2::msg::CustomMsg>("/livox/lidar", 10);
@@ -62,14 +68,14 @@ public:
         if (!gz_node_.Subscribe(gz_topic, &LivoxSimNode::points_callback, this)) {
             RCLCPP_ERROR(this->get_logger(), "Cannot subscribe to Gazebo topic %s", gz_topic.c_str());
         }
-        RCLCPP_INFO(this->get_logger(), "livox_sim_node started (%s to /livox/lidar, xfer_format %d, %u time slices)", gz_topic.c_str(), xfer_format_, bands_ - 1);
+        RCLCPP_INFO(this->get_logger(), "livox_sim_node started (%s to /livox/lidar, xfer_format %d, %u time slices)", gz_topic.c_str(), xfer_format_, sim_time_slices);
     }
 
 private:
     static constexpr uint32_t kLines = 4; // The Mid-360 has 4 laser lines
 
     int xfer_format_ = 0;
-    uint32_t bands_ = 2; // Bands of rows per frame, time_slices + 1
+    uint32_t bands_ = 1; // Bands of rows per frame: 1 if sim_time_slices == 1; sim_time_slices + 1 otherwise
     uint32_t band_ = 0; // Band the next render adds to the frame, 0 is the top one
     std::vector<LivoxPoint> points_; // The frame being built
     builtin_interfaces::msg::Time frame_stamp_; // Time of the frame's first band
@@ -123,16 +129,19 @@ private:
         }
         last_stamp_ns_ = stamp_ns;
         if (band_ == 0) {
-            start_frame(stamp, stamp_ns);
+            start_frame(stamp, stamp_ns); // The frame's time is its first render's
         }
-        add_band(band_);
+        add_band(band_); // With one band, the whole render
         if (++band_ < bands_) {
             return; // The frame needs the next renders
         }
         publish_frame();
-        start_frame(stamp, stamp_ns); // This render's top band opens the next frame
-        add_band(0);
-        band_ = 1;
+        band_ = 0;
+        if (bands_ > 1) { // This render's top band opens the next frame, at the time the last one closed
+            start_frame(stamp, stamp_ns);
+            add_band(0);
+            band_ = 1;
+        }
     }
 
     void start_frame(const builtin_interfaces::msg::Time & stamp, uint64_t stamp_ns)

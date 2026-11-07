@@ -46,9 +46,9 @@ REPOS=( # Format: "URL;BRANCH;LOCAL_DIR_NAME"
   "https://github.com/eProsima/Micro-XRCE-DDS-Agent.git;master;Micro-XRCE-DDS-Agent"
   "https://github.com/Livox-SDK/Livox-SDK2.git;master;Livox-SDK2"
   "https://github.com/Livox-SDK/livox_ros_driver2.git;master;livox_ros_driver2"
-  "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
 )
 ODOM_REPOS=( # Only used by the advanced-odom-true stage of aircraft.dockerfile
+  "https://github.com/PRBonn/kiss-icp.git;main;kiss-icp"
   "https://github.com/rpng/open_vins.git;master;open_vins"
   "https://github.com/MIT-SPARK/spark-fast-lio.git;main;spark-fast-lio"
   "https://github.com/MIT-SPARK/KISS-Matcher.git;main;KISS-Matcher"

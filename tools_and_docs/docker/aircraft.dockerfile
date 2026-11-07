@@ -223,7 +223,7 @@ RUN curl -fsSL https://repo.download.nvidia.com/jetson/jetson-ota-public.asc -o 
 ################################################################################
 # Add odometry packages ########################################################
 ################################################################################
-FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image
+FROM image-with-hardware-specific-ort_${TARGETARCH} AS ros2-px4msgs-dds-mavros-yolo-ort-lidar-image
 
 # Install the Livox SDK (livox_ros_driver2 requirement)
 COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
@@ -243,24 +243,24 @@ RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.x
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=jazzy -DCMAKE_BUILD_TYPE=Release"
 
-# Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
-COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
-WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
-
 ################################################################################
 # Empty branch to skip the build of advanced odometry, SLAM packages ###########
 # Mutually exclusive with the next stage #######################################
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-false
+FROM ros2-px4msgs-dds-mavros-yolo-ort-lidar-image AS advanced-odom-false
 # Do nothing
 
 ################################################################################
 # Branch including the build of advanced odometry, SLAM packages ###############
 # Mutually exclusive with the previous stage ###################################
 ################################################################################
-FROM ros2-px4msgs-dds-mavros-yolo-ort-simple-odom-image AS advanced-odom-true
+FROM ros2-px4msgs-dds-mavros-yolo-ort-lidar-image AS advanced-odom-true
+
+# Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
+COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
+WORKDIR /aas/github_ws
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
@@ -456,13 +456,18 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 
 # Copy resources and configuration files from this repository
 COPY aircraft/aircraft_resources/ /aas/aircraft_resources
-COPY aircraft/aircraft_resources/patches/kiss_icp.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz
 COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
 RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/cancellable_action \
     && chmod +x /aas/aircraft_resources/patches/cancellable_action.py
 
 # Copy sensor configuration
 COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
+
+# KISS-ICP without deskewing to avoid divide-by-zero when sim_time_slices: 1
+RUN [ ! -d /aas/github_ws/src/kiss-icp ] || echo '{kiss_icp_node: {ros__parameters: {data: {deskew: false}}}}' > /aas/github_ws/src/kiss-icp/ros/config/no_deskew.yaml
+# RViz windows resized to 800x600 and placed at the bottom left of the screen, with the Displays and Views docks hidden
+RUN for f in /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz; do \
+      [ ! -f "$f" ] || sed -i 's/^  Height: .*/  Height: 600/; s/^  Width: .*/  Width: 800/; s/^  X: .*/  X: 0/; s/^  Y: .*/  Y: 4096/; s/\(0044006900730070006c006100790073\)01/\100/; s/\(00560069006500770073\)01/\100/' "$f"; done
 
 # Source the workspaces (mimosa_custom_gtsam_ws first, as github_ws builds rovio on it, and only if BUILD_ADVANCED_ODOM=true)
 RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \

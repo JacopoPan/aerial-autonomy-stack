@@ -53,12 +53,12 @@
   sensor_config = YAML.load_file('/aas/simulation_resources/aircraft_models/sensor_config.yaml')
   cam_update_rate = sensor_config['sensors']['camera_intrinsics']['update_rate']
   stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
-  lidar_time_slices = sensor_config['sensors']['lidar_intrinsics']['time_slices']
 
   camera_streams = stereo_cam ? [{name: '_left', port: 5600}, {name: '_right', port: 5601}] : [{name: '', port: 5600}]
 
   # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
   livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0
+  lidar_sim_time_slices = sensor_config['sensors']['lidar_intrinsics']['sim_time_slices']
 
   if autopilot == 'ardupilot'
     # ArduPilot SITL --home (lat,lon,alt,heading) from the world's spherical coordinates
@@ -203,7 +203,7 @@ windows:
           ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge <%= bridges.join(' ') %> --ros-args <%= remaps.join(' ') %>
         <% end %>
         <% if lidar %>
-        - ROS_DOMAIN_ID=<%= drone_id %> ros2 run livox_sim livox_sim --ros-args -p use_sim_time:=true -p xfer_format:=<%= livox_xfer_format %> -p time_slices:=<%= lidar_time_slices %> -p gz_topic:=<%= lidar_gz_topic %>
+        - ROS_DOMAIN_ID=<%= drone_id %> ros2 run livox_sim livox_sim --ros-args -p use_sim_time:=true -p xfer_format:=<%= livox_xfer_format %> -p sim_time_slices:=<%= lidar_sim_time_slices %> -p gz_topic:=<%= lidar_gz_topic %>
         <% end %>
         - "ROS_DOMAIN_ID=<%= drone_id %> ros2 run ros_gz_bridge parameter_bridge /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"
   <% end %>
