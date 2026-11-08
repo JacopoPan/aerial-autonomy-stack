@@ -294,7 +294,7 @@ HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh        
 Finally, start the simulation container:
 ```sh
 # On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh
+HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh                                # Add the Jetsons' ODOM, if any: it sets livox_sim's LiDAR format
 ```
 
 > **Note:** running only the last 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`

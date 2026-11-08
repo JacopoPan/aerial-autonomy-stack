@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
-#include "rclcpp/executors/multi_threaded_executor.hpp"
+#include "rclcpp/executors/single_threaded_executor.hpp"
+// #include "rclcpp/executors/multi_threaded_executor.hpp"
 
 #include <sensor_msgs/msg/imu.hpp>
 #include <px4_msgs/msg/sensor_combined.hpp>
@@ -94,7 +95,8 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    rclcpp::executors::MultiThreadedExecutor executor; // Or set num_threads with executor(rclcpp::ExecutorOptions(), 8);
+    rclcpp::executors::SingleThreadedExecutor executor; // One callback at a time, as callback_group_subscriber_ also ensures
+    // rclcpp::executors::MultiThreadedExecutor executor; // Or set num_threads with executor(rclcpp::ExecutorOptions(), 8);
     auto node = std::make_shared<ImuPublisherNode>();
     executor.add_node(node);
     executor.spin();
