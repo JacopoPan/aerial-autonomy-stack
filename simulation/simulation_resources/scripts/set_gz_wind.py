@@ -6,8 +6,8 @@ This scripts allows to set wind velocity of plugin gz::sim::systems::WindEffects
 - Thus, this script is only recommended for use with QUADS
 
 Use as:
-    python3 gz_wind.py --from_west 0.0 --from_south 3.0
-    python3 gz_wind.py --stop_wind
+    python3 set_gz_wind.py --from_west 0.0 --from_south 3.0
+    python3 set_gz_wind.py --stop_wind
 """
 import os
 import time

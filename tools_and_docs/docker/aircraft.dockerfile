@@ -457,7 +457,7 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 # Copy resources and configuration files from this repository
 COPY aircraft/aircraft_resources/ /aas/aircraft_resources
 COPY aircraft/aircraft_resources/patches/kiss_icp.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz
-COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
+COPY aircraft/aircraft_resources/config/mavros_apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
 RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/cancellable_action \
     && chmod +x /aas/aircraft_resources/patches/cancellable_action.py
 

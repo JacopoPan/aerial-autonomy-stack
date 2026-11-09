@@ -72,7 +72,7 @@ AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
 SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
 GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
-# In dev mode, resources and workspaces are mounted from the host
+# In dev mode, workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
   DEV_SIM_OPTS="--entrypoint /bin/bash"
   DEV_SIM_OPTS+=" -v ${SCRIPT_DIR}/../simulation/simulation_ws/src:/aas/simulation_ws/src:cached"

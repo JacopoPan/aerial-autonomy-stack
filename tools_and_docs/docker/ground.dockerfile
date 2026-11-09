@@ -33,7 +33,7 @@ RUN wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504
         https://github.com/betaflight/betaflight-configurator/releases/download/2026.6.2/Betaflight-2026.6.2-amd64.deb \
     && apt update && apt install -y --no-install-recommends /betaflight-app.deb socat \
     && rm /betaflight-app.deb && apt clean && rm -rf /var/lib/apt/lists/*
-# Run with $ python3 /aas/ground_resources/scripts/betaflight_app.py tcp://127.0.0.1:5761
+# Run with $ python3 /aas/ground_resources/scripts/launch_betaflight_app.py tcp://127.0.0.1:5761
 
 # Install wmctrl and xrandr to resize QGC/Betaflight App windows
 RUN apt update \
@@ -100,9 +100,9 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/
 
 # Copy resources and configuration files from this repository
 COPY ground/ground_resources/ /aas/ground_resources
-COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
+COPY ground/ground_resources/config/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
 # DDS interface configuration shared with the aircraft image
-COPY aircraft/aircraft_resources/comms/fastdds_profile.xml.erb aircraft/aircraft_resources/comms/cyclonedds.xml /aas/ground_resources/comms/
+COPY aircraft/aircraft_resources/comms/fastdds_no_air_radio.xml.erb aircraft/aircraft_resources/comms/cyclonedds_loopback.xml /aas/ground_resources/comms/
 
 # Source the workspaces
 RUN echo "source /aas/ground_ws/install/local_setup.bash" >> /root/.bashrc

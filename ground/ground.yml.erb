@@ -24,9 +24,9 @@ name: ground
 
 # Keep DDS off AIR_SUBNET: topics cross it only through the Zenoh bridge
 on_project_start:
-  - erb /aas/ground_resources/comms/fastdds_profile.xml.erb > /aas/ground_resources/comms/fastdds_profile.xml # Fills in this container's AIR_SUBNET/mesh radio address
-  - export FASTRTPS_DEFAULT_PROFILES_FILE=/aas/ground_resources/comms/fastdds_profile.xml # ROS2 (Jazzy, FastDDS 2.14)
-  - export CYCLONEDDS_URI=file:///aas/ground_resources/comms/cyclonedds.xml # zenoh-bridge-ros2dds (Eclipse apt repo, CycloneDDS)
+  - erb /aas/ground_resources/comms/fastdds_no_air_radio.xml.erb > /aas/ground_resources/comms/fastdds_no_air_radio.xml # Fills in this container's AIR_SUBNET/mesh radio address
+  - export FASTRTPS_DEFAULT_PROFILES_FILE=/aas/ground_resources/comms/fastdds_no_air_radio.xml # ROS2 (Jazzy, FastDDS 2.14)
+  - export CYCLONEDDS_URI=file:///aas/ground_resources/comms/cyclonedds_loopback.xml # zenoh-bridge-ros2dds (Eclipse apt repo, CycloneDDS)
 
 windows:
 
@@ -80,7 +80,7 @@ windows:
           <% drone_ids.each do |drone_id| %>
           (while true; do socat TCP-LISTEN:<%= 5761 + 10 * (drone_id - 1) %>,bind=127.0.0.1,reuseaddr TCP-LISTEN:<%= 15761 + 10 * (drone_id - 1) %>,reuseaddr; sleep 1; done) &
           <% end %>
-          python3 /aas/ground_resources/scripts/betaflight_app.py <%= drone_ids.map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
+          python3 /aas/ground_resources/scripts/launch_betaflight_app.py <%= drone_ids.map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
         <% elsif autopilot == 'px4' || autopilot == 'ardupilot' %>
         # QGC offline tiles: export from QGC 5.1 Application Settings -> Maps -> Offline Maps and save them on the host as ~/Downloads/qgcMapCache.qgctiledb
         - >

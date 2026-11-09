@@ -85,7 +85,7 @@ if [[ "$GROUND" == "true" ]]; then
   exit 0
 fi
 
-# In dev mode, resources and workspaces are mounted from the host
+# In dev mode, workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
   DEV_OPTS="--entrypoint /bin/bash"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"

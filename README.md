@@ -165,8 +165,8 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s terminal <i>(click to expand)</i></summary>
 > 
 > ```sh
-> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
-> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> python3 /aas/simulation_resources/scripts/set_gz_wind.py --from_west 0.0 --from_south 3.0
+> python3 /aas/simulation_resources/scripts/set_gz_wind.py --stop_wind
 > # Note: only use with the quadrotor models as the simulated airspeed sensors on VTOLs/tailsitters are not Gazebo wind-aware
 > ```
 > </details>

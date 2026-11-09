@@ -1,6 +1,6 @@
 """
 Use as:
-    python3 gz_step.py --step_sec 1.0
+    python3 step_gz_world.py --step_sec 1.0
 """
 import os
 import argparse

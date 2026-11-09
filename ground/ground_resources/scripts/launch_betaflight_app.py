@@ -1,7 +1,7 @@
 """Start one Betaflight App per Betaflight SITL, each pre-set to connect to its drone over TCP.
 
 Use as:
-    python3 betaflight_app.py tcp://127.0.0.1:5761 [tcp://127.0.0.1:5771 ...]   (in drone order, drone k: port 5761 + 10 * (k - 1))
+    python3 launch_betaflight_app.py tcp://127.0.0.1:5761 [tcp://127.0.0.1:5771 ...]   (in drone order, drone k: port 5761 + 10 * (k - 1))
 """
 import json
 import os
