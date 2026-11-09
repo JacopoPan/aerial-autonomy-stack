@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Use with:
-# $ cd aerial-autonomy-stack/tools_and_docs/
+# $ cd aerial-autonomy-stack/start_here/
 # $ ./tests/check_requirements.sh
 
-HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md"
+HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/start_here/docs/REQUIREMENTS_UBUNTU.md"
 if grep -q "Microsoft" /proc/version || grep -q "WSL" /proc/version; then
     echo "[INFO] WSL environment detected: some checks (NVIDIA Driver/CTK) may behave differently; open a GitHub issue, if necessary"
-    HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/tools_and_docs/docs/REQUIREMENTS_WSL.md"
+    HELP_URL="https://github.com/JacopoPan/aerial-autonomy-stack/blob/main/start_here/docs/REQUIREMENTS_WSL.md"
 fi
 
 if [ -f /etc/os-release ]; then

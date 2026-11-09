@@ -114,7 +114,7 @@ if [ "$DOWNLOAD_NEEDED" = "true" ]; then
     exit 1 # Stop the script
   fi
 fi
-# Unzip quietly (-q), overwrite (-o), into the repository root directory (-d) above tools_and_docs/ to merge into simulation/
+# Unzip quietly (-q), overwrite (-o), into the repository root directory (-d) above start_here/ to merge into simulation/
 unzip -q -o "$ZIP_FILE" -d "$SCRIPT_DIR/.."
 
 if [ "$CLONE_ONLY" = "true" ]; then

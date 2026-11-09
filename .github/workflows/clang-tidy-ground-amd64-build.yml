@@ -49,7 +49,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone external repos
-        run: CLONE_ONLY=true ./tools_and_docs/sim_build.sh
+        run: CLONE_ONLY=true ./start_here/sim_build.sh
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,11 +58,11 @@ jobs:
         run: |
           docker buildx build --target ros2-image \
             --output type=oci,dest=$RUNNER_TEMP/transitional-ros2-image,tar=false \
-            -f ./tools_and_docs/docker/aircraft.dockerfile .
+            -f ./start_here/docker/aircraft.dockerfile .
           docker buildx build --load \
             --build-context transitional-ros2-image=oci-layout://$RUNNER_TEMP/transitional-ros2-image \
             -t ground-image:lint \
-            -f ./tools_and_docs/docker/ground.dockerfile .
+            -f ./start_here/docker/ground.dockerfile .
 
       - name: Check disk space after build
         run: df -h

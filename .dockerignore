@@ -11,7 +11,7 @@
 !_github_clones/betaflight/**/.git
 
 # Ignore logs
-tools_and_docs/logs/
+start_here/logs/
 
 # Ignore temporary assets
 _github_clones/*.zip

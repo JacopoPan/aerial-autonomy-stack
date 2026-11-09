@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Adjust the configuration below as needed, then run with:
-# $ cd aerial-autonomy-stack/tools_and_docs/
+# $ cd aerial-autonomy-stack/start_here/
 # $ conda activate aas
 # $ ./tests/performance.sh
 
@@ -27,7 +27,7 @@ if [[ "$CONDA_DEFAULT_ENV" != "aas" ]]; then
     exit 1
 fi
 
-# Find the script's path (and then gym_run.py script in tools_and_docs/)
+# Find the script's path (and then gym_run.py script in start_here/)
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 GYM_RUN_SCRIPT="$SCRIPT_DIR/../gym_run.py"
 

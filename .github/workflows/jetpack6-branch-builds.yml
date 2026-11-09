@@ -1,4 +1,5 @@
 name: jetpack6 branch images
+# Paths use `tools_and_docs/` because branch `jetpack6` predates the `start_here/` renaming
 
 on:
   schedule:

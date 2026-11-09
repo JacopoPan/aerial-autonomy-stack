@@ -120,7 +120,7 @@ jobs:
 
       - name: Run aas-gym test 1
         run: |
-          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot px4 --no-gpu
+          python3 ./start_here/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot px4 --no-gpu
 
       - name: Safety cleanup between tests
         if: always()
@@ -132,4 +132,4 @@ jobs:
 
       - name: Run aas-gym test 2
         run: |
-          python3 ./tools_and_docs/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot ardupilot --no-gpu
+          python3 ./start_here/gym_run.py --mode speedup --num_quads 1 --no-camera --no-lidar --autopilot ardupilot --no-gpu

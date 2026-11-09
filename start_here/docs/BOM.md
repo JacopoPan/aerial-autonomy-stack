@@ -105,7 +105,7 @@ flowchart TB
 
 ## Holybro X650 with 6X Autopilot Parameters
 
-Select, flight-proven parameters for the Holybro X650 kit; for full `.params` files examples, check folder [`params/`](/tools_and_docs/docs/params/)
+Select, flight-proven parameters for the Holybro X650 kit; for full `.params` files examples, check folder [`params/`](/start_here/docs/params/)
 
 ### PX4 Configuration
 
@@ -211,7 +211,7 @@ RSSI_CHANNEL        16              # Tells the flight controller to read Channe
 
 ## Radio Configuration
 
-To *(i)* pair an RC and *(ii)* set up the network IDs and trasmission power of SiK point-to-point or Microhard point-to-multipoint telemetry radios with AT commands, read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md)
+To *(i)* pair an RC and *(ii)* set up the network IDs and trasmission power of SiK point-to-point or Microhard point-to-multipoint telemetry radios with AT commands, read [`SETUP_AVIONICS.md`](/start_here/docs/SETUP_AVIONICS.md)
 
 ## Triple Redundancy for RTL
 

@@ -3,7 +3,7 @@
 > These instructions are tested using Ubuntu 24.04.4 LTS, Ubuntu 26.04 LTS
 
 > [!TIP]
-> Run [`check_requirements.sh`](/tools_and_docs/tests/check_requirements.sh) to verify whether you need to follow the steps below
+> Run [`check_requirements.sh`](/start_here/tests/check_requirements.sh) to verify whether you need to follow the steps below
 
 ## Install Ubuntu with NVIDIA Driver
 
@@ -107,7 +107,7 @@ docker run --rm --gpus all nvcr.io/nvidia/cuda:13.3.1-cudnn-runtime-ubuntu24.04 
 > [!TIP]
 > Re-run the `check_requirements.sh` script
 > ```
-> cd aerial-autonomy-stack/tools_and_docs/
+> cd aerial-autonomy-stack/start_here/
 >  ./tests/check_requirements.sh
 > ```
 > and go back to the ["Installation" instructions](https://github.com/JacopoPan/aerial-autonomy-stack#1-installation)
