@@ -450,13 +450,13 @@ RUN apt update && apt install -y python3-simpleeval && rosdep install --from-pat
 # Build the ROS 2 workspace (NOTE: also includes ground_system_msgs from the ground_ws)
 COPY ground/ground_ws/src/ground_system_msgs /aas/aircraft_ws/src/ground_system_msgs
 COPY aircraft/aircraft_ws/src /aas/aircraft_ws/src
-COPY tools_and_docs/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
+COPY start_here/tests/.clang-tidy /aas/aircraft_ws/src/.clang-tidy
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY aircraft/aircraft_resources/ /aas/aircraft_resources
-COPY aircraft/aircraft_resources/patches/apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
+COPY aircraft/aircraft_resources/config/mavros_apm_pluginlists.yaml /opt/ros/jazzy/share/mavros/launch/apm_pluginlists.yaml
 RUN ln -s /aas/aircraft_resources/patches/cancellable_action.py /usr/local/bin/cancellable_action \
     && chmod +x /aas/aircraft_resources/patches/cancellable_action.py
 

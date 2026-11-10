@@ -6,7 +6,7 @@
 2. **Simulate** faster-than-real-time perception and control—with YOLO and 3D LiDAR
 3. **Deploy** in real drones—with JetPack, DeepStream, and NVIDIA Orin
 
-For an example bill of materials, read [`BOM.md`](/tools_and_docs/docs/BOM.md); for motivation, read [`RATIONALE.md`](/tools_and_docs/docs/RATIONALE.md)
+For an example bill of materials, read [`BOM.md`](/start_here/docs/BOM.md); for motivation, read [`RATIONALE.md`](/start_here/docs/RATIONALE.md)
 
 https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 
@@ -29,20 +29,20 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 - [PX4 ROS 2 Interface Library](https://github.com/Auterion/px4-ros2-interface-lib) external flight modes
 - [ArduPilot Guided](https://ardupilot.org/copter/docs/ac2_guidedmode.html) interface (i.e. `setpoint_velocity`, `setpoint_accel` references)
 - [Betaflight MSP Override](https://betaflight.com/docs/wiki/guides/current/MSP-Companion-Computer-Control) interface (i.e. RC sticks in ACRO, ANGLE, or ALTHOLD + POS HOLD)
-- Logs analysis with [`plot_logs.py`](/tools_and_docs/plot_logs.py) (`.ulg`, `.bin`); SITL logs and MCAP `rosbag`s (`RECORD_ROSBAG=true`) are copied to the host at the end of each simulation
+- Logs analysis with [`plot_logs.py`](/start_here/plot_logs.py) (`.ulg`, `.bin`); SITL logs and MCAP `rosbag`s (`RECORD_ROSBAG=true`) are copied to the host at the end of each simulation
 </details>
 
 ## 1. Installation
 
 > AAS is developed with Ubuntu 24.04 and `nvidia-driver-615-open` on an i7-11 with RTX 3060
 >
-> Read [`REQUIREMENTS_UBUNTU.md`](/tools_and_docs/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/tools_and_docs/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
+> Read [`REQUIREMENTS_UBUNTU.md`](/start_here/docs/REQUIREMENTS_UBUNTU.md) (or [`REQUIREMENTS_WSL.md`](/start_here/docs/REQUIREMENTS_WSL.md) for Windows 11) to install the requirements
 
 ```sh
 sudo apt update && sudo apt install -y git xterm xfonts-base wget unzip
 
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 ./tests/check_requirements.sh                         # AAS requires nvidia-driver, docker, and nvidia-container-toolkit
 ./sim_build.sh                                        # The 1st build takes ~45' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
@@ -69,7 +69,7 @@ done
 Start AAS:
 
 ```sh
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start a simulation, check the script for more options (note: ArduPilot SITL checks take ~30s of simulated time before being ready to arm)
 
@@ -165,8 +165,8 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > <summary>Add or disable <b>wind effects</b>, in the <kbd>Simulation</kbd>'s terminal <i>(click to expand)</i></summary>
 > 
 > ```sh
-> python3 /aas/simulation_resources/scripts/gz_wind.py --from_west 0.0 --from_south 3.0
-> python3 /aas/simulation_resources/scripts/gz_wind.py --stop_wind
+> python3 /aas/simulation_resources/scripts/set_gz_wind.py --from_west 0.0 --from_south 3.0
+> python3 /aas/simulation_resources/scripts/set_gz_wind.py --stop_wind
 > # Note: only use with the quadrotor models as the simulated airspeed sensors on VTOLs/tailsitters are not Gazebo wind-aware
 > ```
 > </details>
@@ -176,7 +176,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > Launching the `sim_run.sh` script with `DEV=true` does **not** start the simulation and mounts folders, `[aircraft|ground]_ws/src` as volumes to more easily track, commit, push changes while building and testing them within the containers:
 > 
 > ```sh
-> cd aerial-autonomy-stack/tools_and_docs/
+> cd aerial-autonomy-stack/start_here/
 > DEV=true ./sim_run.sh                                                                       # Starts one simulation-image, one ground-image, and one aircraft-image where the *_ws/src/ folders are mounted from the host
 > ```
 > 
@@ -215,13 +215,13 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 >
 > The default quad is a [Holybro X650](https://holybro.com/collections/multicopter-kit/products/x650-kits?variant=43994378240189) with the [IMX219](https://docs.arducam.com/Nvidia-Jetson-Camera/Native-Camera/imx219/) camera and the [Livox Mid-360S](https://www.livoxtech.com/mid-360s/specs) LiDAR
 >
-> Read [`SETUP_AVIONICS.md`](/tools_and_docs/docs/SETUP_AVIONICS.md) and [`BOM.md`](/tools_and_docs/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk/FCU
+> Read [`SETUP_AVIONICS.md`](/start_here/docs/SETUP_AVIONICS.md) and [`BOM.md`](/start_here/docs/BOM.md) to setup the requirements on the Jetson and configure the Pixhawk/FCU
 >
-> Read [`SETUP_CHRONY.md`](/tools_and_docs/docs/SETUP_CHRONY.md) to let the Jetson timesync to the `ground-image` computer when w/o internet
+> Read [`SETUP_CHRONY.md`](/start_here/docs/SETUP_CHRONY.md) to let the Jetson timesync to the `ground-image` computer when w/o internet
 
 ```sh
 git clone https://github.com/JacopoPan/aerial-autonomy-stack.git
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~50' to build onnxruntime-gpu with TensorRT support from source
 
@@ -234,7 +234,7 @@ cd aerial-autonomy-stack/tools_and_docs/
 On a Jetson Orin, start the `aircraft-image`:
 
 ```sh
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.sh    # The first run of `./deploy_run.sh` requires ~5-10' to build the TensorRT cache
 
@@ -250,7 +250,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
 
 ```sh
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 ./sim_build.sh                                        # Build all images for amd64, including ground-image
 GROUND=true QUAD_IDS=1 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh    # Optionally, use offline QGC maps placing file qgcMapCache.qgctiledb in the host's ~/Downloads/ folder
@@ -277,7 +277,7 @@ Set up a LAN on an arbitrary `SIM_SUBNET` with netmask `255.255.0.0` (e.g. `172.
 First, start the ground container:
 ```sh
 # On the computer with IPs ending in 90.101
-HITL=true GROUND=true QUAD_IDS=1,2 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
+HITL=true GROUND=true QUAD_IDS=1,2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 HEADLESS=false ./deploy_run.sh
 ```
 
 Then, start all aircraft containers, one on each Jetson (e.g. *via* SSH from the ground container):
@@ -328,7 +328,7 @@ pip3 install -e .
 Examples:
 ```sh
 conda activate aas                                    # If using Anaconda
-cd aerial-autonomy-stack/tools_and_docs/
+cd aerial-autonomy-stack/start_here/
 
 python3 gym_run.py --mode step                        # Manually step AAS @1Hz
 python3 gym_run.py --mode speedup                     # Speed-up test @50Hz
@@ -498,7 +498,7 @@ aerial-autonomy-stack
 │   │
 │   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
-└── tools_and_docs
+└── start_here
     ├── docker
     │   ├── aircraft.dockerfile                       # Docker image for aircraft simulation and deployment
     │   ├── ground.dockerfile                         # Docker image for ground system simulation and deployment

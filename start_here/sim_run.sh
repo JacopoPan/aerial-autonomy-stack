@@ -74,7 +74,7 @@ AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
 SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
 GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
-# In dev mode, resources and workspaces are mounted from the host
+# In dev mode, workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
   DEV_SIM_OPTS="--entrypoint /bin/bash"
   DEV_SIM_OPTS+=" -v ${SCRIPT_DIR}/../simulation/simulation_ws/src:/aas/simulation_ws/src:cached"
@@ -157,7 +157,7 @@ DOCKER_CMD="docker run -it --rm \
 if [[ "$HITL" == "true" ]]; then
   DOCKER_CMD="$DOCKER_CMD --net=host"
 else
-  DOCKER_CMD="$DOCKER_CMD --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.${SIM_ID}"
+  DOCKER_CMD="$DOCKER_CMD --network name=$SIM_NET_NAME,ip=${SIM_SUBNET}.90.${SIM_ID}"
 fi
 # Add WSL-specific options and complete the command
 if [[ "$DESK_ENV" == "wsl" ]]; then
@@ -182,9 +182,10 @@ if [[ "$HITL" == "false" ]]; then
       --env VTOL_IDS=$(seq -s, $((NUM_QUADS + 1)) $((NUM_QUADS + NUM_VTOLS))) \
       --env TAIL_IDS=$(seq -s, $((NUM_QUADS + NUM_VTOLS + 1)) $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))) \
       --env SIMULATED_TIME=true \
-      --env ROS_DOMAIN_ID=$GROUND_ID --env AIR_SUBNET=$AIR_SUBNET \
+      --env ROS_DOMAIN_ID=$GROUND_ID --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET \
       --env HOST_INPUT_GID=$(getent group input | cut -d: -f3) \
-      --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.${GROUND_ID} \
+      --network name=$SIM_NET_NAME,ip=${SIM_SUBNET}.90.${GROUND_ID} \
+      --network name=$AIR_NET_NAME,ip=${AIR_SUBNET}.90.${GROUND_ID} \
       --privileged \
       --name $GND_CONT_NAME"
     # Add WSL-specific options and complete the command
@@ -219,12 +220,15 @@ if [[ "$HITL" == "false" ]]; then
         --env GND_CONTAINER=$GND_CONTAINER \
         --env ROS_DOMAIN_ID=$DRONE_ID \
         --env RECORD_ROSBAG=$RECORD_ROSBAG \
-        --net=$SIM_NET_NAME --ip=${SIM_SUBNET}.90.$DRONE_ID \
+        --network name=$SIM_NET_NAME,ip=${SIM_SUBNET}.90.$DRONE_ID \
         --privileged \
         --name $NAME_AIRCRAFT_CNT"
       # Add WSL-specific options and complete the command
       if [[ "$DESK_ENV" == "wsl" ]]; then
         DOCKER_CMD="$DOCKER_CMD $WSL_OPTS"
+      fi
+      if [[ "$GND_CONTAINER" == "true" ]]; then
+        DOCKER_CMD="$DOCKER_CMD --network name=$AIR_NET_NAME,ip=${AIR_SUBNET}.90.$DRONE_ID"
       fi
       DOCKER_CMD="$DOCKER_CMD ${DEV_AIR_OPTS} aircraft-image"
       calculate_terminal_position $(($DRONE_ID + 1))
@@ -239,14 +243,6 @@ if [[ "$HITL" == "false" ]]; then
   launch_aircraft_containers "vtol" $NUM_VTOLS
   # Launch the Tailsitter containers
   launch_aircraft_containers "tail" $NUM_TAILS
-
-  if [[ "$GND_CONTAINER" == "true" ]]; then
-    sleep 2.0 # Once all containers are up, connect ground and aircraft containers to the air network
-    docker network connect --ip=${AIR_SUBNET}.90.$GROUND_ID $AIR_NET_NAME $GND_CONT_NAME
-    for i in $(seq 1 $((NUM_QUADS + NUM_VTOLS + NUM_TAILS))); do
-      docker network connect --ip=${AIR_SUBNET}.90.$i $AIR_NET_NAME "aircraft-container-inst${INSTANCE}_${i}"
-    done
-  fi
 fi
 
 echo "Fly, my pretties, fly!"

@@ -4,7 +4,7 @@
 >
 > Alternative hardware options include: [ARK's Jetson PAB Orin NX NDAA Bundle](https://arkelectron.com/product/ark-jetson-orin-nx-ndaa-bundle/),  [ARK's Jetson PAB V3 Orin NX NDAA Bundle](https://arkelectron.com/product/ark-jetson-pab-v3-orin-nx-ndaa-bundle/), and a [Holybro's 6X Pro](https://holybro.com/collections/flight-controllers/products/pixhawk-6x-pro) or [CubePilot Cube Orange+](https://www.cubepilot.org/#/cube/features) paired with a [Seeed Studio's A603](https://www.seeedstudio.com/A603-Carrier-Board-for-Jetson-Orin-NX-Nano-p-5635.html) or [A608](https://www.seeedstudio.com/Jetson-A608-Carrier-Board-for-Orin-NX-Orin-Nano-Series-p-5853.html) Jetson carrier
 >
-> For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/tools_and_docs/docs/BOM.md)
+> For the complete bill of materials of an `aerial-autonomy-stack`-enabled quadcopter, read [`BOM.md`](/start_here/docs/BOM.md)
 
 ## Flash JetPack 7 to Jetson Orin
 
@@ -257,7 +257,7 @@ ifconfig
 # Set vehicle/MAV_SYS_ID (for multiple QGC connections) and UXRCE_DDS_DOM_ID/ROS_DOMAIN_ID
 param set MAV_SYS_ID 1
 param set UXRCE_DDS_DOM_ID 1
-param set UXRCE_DDS_PTCFG 2         # Use the custom "px4_participant" (set in the aircraft container's fastdds_profile.xml) to keep DDS off radios
+param set UXRCE_DDS_PTCFG 2         # Use the custom "px4_participant" (set in the aircraft container's fastdds_no_air_radio.xml) to keep DDS off radios
 
 # Optionally
 param set MAV_2_CONFIG 0            # Disable MAVLINK on Ethernet (so Ethernet is used for XRCE-DDS only), if needed, also check params MAV_0_CONFIG, MAV_1_CONFIG

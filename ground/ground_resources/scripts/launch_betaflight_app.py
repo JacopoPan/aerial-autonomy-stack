@@ -1,7 +1,7 @@
 """Start one Betaflight App per Betaflight SITL, each pre-set to connect to its drone over TCP.
 
 Use as:
-    python3 betaflight_app.py tcp://127.0.0.1:5761 [tcp://127.0.0.1:5771 ...]   (in drone order, drone k: port 5761 + 10 * (k - 1))
+    python3 launch_betaflight_app.py tcp://127.0.0.1:5761 [tcp://127.0.0.1:5771 ...]   (in drone order, drone k: port 5761 + 10 * (k - 1))
 """
 import json
 import os
@@ -38,7 +38,8 @@ for drone_id, url in enumerate(urls, start=1):
     db.close()
     env = dict(os.environ, XDG_DATA_HOME=data_home)
     env.setdefault('WEBKIT_DISABLE_DMABUF_RENDERER', '1') # Avoid blank WebKitGTK windows
-    app = subprocess.Popen(['betaflight-app'], env=env)
+    # Hide the host's serial ports from the App (an empty /sys/class/tty in its own mount namespace): it lists none, so Connect uses the TCP address
+    app = subprocess.Popen(['unshare', '--mount', 'sh', '-c', 'mount -t tmpfs tmpfs /sys/class/tty && exec betaflight-app'], env=env)
     apps[app.pid] = (drone_id, url)
     print(f'Betaflight App {drone_id}: Connect goes to {url}')
 

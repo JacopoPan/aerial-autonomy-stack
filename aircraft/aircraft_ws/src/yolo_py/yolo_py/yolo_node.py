@@ -136,7 +136,7 @@ class YoloInferenceNode(Node):
                     f"{record_branch}"
                     "nvvidconv ! "
                     "video/x-raw(memory:NVMM), format=RGBA ! "
-                    "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
+                    "nvdewarper config-file=/aas/aircraft_resources/config/imx219_dewarper.txt ! "
                     "nvvidconv ! "
                     "video/x-raw, width=640, height=360, format=BGRx ! "
                     "queue max-size-buffers=2 leaky=downstream ! " # Mitigate EGL crashes
@@ -149,10 +149,10 @@ class YoloInferenceNode(Node):
                 #     "video/x-raw(memory:NVMM), width=1280, height=720, framerate=60/1 ! "
                 #     "nvvidconv ! "
                 #     "video/x-raw(memory:NVMM), format=RGBA ! "
-                #     "nvdewarper config-file=/aas/aircraft_resources/patches/imx219_dewarper_config.txt ! "
+                #     "nvdewarper config-file=/aas/aircraft_resources/config/imx219_dewarper.txt ! "
                 #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=NV12 ! "
                 #     "m.sink_0 nvstreammux name=m batch-size=1 width=640 height=360 ! "
-                #     "nvinfer config-file-path=/aas/aircraft_resources/patches/nvinfer_config.txt ! "
+                #     "nvinfer config-file-path=/aas/aircraft_resources/config/deepstream_nvinfer.txt ! "
                 #     "nvvideoconvert ! video/x-raw(memory:NVMM), format=RGBA ! "
                 #     "nvdsosd ! "
                 #     "nvvideoconvert ! video/x-raw, format=BGRx ! "
@@ -170,7 +170,7 @@ class YoloInferenceNode(Node):
 
         # Intrinsics Setup
         if self.architecture == 'aarch64' and not self.hitl: # IMX219-200 CSI camera undistorted with nvdewarper
-            calib_file = "/aas/aircraft_resources/patches/camera_calibration.yaml"
+            calib_file = "/aas/aircraft_resources/config/imx219_calibration.yaml"
             if not os.path.exists(calib_file):
                 raise FileNotFoundError(f"CRITICAL: Camera calibration file not found at {calib_file}.")
             with open(calib_file, 'r') as f:

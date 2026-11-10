@@ -4,7 +4,7 @@ Every period: active modes, arming disable flags, RC channels (as Betaflight use
 altitude and vertical speed (from the arming point, once armed), GPS fix and satellites
 
 Use as:
-    python3 /aas/aircraft_resources/scripts/betaflight_msp_monitor.py --ip ${SIM_SUBNET}.90.${SIM_ID} --port $((5761 + 10 * (DRONE_ID - 1))) --period 0.5
+    python3 /aas/aircraft_resources/scripts/monitor_betaflight_msp.py --ip ${SIM_SUBNET}.90.${SIM_ID} --port $((5761 + 10 * (DRONE_ID - 1))) --period 0.5
 
 Note: requires the Betaflight App to be disconnected from the SITL instance
 """

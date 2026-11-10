@@ -1,7 +1,9 @@
 <% 
   headless = ENV.fetch('HEADLESS', 'false') == 'true'
 
+  sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   air_subnet = ENV.fetch('AIR_SUBNET', '10.22')
+  ground_id = ENV.fetch('ROS_DOMAIN_ID', '101')
 
   quad_ids = ENV.fetch('QUAD_IDS', '1').split(',').map(&:to_i)
   vtol_ids = ENV.fetch('VTOL_IDS', '').split(',').map(&:to_i)
@@ -22,9 +24,9 @@ name: ground
 
 # Keep DDS off AIR_SUBNET: topics cross it only through the Zenoh bridge
 on_project_start:
-  - erb /aas/ground_resources/comms/fastdds_profile.xml.erb > /aas/ground_resources/comms/fastdds_profile.xml # Fills in this container's AIR_SUBNET/mesh radio address
-  - export FASTRTPS_DEFAULT_PROFILES_FILE=/aas/ground_resources/comms/fastdds_profile.xml # ROS2 (Jazzy, FastDDS 2.14)
-  - export CYCLONEDDS_URI=file:///aas/ground_resources/comms/cyclonedds.xml # zenoh-bridge-ros2dds (Eclipse apt repo, CycloneDDS)
+  - erb /aas/ground_resources/comms/fastdds_no_air_radio.xml.erb > /aas/ground_resources/comms/fastdds_no_air_radio.xml # Fills in this container's AIR_SUBNET/mesh radio address
+  - export FASTRTPS_DEFAULT_PROFILES_FILE=/aas/ground_resources/comms/fastdds_no_air_radio.xml # ROS2 (Jazzy, FastDDS 2.14)
+  - export CYCLONEDDS_URI=file:///aas/ground_resources/comms/cyclonedds_loopback.xml # zenoh-bridge-ros2dds (Eclipse apt repo, CycloneDDS)
 
 windows:
 
@@ -32,7 +34,7 @@ windows:
       layout: even-horizontal
       panes:
         - clear && echo "So nice to have you with us, this is the ground container."
-        - ros2 run ground_system ground_system --ros-args -p drone_ids:="<%= drone_ids %>" -p base_port:=18540 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-1']"
+        - ros2 run ground_system ground_system --ros-args -p drone_ids:="<%= drone_ids %>" -p base_port:=18540 -p ip:=127.0.0.1 -p rate:=10.0 <%= simulated_time ? '-p use_sim_time:=True' : '' %> -p assignments:="['1-0', '2-1']"
 
   - mavlink-router:
       layout: tiled
@@ -43,8 +45,8 @@ windows:
           <% (1..num_drones).each do |drone_id| %>
           <% sitl_instance = drone_id - 1 %>
           echo "[UdpEndpoint drone<%= drone_id %>]" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
-          echo "Mode = Eavesdropping" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
-          echo "Address = 0.0.0.0" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
+          echo "Mode = Server" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
+          echo "Address = <%= sim_subnet %>.90.<%= ground_id %>" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
           echo "Port = <%= 16540 + sitl_instance %>" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
           <% end %>
           <% else %>
@@ -63,13 +65,13 @@ windows:
             done
           ) &&
           <% end %>
-          mavlink-routerd -c /aas/ground_resources/comms/mavlink_router_main.conf
+          until mavlink-routerd -c /aas/ground_resources/comms/mavlink_router_main.conf; do sleep 1; done
 
   - zenoh_and_gcs:
       layout: even-horizontal
       pre: if [ -n "$HOST_INPUT_GID" ]; then groupadd -g "$HOST_INPUT_GID" host_input 2>/dev/null || true; usermod -aG host_input qgcuser; fi
       panes:
-        - zenoh-bridge-ros2dds -l tcp/0.0.0.0:7447 -c /aas/ground_resources/comms/zenoh_config_ground.json5
+        - until zenoh-bridge-ros2dds -l tcp/<%= air_subnet %>.90.<%= ground_id %>:7447 -c /aas/ground_resources/comms/zenoh_config_ground.json5; do sleep 1; done
         <% if headless %>
         - echo "Headless mode, not launching QGroundControl."
         <% elsif autopilot == 'betaflight' %>
@@ -78,7 +80,7 @@ windows:
           <% drone_ids.each do |drone_id| %>
           (while true; do socat TCP-LISTEN:<%= 5761 + 10 * (drone_id - 1) %>,bind=127.0.0.1,reuseaddr TCP-LISTEN:<%= 15761 + 10 * (drone_id - 1) %>,reuseaddr; sleep 1; done) &
           <% end %>
-          python3 /aas/ground_resources/scripts/betaflight_app.py <%= drone_ids.map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
+          python3 /aas/ground_resources/scripts/launch_betaflight_app.py <%= drone_ids.map { |drone_id| "tcp://127.0.0.1:#{5761 + 10 * (drone_id - 1)}" }.join(' ') %>
         <% elsif autopilot == 'px4' || autopilot == 'ardupilot' %>
         # QGC offline tiles: export from QGC 5.1 Application Settings -> Maps -> Offline Maps and save them on the host as ~/Downloads/qgcMapCache.qgctiledb
         - >

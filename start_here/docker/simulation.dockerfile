@@ -132,9 +132,9 @@ COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/gith
 WORKDIR /aas/github_apps/betaflight
 RUN git apply ../betaflight-2026.6.2.patch && make TARGET=SITL
 COPY /_github_clones/aeroloop_gazebo /aas/github_apps/aeroloop_gazebo
-COPY simulation/simulation_resources/patches/aeroloop_gazebo-gz.patch /aas/github_apps/aeroloop_gazebo-gz.patch
+COPY simulation/simulation_resources/patches/betaflight_aeroloop_gazebo-gz.patch /aas/github_apps/betaflight_aeroloop_gazebo-gz.patch
 WORKDIR /aas/github_apps/aeroloop_gazebo
-RUN git apply ../aeroloop_gazebo-gz.patch && mkdir plugins/build && cd plugins/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
+RUN git apply ../betaflight_aeroloop_gazebo-gz.patch && mkdir plugins/build && cd plugins/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
 # Run with $ /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf
 
 ################################################################################
@@ -156,7 +156,7 @@ WORKDIR /aas/github_apps/PX4-Autopilot
 RUN git apply ../px4-v1.17.0.patch
 
 # Replace dds_topics.yaml with custom topics
-COPY simulation/simulation_resources/patches/dds_topics.yaml /aas/github_apps/PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml
+COPY simulation/simulation_resources/patches/px4_dds_topics.yaml /aas/github_apps/PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml
 
 # Add PX4 Airframes ROMFS
 COPY --from=airframe_filter_stage /airframes/ /aas/github_apps/PX4-Autopilot/ROMFS/px4fmu_common/init.d-posix/airframes/
@@ -209,12 +209,12 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources
-RUN chmod +x /aas/simulation_resources/patches/create_*_drones_and_world.sh
+RUN chmod +x /aas/simulation_resources/scripts/create_*_drones_and_world.sh
 
 # Copy QGC configuration (only for GND_CONTAINER=false)
-COPY ground/ground_resources/patches/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
+COPY ground/ground_resources/config/QGroundControl.ini /home/qgcuser/.config/QGroundControl/QGroundControl.ini
 # Copy the Betaflight App launcher (only for AUTOPILOT=betaflight and GND_CONTAINER=false)
-COPY ground/ground_resources/scripts/betaflight_app.py /aas/ground_resources/scripts/betaflight_app.py
+COPY ground/ground_resources/scripts/launch_betaflight_app.py /aas/ground_resources/scripts/launch_betaflight_app.py
 
 # Build gz_gst_bridge
 WORKDIR /aas/simulation_resources/comms/gz_gst_bridge

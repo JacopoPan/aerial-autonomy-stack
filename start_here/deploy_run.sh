@@ -74,7 +74,7 @@ if [[ "$GROUND" == "true" ]]; then
     --env QUAD_IDS=$QUAD_IDS --env VTOL_IDS=$VTOL_IDS --env TAIL_IDS=$TAIL_IDS \
     --env SIMULATED_TIME=$HITL \
     --env ROS_DOMAIN_ID=$GROUND_ID \
-    --env AIR_SUBNET=$AIR_SUBNET \
+    --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET \
     --env HOST_INPUT_GID="$(getent group input | cut -d: -f3)" \
     --env REMOTE_VIDEO_STREAMS=true \
     --env SSH_CONNECTIONS=true \
@@ -87,7 +87,7 @@ if [[ "$GROUND" == "true" ]]; then
   exit 0
 fi
 
-# In dev mode, resources and workspaces are mounted from the host
+# In dev mode, workspaces are mounted from the host
 if [[ "$DEV" == "true" ]]; then
   DEV_OPTS="--entrypoint /bin/bash"
   DEV_OPTS+=" -v ${SCRIPT_DIR}/../aircraft/aircraft_ws/src:/aas/aircraft_ws/src:cached"

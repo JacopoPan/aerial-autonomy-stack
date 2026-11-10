@@ -7,7 +7,7 @@
 /_github_clones/
 
 # Logs
-/tools_and_docs/logs/
+/start_here/logs/
 
 # Meshes unpacked from simulation_resources.zip
 simulation/simulation_resources/aircraft_models/alti_transition_quad/materials/textures/AltiTransitionMap.png

@@ -3,7 +3,7 @@ Sanity-check the MAVLink link created by mavlink-router for QGC (udpin:127.0.0.1
 Note: remember to close QGroundControl first
 
 Use as:
-    python3 ardupilot_mavlink_checks.py --device="udpin:127.0.0.1:14550"
+    python3 check_ardupilot_mavlink.py --device="udpin:127.0.0.1:14550"
 
 If necessary, remove MAVLink signature over USB (e.g. `/dev/ttyACM0`)
 

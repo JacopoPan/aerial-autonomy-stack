@@ -49,7 +49,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Clone external repos
-        run: CLONE_ONLY=true ./tools_and_docs/sim_build.sh
+        run: CLONE_ONLY=true ./start_here/sim_build.sh
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -59,7 +59,7 @@ jobs:
           docker buildx build --load \
             --build-arg BUILD_ADVANCED_ODOM=false \
             -t aircraft-image:lint \
-            -f ./tools_and_docs/docker/aircraft.dockerfile .
+            -f ./start_here/docker/aircraft.dockerfile .
 
       - name: Check disk space after build
         run: df -h

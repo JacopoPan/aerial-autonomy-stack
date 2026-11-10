@@ -2,11 +2,11 @@
 Inspect all topics' message type, publisher node(s), and subscriber nodes
 
 Use as:
-    python3 /aas/aircraft_resources/scripts/inspect_topics.py
+    python3 /aas/aircraft_resources/scripts/inspect_ros2_topics.py
 """
 import subprocess
 
-def inspect_topics():
+def inspect_ros2_topics():
     try:
         topics = subprocess.check_output(['ros2', 'topic', 'list']).decode().split()
     except Exception:
@@ -48,4 +48,4 @@ def inspect_topics():
         print(f"{t:<60} | {msg_type:<40} | {pub_str:<40} | {sub_str:<40}")
 
 if __name__ == '__main__':
-    inspect_topics()
+    inspect_ros2_topics()
