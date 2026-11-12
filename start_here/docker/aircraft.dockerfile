@@ -461,7 +461,7 @@ RUN ln -s /aas/aircraft_resources/scripts/cancellable_action.py /usr/local/bin/c
     && chmod +x /aas/aircraft_resources/scripts/cancellable_action.py
 
 # Copy sensor configuration
-COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
+COPY simulation/simulation_resources/aircraft_sensors/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
 # KISS-ICP without deskewing to avoid divide-by-zero when sim_time_slices: 1
 RUN [ ! -d /aas/github_ws/src/kiss-icp ] || echo '{kiss_icp_node: {ros__parameters: {data: {deskew: false}}}}' > /aas/github_ws/src/kiss-icp/ros/config/no_deskew.yaml
