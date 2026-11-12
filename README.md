@@ -132,7 +132,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
 
 > [!TIP]
-> Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_models/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
+> Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_sensors/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
 >
 > <details>
 > <summary>Use ROS2 drone and gimbal <b>control primitives</b> from CLI <i>(click to expand)</i></summary>
@@ -356,10 +356,14 @@ flowchart TB
             gz(Gazebo Sim):::resource
             subgraph models [Models]
                 drones(aircraft_models/):::resource
+                sensors(aircraft_sensors/):::resource
                 worlds(simulation_worlds/):::resource
             end
 
             drones --> gz
+            sensors --> gz
+            sensors ~~~ drones
+            sensors ~~~ worlds
             worlds --> gz
             sitl <--> |"gz_bridge || ardupilot_gazebo <br/> || aeroloop_gazebo"| gz
         end
@@ -476,12 +480,13 @@ aerial-autonomy-stack
 │   │   │   ├── iris_with_ardupilot                   # ArduPilot quad model
 │   │   │   ├── iris_with_betaflight                  # Betaflight quad model
 │   │   │   ├── swan_k1_hwing                         # ArduPilot tailsitter model
+│   │   │   ├── standard_vtol                         # PX4 VTOL model
+│   │   │   ├── x500                                  # PX4 quad model
+│   │   │   └── quadtailsitter                        # PX4 tailsitter model
+│   │   ├── aircraft_sensors
 │   │   │   ├── sensor_camera                         # Camera model
 │   │   │   ├── sensor_gimbal                         # 3D gimbal used with sensor_camera
 │   │   │   ├── sensor_lidar                          # LiDAR model
-│   │   │   ├── standard_vtol                         # PX4 VTOL model
-│   │   │   ├── x500                                  # PX4 quad model
-│   │   │   ├── quadtailsitter                        # PX4 tailsitter model
 │   │   │   └── sensor_config.yaml                    # Intrinsics and extrinsics for all sensor and vehicle models
 │   │   └── simulation_worlds
 │   │       ├── apple_orchard.sdf

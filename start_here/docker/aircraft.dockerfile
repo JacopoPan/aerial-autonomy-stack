@@ -462,7 +462,7 @@ RUN ln -s /aas/aircraft_resources/scripts/cancellable_action.py /usr/local/bin/c
     && chmod +x /aas/aircraft_resources/scripts/cancellable_action.py
 
 # Copy sensor configuration
-COPY simulation/simulation_resources/aircraft_models/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
+COPY simulation/simulation_resources/aircraft_sensors/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
 # Source the workspaces (mimosa_custom_gtsam_ws first, as github_ws builds rovio on it, and only if BUILD_ADVANCED_ODOM=true)
 RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \

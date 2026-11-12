@@ -19,14 +19,14 @@ def render_and_save(template_name, output_name, template_binding)
 end
 
 # Load the configuration file
-config = YAML.load_file(File.join(MODELS_DIR, 'sensor_config.yaml'))
+config = YAML.load_file(File.join(MODELS_DIR, '../aircraft_sensors/sensor_config.yaml'))
 
 # Generate sensor SDFs
 camera_intrinsics = config['sensors']['camera_intrinsics']
-render_and_save('sensor_camera/model.sdf.erb', 'sensor_camera/model.sdf', binding)
+render_and_save('../aircraft_sensors/sensor_camera/model.sdf.erb', '../aircraft_sensors/sensor_camera/model.sdf', binding)
 
 lidar_intrinsics = config['sensors']['lidar_intrinsics']
-render_and_save('sensor_lidar/model.sdf.erb', 'sensor_lidar/model.sdf', binding)
+render_and_save('../aircraft_sensors/sensor_lidar/model.sdf.erb', '../aircraft_sensors/sensor_lidar/model.sdf', binding)
 
 # Generate aircraft SDFs
 config['aircraft_models'].each do |model_name, extrinsics|
