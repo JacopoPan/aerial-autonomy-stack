@@ -20,6 +20,12 @@
     <!-- ROS2 nodes, used by default: UDP without the radio, plus shared memory as in ROS2's default -->
     <participant profile_name="aas" is_default_profile="true">
       <rtps>
+        <allocation>
+          <remote_locators>
+            <max_unicast_locators>8</max_unicast_locators>
+          </remote_locators>
+        </allocation>
+        <netmask_filter>ON</netmask_filter>
         <userTransports>
           <transport_id>udp</transport_id>
           <transport_id>shm</transport_id>
