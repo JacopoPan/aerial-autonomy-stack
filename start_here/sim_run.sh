@@ -18,7 +18,7 @@ GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
 NUM_TAILS="${NUM_TAILS:-0}" # Number of tailsitters (default = 0)
-WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
+WORLD="${WORLD:-impalpable_greyness}" # Options: impalpable_greyness (default), apple_orchard, crematoria, livo_bench, shibuya_crossing, swiss_town, waterworld
 #
 RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 DEV="${DEV:-false}" # Options: true, false (default)
@@ -49,7 +49,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none kissicp openvins fastlio superodom mimosa
-check_enum WORLD impalpable_greyness apple_orchard crematoria shibuya_crossing swiss_town waterworld
+check_enum WORLD impalpable_greyness apple_orchard crematoria livo_bench shibuya_crossing swiss_town waterworld
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG DEV HITL GND_CONTAINER PX4_ROS2_LIB START_AS_PAUSED PLOT; do check_enum "$v" true false; done
 if [[ "$ODOM" =~ ^(kissicp|fastlio|superodom|mimosa)$ && "$LIDAR" != "true" ]]; then abort "ODOM=$ODOM requires LIDAR=true"; fi
 if [[ "$ODOM" =~ ^(openvins|mimosa)$ && "$CAMERA" != "true" ]]; then abort "ODOM=$ODOM requires CAMERA=true"; fi

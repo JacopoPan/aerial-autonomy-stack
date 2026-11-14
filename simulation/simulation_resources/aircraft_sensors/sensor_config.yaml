@@ -21,9 +21,10 @@ sensors:
     max_range: 70.0
     range_resolution: 0.01
     update_rate: 6
-    sim_time_slices: 2 # Number of Gazebo renders per update (i.e., gpu_lidar runs at update_rate * sim_time_slices), livox_sim stamps each point with its render's time
-    # sim_time_slices: 1 is Gazebo's idealized LiDAR, with all points in a frame having the same time
-    # sim_time_slices: >1 spreads them over the frame, as on the real sensor, to test deskewing
+    # Simulation only: number of Gazebo renders per update (i.e., the gpu_lidar plugin runs at <update_rate * sim_time_slices> Hz)
+    # The livox_sim node stamps each point with its render's (simulation) time
+    sim_time_slices: 2 # sim_time_slices: 1 is Gazebo's idealized LiDAR, with all points in a frame having the same time
+                       # sim_time_slices: >1 spreads them over the frame, as on the real sensor, to test deskewing
 
 aircraft_models:
 

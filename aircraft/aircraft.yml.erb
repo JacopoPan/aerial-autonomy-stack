@@ -28,20 +28,136 @@
   # Load sensor information from the sensor_config.yaml file
   require 'yaml'
   sensor_config = YAML.load_file('/aas/aircraft_resources/sensor_config.yaml')
-  hfov_deg = sensor_config['sensors']['camera_intrinsics']['horizontal_fov_deg'].to_f
-  stereo_cam = sensor_config['sensors']['camera_intrinsics']['stereo'] == true
-
-  camera_ids = stereo_cam ? [0, 1] : [0] # In SITL/HITL simulation, these are the UDP streams on ports 5600, 5601; on real drones, these are CSI sensor-id 0, 1
-
   sim_models = { 'ardupilot' => { 'quad' => 'iris_with_ardupilot', 'vtol' => 'alti_transition_quad', 'tail' => 'swan_k1_hwing'},
                  'px4' => { 'quad' => 'x500', 'vtol' => 'standard_vtol', 'tail' => 'quadtailsitter' },
                  'betaflight' => { 'quad' => 'iris_with_betaflight' } }
   sim_model = sim_models.fetch(autopilot, {})[drone_type]
-  camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
 
+  camera_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['camera_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
+  camera_intrinsics = sensor_config['sensors']['camera_intrinsics']
+  hfov_deg = camera_intrinsics['horizontal_fov_deg'].to_f
+  stereo_cam = camera_intrinsics['stereo'] == true
+  camera_ids = stereo_cam ? [0, 1] : [0] # In SITL/HITL simulation, these are the UDP streams on ports 5600, 5601; on real drones, these are CSI sensor-id 0, 1
+
+  lidar_extrinsics = sim_model ? sensor_config['aircraft_models'][sim_model]['lidar_extrinsics'].split.map(&:to_f) : [0, 0, 0, 0, 0, 0]
   livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0 # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
-  gz_instantaneous_lidar = simulated_time && sensor_config['sensors']['lidar_intrinsics']['sim_time_slices'] == 1 # In SITL/HITL, with sim_time_slices == 1, all points in a LiDAR frame have the same time
-  odom_uses_camera = %w[openvins mimosa].include?(odom) # mimosa through rovio
+  gz_sim_instantaneous_lidar = simulated_time && sensor_config['sensors']['lidar_intrinsics']['sim_time_slices'] == 1 # In SITL/HITL, with sim_time_slices == 1, all points in a LiDAR frame have the same time
+
+  odom_requires_ros2_camera_frames = %w[openvins mimosa].include?(odom) # mimosa through openvins
+
+  if odom != 'none'
+    require '/aas/aircraft_resources/scripts/pose_helpers.rb'
+    extend PoseHelpers
+
+    raise "ODOM=#{odom} requires wideangle: false in sensor_config.yaml" if odom_requires_ros2_camera_frames && camera_intrinsics['wideangle'] == true
+
+    camera_quaternion = quat_mul(quat(*camera_extrinsics[3, 3]), quat(-90, 0, -90)) # camera_frame_N is optical: z forward, x right, y down
+    camera_y_offsets = stereo_cam ? [0.05, -0.05] : [0.0] # Camera 0 on the left, camera 1 on the right, see sensor_camera/model.sdf.erb
+    camera_positions = camera_y_offsets.map { |y| transform_point(camera_extrinsics, [0, y, 0]) }
+    focal_length = camera_intrinsics['width'] / 2.0 / Math.tan(hfov_deg * Math::PI / 360)
+    pinhole_intrinsics = [focal_length, focal_length, camera_intrinsics['width'] / 2.0, camera_intrinsics['height'] / 2.0] # fx, fy, cx, cy
+
+    lidar_position = lidar_extrinsics[0, 3]
+    lidar_quaternion = quat(*lidar_extrinsics[3, 3])
+    lidar_rotation = rot_matrix(lidar_quaternion)
+    lidar_min_range = 0.5 # Closer points (e.g., on the propellers) are ignored
+
+    # RViz configurations
+    odom_rviz_config = { 'kissicp' => '/aas/github_ws/install/kiss_icp/share/kiss_icp/rviz/kiss_icp.rviz',
+                         'openvins' => '/aas/github_ws/install/ov_msckf/share/ov_msckf/launch/display_ros2.rviz',
+                         'fastlio' => '/aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz',
+                         'superodom' => '/aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz',
+                         'mimosa' => '/aas/aircraft_resources/config/rviz_mimosa_ros2.rviz' }[odom]
+    # In simulation, we copy the RViz view to add Gazebo's ground truth (re-published by odom_ground_truth.py)
+    if simulated_time && odom_rviz_config && File.exist?(odom_rviz_config)
+      rviz_view = YAML.load_file(odom_rviz_config)
+      ground_truth_display = YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Path
+        Name: Ground truth
+        Color: 255; 255; 0
+        Topic:
+          Value: /odom_ground_truth/path
+        Enabled: true
+        Value: true
+      DISPLAY
+      rviz_view['Visualization Manager']['Displays'] << ground_truth_display
+      odom_rviz_config = '/aas/aircraft_resources/config/rviz_odom_gz_ground_truth.rviz'
+      File.write(odom_rviz_config, rviz_view.to_yaml)
+      ground_truth_frame = rviz_view['Visualization Manager']['Global Options']['Fixed Frame'] # The selected backend's odometry fixed frame (e.g., odom_lidar for kissicp), used by odom_ground_truth.py to publish /odom_ground_truth/path
+    end
+
+    # SuperOdom and mimosa configuration files
+    case odom
+    when 'superodom'
+      lidar_in_imu = mat_vec(lidar_rotation.transpose, lidar_position) # IMU-to-LiDAR translation in LiDAR's axes (imu_transformer already rotates /imu_data into livox_frame)
+      superodom_calibration_yaml = '/aas/aircraft_resources/config/superodom_calibration.yaml'
+      File.write(superodom_calibration_yaml, <<~CALIBRATION) # Read with OpenCV's cv::FileStorage
+        %YAML:1.0
+        extrinsicRotation_imu_laser: !!opencv-matrix
+          rows: 3
+          cols: 3
+          dt: d
+          data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        extrinsicTranslation_imu_laser: !!opencv-matrix
+          rows: 3
+          cols: 1
+          dt: d
+          data: #{float_list(lidar_in_imu)}
+        imu_laser_rotation_offset: !!opencv-matrix
+          rows: 3
+          cols: 1
+          dt: d
+          data: [0.0, 0.0, 0.0]
+      CALIBRATION
+    when 'mimosa'
+      mimosa_config = '/aas/mimosa_custom_gtsam_ws/install/mimosa/share/mimosa/config'
+      mimosa_params = YAML.load_file("#{mimosa_config}/lapwing/params.yaml") # mimosa's example with a Mid-360
+      mimosa_params['lidar']['T_B_S'] = (lidar_position + lidar_quaternion).map { |v| v.round(6) }
+      mimosa_params['lidar']['sensor_json'] = "#{mimosa_config}/os_dummy.json" # Placeholder Ouster model (mimosa requires one even with photometric off), by absolute path
+      mimosa_params['lidar']['manager']['range_min'] = lidar_min_range
+      mimosa_params['radar']['manager']['enabled'] = false
+      mimosa_params['imu']['preintegration']['integration_sigma'] = 1e-4
+      mimosa_params_yaml = '/aas/aircraft_resources/config/mimosa_params.yaml'
+      File.write(mimosa_params_yaml, mimosa_params.to_yaml)
+    end
+  end
+
+  if record_rosbag
+    # Omitted for size: /livox/lidar, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
+    rosbag_topics = %W[
+      /tf
+      /tf_static
+      /rosout
+      /detections
+      /dtc_commands
+      /tracks
+      /offboard_flag
+      /kiss/odometry
+    ]
+    rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
+    case autopilot
+    when 'px4'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/fmu/out/vehicle_status_v1
+        /Drone#{drone_id}/fmu/out/vehicle_local_position_v1
+        /Drone#{drone_id}/fmu/out/vehicle_global_position
+      ]
+    when 'ardupilot'
+      rosbag_topics += %W[
+        /mavros/state
+        /mavros/local_position/odom
+        /mavros/global_position/global
+      ]
+    when 'betaflight'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/attitude
+        /Drone#{drone_id}/global_position
+        /Drone#{drone_id}/local_position
+        /Drone#{drone_id}/velocity
+        /Drone#{drone_id}/rc_override
+      ]
+    end
+  end
 %>
 
 name: drone
@@ -83,38 +199,68 @@ windows:
   - perception:
       layout: even-horizontal
       panes:
-        <% if camera %>
-        <% camera_ids.each do |cam_id| %>
-        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom_uses_camera %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
-        <% end %>
-        <% end %>
+        <% if camera; camera_ids.each do |cam_id| %>
+        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom_requires_ros2_camera_frames %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
+        <% end; end %>
         <% if lidar && !headless && odom == 'none' %>
         - ros2 run rviz2 rviz2 -d /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
         <% end %>
 
   <% if odom != 'none' %>
   - odom:
-      layout: even-horizontal
+      layout: tiled
       panes:
+        - ros2 run imu_publisher imu_publisher --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        - ros2 run tf2_ros static_transform_publisher --frame-id base_link --child-frame-id imu_link
+        <% if camera; camera_ids.each do |cam_id| %>
+        - ros2 run tf2_ros static_transform_publisher --frame-id base_link --child-frame-id camera_frame_<%= cam_id %> <%= tf_args(camera_positions[cam_id], camera_quaternion) %>
+        <% end; end %>
+        <% if lidar %>
+        - ros2 run tf2_ros static_transform_publisher --frame-id base_link --child-frame-id livox_frame <%= tf_args(lidar_position, lidar_quaternion) %>
+        <% end %>
         <% case odom %>
         <% when 'kissicp' %>
-        - ros2 launch kiss_icp odometry.launch.py topic:=/livox/lidar use_sim_time:=<%= simulated_time %> <%= headless ? 'visualize:=false' : '' %> <%= gz_instantaneous_lidar ? 'config_file:=/aas/github_ws/src/kiss-icp/ros/config/no_deskew.yaml' : '' %>
-        <% when 'openvins' %>
         - >
-          CONFIG_NAME=euroc_mav && CONFIG_DIR=/aas/github_ws/install/ov_msckf/share/ov_msckf/config/$CONFIG_NAME &&
-          sed -i 's|/imu0|/imu_data|g' $CONFIG_DIR/kalibr_imu_chain.yaml && sed -i 's|/cam0/image_raw|/camera_frames_0|g; s|/cam1/image_raw|/camera_frames_1|g' $CONFIG_DIR/kalibr_imucam_chain.yaml &&
-          ros2 launch ov_msckf subscribe.launch.py config:=$CONFIG_NAME <%= headless ? '' : 'rviz_enable:=true' %>
-          <%= stereo_cam ? '' : 'use_stereo:=false max_cameras:=1' %> <%= simulated_time ? 'use_sim_time:=true' : '' %>
+          ros2 run kiss_icp kiss_icp_node --ros-args -r pointcloud_topic:=/livox/lidar -p base_frame:=base_link -p publish_odom_tf:=true -p invert_odom_tf:=false
+          -p data.min_range:=<%= lidar_min_range %> -p data.deskew:=<%= !gz_sim_instantaneous_lidar %>
+          -p publish_debug_clouds:=<%= !headless %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        <% when 'openvins', 'mimosa' %>
+        # With try_zupt, OpenVINS initializes at rest (before takeoff) rather than waiting for a jerk above init_imu_thresh
+        - >
+          ros2 run ov_msckf run_subscribe_msckf --ros-args -r __ns:=/ov_msckf -p try_zupt:=true -p config_path:=/aas/github_ws/install/ov_msckf/share/ov_msckf/config/euroc_mav/estimator_config.yaml
+          -p imu0_rostopic:=/imu_data -p use_stereo:=<%= stereo_cam %> -p max_cameras:=<%= camera_ids.size %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+          <% camera_ids.each do |cam_id| %>
+          -p cam<%= cam_id %>_rostopic:=/camera_frames_<%= cam_id %> -p cam<%= cam_id %>_T_imu_cam:="<%= float_list(transform_matrix(camera_positions[cam_id], camera_quaternion)) %>" -p cam<%= cam_id %>_intrinsics:="<%= float_list(pinhole_intrinsics) %>" -p cam<%= cam_id %>_distortion_coeffs:="<%= float_list([0] * 4) %>" -p cam<%= cam_id %>_resolution:="[<%= camera_intrinsics['width'] %>, <%= camera_intrinsics['height'] %>]"
+          <% end %>
         <% when 'fastlio' %>
-        - ros2 launch spark_fast_lio mapping_vbr_colosseo.launch.yaml start_rviz:=<%= !headless %>
+        - >
+          ros2 run spark_fast_lio spark_lio_mapping --ros-args -r livox:=/livox/lidar -r imu:=/imu_data -p common.lidar_frame:=livox_frame -p common.imu_frame:=imu_link -p common.base_frame:=base_link -p common.visualization_frame:=base
+          -p preprocess.scan_line:=4 -p preprocess.blind:=<%= lidar_min_range %> -p mapping.extrinsic_T:="<%= float_list(lidar_position) %>" -p mapping.extrinsic_R:="<%= float_list(lidar_rotation) %>"
+          -p gravity_alignment.enable_gravity_alignment:=false -p publish.scan_publish_en:=true <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 launch kiss_matcher_ros run_kiss_matcher_sam.launch.yaml start_rviz:=<%= !headless %>
         <% when 'superodom' %>
-        - ros2 launch super_odometry livox_mid360.launch.py
-        <% when 'mimosa' %>
-        - ros2 launch mimosa parrot_launch.py
-        - ros2 launch rovio rovio_node.launch.py imu_topic:=/imu_data cam0_topic:=/camera_frames_0 cam1_topic:=/camera_frames_1 <%= simulated_time ? 'use_sim_time:=true' : '' %>
+        # SuperOdom's Livox mode expects the IMU along the LiDAR's axes, imu_transformer rotates /imu_data into livox_frame
+        - ros2 run imu_transformer imu_transformer_node --ros-args -r imu_in:=/imu_data -r imu_out:=/imu_data_livox_frame -p target_frame:=livox_frame <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        # SuperOdom's three nodes, as in its livox_mid360.launch.py
+          <% %w[feature_extraction_node laser_mapping_node imu_preintegration_node].each do |node| %>
+        - >
+          ros2 run super_odometry <%= node %> --ros-args --params-file /aas/github_ws/install/super_odometry/share/super_odometry/config/livox_mid360.yaml <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+          -p imu_topic:=/imu_data_livox_frame -p laser_topic:=/livox/lidar -p feature_extraction_node.min_range:=<%= lidar_min_range %> -p calibration_file:=<%= superodom_calibration_yaml %>
+          <% end %>
         <% end %>
-        - ros2 run imu_publisher imu_publisher --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+        <% if odom == 'mimosa' %>
+        # OpenVINS publishes odometry at IMU rate and mimosa adds a graph state per odometry message: throttling to 10 Hz keeps the graph small
+        - ros2 run topic_tools throttle messages /ov_msckf/odomimu 10.0 /ov_msckf/odomimu_10hz <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
+        - >
+          ros2 run mimosa mimosa_node --ros-args -p config_path:=<%= mimosa_params_yaml %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
+          -r /mimosa_node/imu/manager/imu_in:=/imu_data -r /mimosa_node/lidar/manager/lidar_in:=/livox/lidar -r /mimosa_node/odometry/manager/odometry_in:=/ov_msckf/odomimu_10hz
+        <% end %>
+        <% if !headless && odom_rviz_config %>
+        - ros2 run rviz2 rviz2 -d <%= odom_rviz_config %> <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
+        <% if ground_truth_frame %>
+        - python3 /aas/aircraft_resources/scripts/odom_ground_truth.py --ros-args -p frame_id:=<%= ground_truth_frame %> <%= odom == 'openvins' ? '-p body_frame:=imu' : '' %>
+        <% end %>
+        <% end %>
   <% end %>
 
   <% if autopilot == 'px4' %>
@@ -167,43 +313,6 @@ windows:
   <% end %>
 
   <% if record_rosbag %>
-  <%
-    # Topics recorded when record_rosbag is true (opt-in: add the names of the topics to save)
-    # Omitted for size: /livox/lidar, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
-    rosbag_topics = %W[
-      /tf
-      /tf_static
-      /rosout
-      /detections
-      /dtc_commands
-      /tracks
-      /offboard_flag
-      /kiss/odometry
-    ]
-    rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
-    case autopilot
-    when 'px4'
-      rosbag_topics += %W[
-        /Drone#{drone_id}/fmu/out/vehicle_status_v1
-        /Drone#{drone_id}/fmu/out/vehicle_local_position_v1
-        /Drone#{drone_id}/fmu/out/vehicle_global_position
-      ]
-    when 'ardupilot'
-      rosbag_topics += %W[
-        /mavros/state
-        /mavros/local_position/odom
-        /mavros/global_position/global
-      ]
-    when 'betaflight'
-      rosbag_topics += %W[
-        /Drone#{drone_id}/attitude
-        /Drone#{drone_id}/global_position
-        /Drone#{drone_id}/local_position
-        /Drone#{drone_id}/velocity
-        /Drone#{drone_id}/rc_override
-      ]
-    end
-  %>
   - logging:
       layout: tiled
       panes:

@@ -258,9 +258,12 @@ FROM ros2-px4msgs-dds-mavros-yolo-ort-lidar-image AS advanced-odom-true
 
 # Install KISS-ICP, based on https://github.com/PRBonn/kiss-icp/blob/main/README.md
 COPY /_github_clones/kiss-icp /aas/github_ws/src/kiss-icp
+# Patch, for RViz only: with base_frame (base_link), KISS-ICP publishes its local map from the LiDAR's first pose, tilted like the LiDAR; the patch moves it to the odometry's frame
+COPY aircraft/aircraft_resources/patches/kiss_icp_base_frame_map.patch /aas/github_ws/src/
+RUN cd /aas/github_ws/src/kiss-icp && git apply ../kiss_icp_base_frame_map.patch
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-skip livox_ros_driver2 --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --packages-select kiss_icp --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install OpenVINS, based on https://docs.openvins.com/gs-installing.html
 RUN apt-get update && \
@@ -283,9 +286,12 @@ RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash &&
 
 # Install SPARK-FAST-LIO, based on https://github.com/MIT-SPARK/spark-fast-lio#package-how-to-install
 COPY /_github_clones/spark-fast-lio /aas/github_ws/src/spark-fast-lio
+# Patch: spark-fast-lio's Livox input (CustomMsg) is compiled out in ROS2; the patch ports it to livox_ros_driver2 and fixes its compile errors
+COPY aircraft/aircraft_resources/patches/spark_fast_lio_livox_ros_driver2.patch /aas/github_ws/src/
+RUN cd /aas/github_ws/src/spark-fast-lio && git apply ../spark_fast_lio_livox_ros_driver2.patch
 WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
+# Explicitly use bash, not sh, to source and build the workspace (sourced, so that CMake finds livox_ros_driver2)
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to spark_fast_lio --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom dependencies, based on https://github.com/superxslam/SuperOdom#-3-installation
 # Sophus on 2021's commit https://github.com/strasdat/Sophus/commit/97e7161
@@ -334,6 +340,11 @@ WORKDIR /aas/github_ws
 RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select rviz_2d_overlay_msgs rviz_2d_overlay_plugins --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Install SuperOdom, based on https://github.com/superxslam/SuperOdom#-3-installation
+# Its Livox mode expects the IMU along the LiDAR's axes (like the Mid-360's built-in one): imu_transformer rotates /imu_data into livox_frame
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ros-jazzy-imu-transformer \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
@@ -345,9 +356,9 @@ WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --packages-select kiss_matcher_ros --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF"
 
-# Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup
+# Install mimosa, based on https://github.com/ntnu-arl/mimosa/tree/dev/ros2#common-setup (add topic-tools to throttle OpenVINS's IMU-rate odometry)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-jazzy-pcl-ros \
+    apt-get install -y --no-install-recommends libgoogle-glog-dev libspdlog-dev ros-jazzy-pcl-ros ros-jazzy-topic-tools \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /aas/mimosa_custom_gtsam_ws/src
@@ -377,27 +388,6 @@ RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/s
 # Build the rest of the mimosa workspace with the static GTSAM from mimosa's fork (limiting resource usage to avoid freezes on resource-constrained hosts)
 RUN MAKEFLAGS='-j4' NINJAJOBS='-j4' bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
     colcon build --packages-up-to mimosa --packages-skip gtsam gtsam_points --cmake-args -DCMAKE_BUILD_TYPE=Release -DCONFIG_UTILS_BUILD_TESTS=OFF -DCONFIG_UTILS_BUILD_DEMOS=OFF"
-
-# Install rovio (ROS 2 porting of https://github.com/ethz-asl/rovio), based on https://github.com/JacopoPan/rovio_ros2#installation
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends freeglut3-dev libglew-dev \
-    # valgrind \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir kindr \
-    && SHA=$(git ls-remote https://github.com/ethz-asl/kindr.git refs/heads/master | cut -f1) && [ -n "$SHA" ] \
-    && wget --tries=5 --retry-connrefused --retry-on-http-error=429,500,502,503,504 --waitretry=10 --timeout=30 -O /tmp/repo_archive.tar.gz https://github.com/ethz-asl/kindr/archive/${SHA}.tar.gz \
-    && tar -xzf /tmp/repo_archive.tar.gz -C kindr --strip-components=1 && rm /tmp/repo_archive.tar.gz \
-    && echo "kindr master ${SHA} $(find kindr -maxdepth 1 -type f -printf '%TF\n' | head -1)" >> /aas/repo_dep_branch_heads.txt \
-    && cd kindr \
-    && mkdir build && cd build \
-    && cmake .. \
-    && make install
-COPY /_github_clones/rovio /aas/github_ws/src/rovio
-WORKDIR /aas/github_ws
-# Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && source /aas/mimosa_custom_gtsam_ws/install/setup.bash && \
-    colcon build --packages-up-to rovio --cmake-args -DCMAKE_BUILD_TYPE=Release -DMAKE_SCENE=ON -DENABLE_VALGRIND_COMPATIBILITY=OFF -DBUILD_TESTING=OFF"
 
 ################################################################################
 # Add analysis tools and YOLO models ###########################################
@@ -463,13 +453,13 @@ RUN ln -s /aas/aircraft_resources/scripts/cancellable_action.py /usr/local/bin/c
 # Copy sensor configuration
 COPY simulation/simulation_resources/aircraft_sensors/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
-# KISS-ICP without deskewing to avoid divide-by-zero when sim_time_slices: 1
-RUN [ ! -d /aas/github_ws/src/kiss-icp ] || echo '{kiss_icp_node: {ros__parameters: {data: {deskew: false}}}}' > /aas/github_ws/src/kiss-icp/ros/config/no_deskew.yaml
 # RViz windows resized to 800x600 and placed at the bottom left of the screen, with the Displays and Views docks hidden
-RUN for f in /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz; do \
+RUN for f in /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz \
+             /aas/github_ws/install/ov_msckf/share/ov_msckf/launch/display_ros2.rviz /aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz \
+             /aas/github_ws/install/kiss_matcher_ros/share/kiss_matcher_ros/rviz/kiss_matcher_sam.rviz /aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz; do \
       [ ! -f "$f" ] || sed -i 's/^  Height: .*/  Height: 600/; s/^  Width: .*/  Width: 800/; s/^  X: .*/  X: 0/; s/^  Y: .*/  Y: 4096/; s/\(0044006900730070006c006100790073\)01/\100/; s/\(00560069006500770073\)01/\100/' "$f"; done
 
-# Source the workspaces (mimosa_custom_gtsam_ws first, as github_ws builds rovio on it, and only if BUILD_ADVANCED_ODOM=true)
+# Source the workspaces (mimosa_custom_gtsam_ws only if BUILD_ADVANCED_ODOM=true)
 RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \
     && echo "source /aas/github_ws/install/local_setup.bash" >> /root/.bashrc \
     && echo "source /aas/aircraft_ws/install/local_setup.bash" >> /root/.bashrc

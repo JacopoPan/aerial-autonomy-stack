@@ -23,7 +23,7 @@ public:
 
         imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>(
             "/imu_data",
-            rclcpp::SensorDataQoS()
+            rclcpp::SensorDataQoS().reliable() // Reliable publishers also match reliable subscribers (e.g., mimosa's)
         );
 
         // Subscribers configuration

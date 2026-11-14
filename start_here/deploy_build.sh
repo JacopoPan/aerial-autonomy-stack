@@ -47,7 +47,6 @@ ODOM_REPOS=( # Only used by the advanced-odom-true stage of aircraft.dockerfile
   "https://github.com/MIT-SPARK/KISS-Matcher.git;main;KISS-Matcher"
   "https://github.com/superxslam/SuperOdom.git;ros2;SuperOdom"
   "https://github.com/ntnu-arl/mimosa.git;dev/ros2;mimosa"
-  "https://github.com/JacopoPan/rovio_ros2.git;main;rovio"
 )
 if [ "$BUILD_ADVANCED_ODOM" = "true" ]; then REPOS+=("${ODOM_REPOS[@]}"); fi
 if [ "$PREBUILT_DEPS" = "true" ] && [ "$CLONE_ONLY" = "false" ]; then

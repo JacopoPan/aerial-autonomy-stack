@@ -1,0 +1,70 @@
+# Odometry benchmark mission, start with: ODOM=kissicp|openvins|fastlio|superodom|mimosa WORLD=livo_bench RTF=2 ./sim_run.sh
+# One ccw lap at 1.5m of altitude at 2.5m/s (~90'' in sim time): through the arch, between the walls, through the tunnel, the gate, and the window, along the wall
+# The drone stops at each corner, then hovers above the takeoff point and lands on it: the odometry's error there is its drift over the lap
+type: Sequence
+name: LIVO_Bench_Mission
+children:
+  - action: takeoff
+    name: "Takeoff to 2.5m"
+    params:
+      takeoff_altitude: 2.5
+
+  - action: speed
+    name: "Set cruise speed to 2.5m/s"
+    params:
+      speed: 2.5
+
+  - action: reposition
+    name: "Go to the start of the lap, at 1.5m"
+    params:
+      east: -8.0
+      north: -2.0
+      altitude: 1.5
+
+  - action: reposition
+    name: "West, through the arch"
+    params:
+      east: -21.0
+      north: -2.0
+      altitude: 1.5
+
+  - action: reposition
+    name: "South, between the tall walls and through the tunnel"
+    params:
+      east: -21.0
+      north: -38.0
+      altitude: 1.5
+
+  - action: reposition
+    name: "East, through the gate"
+    params:
+      east: -8.0
+      north: -38.0
+      altitude: 1.5
+
+  - action: reposition
+    name: "North, through the window and along the tall wall"
+    params:
+      east: -8.0
+      north: -2.0
+      altitude: 1.5
+
+  - action: reposition
+    name: "Back above the takeoff point"
+    params:
+      east: 0.0
+      north: 0.0
+      altitude: 1.5
+
+  - action: wait
+    name: "Hover for 5s"
+    params:
+      duration: 5.0
+
+  - action: land
+    name: "Land on the takeoff point"
+    params:
+      landing_altitude: 1.5
+
+run_with:
+  ros2 run mission mission --conops livo_bench.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=$SIMULATED_TIME
