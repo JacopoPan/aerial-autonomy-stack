@@ -44,12 +44,12 @@ class OdomGroundTruth(Node):
         if start:
             start_p, start_q = start
             rotation = qmul(start_q, [-q[0], -q[1], -q[2], q[3]]) # From Gazebo's world to frame_id: the drone's current orientation becomes start_q
-            self.world_to_frame = (rotation, [s - r for s, r in zip(start_p, rotate(rotation, p))]) # And its current position becomes start_p
+            self.world_to_frame = (rotation, [s - r for s, r in zip(start_p, rotate(rotation, p), strict=True)]) # And its current position becomes start_p
             self.path.poses = []
         if self.world_to_frame is None:
             return
         rotation, translation = self.world_to_frame
-        x, y, z = [r + t for r, t in zip(rotate(rotation, p), translation)]
+        x, y, z = [r + t for r, t in zip(rotate(rotation, p), translation, strict=True)]
         last = self.path.poses[-1].pose.position if self.path.poses else None
         if last and (x - last.x) ** 2 + (y - last.y) ** 2 + (z - last.z) ** 2 < 0.01: # Ignore poses less than 10cm apart
             return
