@@ -297,6 +297,24 @@ SR2_RAW_SENS     50
 SR2_RC_CHAN      1
 ```
 
+Topic `/mavros/imu/data_raw` is filled from `HIGHRES_IMU` (float) when ArduPilot streams it, and from `RAW_IMU` (part of `SR2_RAW_SENS`) otherwise (integer mG and mrad/s)
+
+`HIGHRES_IMU` is in no `SR2_*` group: to let ArduPilot stream it on `TELEM2`, add file `message-intervals-chan2.txt` on the microSD card's root folder
+
+Upload it with MAVProxy (in `simulation-image`) connecting the autopilot over USB (e.g. `/dev/ttyACM0`):
+
+```sh
+docker run -it --rm --device=/dev/ttyACM0 --entrypoint bash simulation-image
+
+# In the container
+echo "105 5" > message-intervals-chan2.txt # "<MAVLink message id> <interval in ms>" per line, no comments
+mavproxy.py --master=/dev/ttyACM0
+
+# In MAVProxy
+ftp put message-intervals-chan2.txt
+reboot
+```
+
 > [!CAUTION]
 > Match ArduPilot parameter `SYSID_THISMAV` with the `DRONE_ID` used to launch `./deploy_run.sh`: this is the `ROS_DOMAIN_ID` of the aircraft container
 

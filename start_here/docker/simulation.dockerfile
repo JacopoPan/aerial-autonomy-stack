@@ -182,16 +182,30 @@ RUN find /src -type f ! -name package.xml -delete
 
 FROM ros2-gcs-gz-px4custom-ardupilot-gst-waves-zmq-betaflight-image AS simulation-dev-image
 
+# Install the Livox SDK and ROS2 driver (also in aircraft.dockerfile) to let livox_sim republish the simulated LiDAR as livox_ros_driver2/CustomMsg
+COPY /_github_clones/Livox-SDK2 /aas/github_apps/Livox-SDK2
+WORKDIR /aas/github_apps/Livox-SDK2
+RUN mkdir build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig
+COPY /_github_clones/livox_ros_driver2 /aas/github_ws/src/livox_ros_driver2
+WORKDIR /aas/github_ws/
+RUN cp -f src/livox_ros_driver2/package_ROS2.xml src/livox_ros_driver2/package.xml
+# Explicitly use bash, not sh, to source and build the workspace
+RUN bash -c "source /opt/ros/jazzy/setup.bash && colcon build --symlink-install --merge-install --packages-select livox_ros_driver2 --cmake-args -DROS_EDITION=ROS2 -DDISTRO_ROS=jazzy -DCMAKE_BUILD_TYPE=Release"
+
 # Install the ROS 2 workspace dependencies
 COPY --from=simulation-manifests /src /aas/simulation_ws/src
 WORKDIR /aas/simulation_ws
 RUN rosdep update
-RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y && apt clean && rm -rf /var/lib/apt/lists/*
+RUN apt update && rosdep install --from-paths src/ --ignore-src --rosdistro jazzy -y --skip-keys "livox_ros_driver2" && apt clean && rm -rf /var/lib/apt/lists/*
 
 # Build the ROS 2 workspace
 COPY simulation/simulation_ws/src /aas/simulation_ws/src
 # Explicitly use bash, not sh, to source and build the workspace
-RUN bash -c "source /opt/ros/jazzy/setup.bash && (source /aas/github_ws/install/setup.bash || true) && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
 
 # Copy resources and configuration files from this repository
 COPY simulation/simulation_resources/ /aas/simulation_resources

@@ -17,7 +17,7 @@ AUTOPILOT="${AUTOPILOT:-px4}" # Options: px4 (default), ardupilot, betaflight
 HEADLESS="${HEADLESS:-true}" # Options: true (default), false 
 CAMERA="${CAMERA:-true}" # Options: true (default), false
 LIDAR="${LIDAR:-true}" # Options: true (default), false
-ODOM="${ODOM:-none}" # Options: none (default), openvins, fastlio, superodom, mimosa
+ODOM="${ODOM:-none}" # Options: none (default), kissicp, openvins, fastlio, superodom, mimosa
 #
 SIM_SUBNET="${SIM_SUBNET:-10.42}" # Simulation subnet (default = 10.42)
 AIR_SUBNET="${AIR_SUBNET:-10.22}" # Inter-vehicle subnet (default = 10.22)
@@ -47,10 +47,12 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # Check env variables
 source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot betaflight
-check_enum ODOM none openvins fastlio superodom mimosa
+check_enum ODOM none kissicp openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
 check_int DRONE_ID 1 99
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO REMOTE_VIDEO_STREAMS DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
+if [[ "$ODOM" =~ ^(kissicp|fastlio|superodom|mimosa)$ && "$LIDAR" != "true" ]]; then abort "ODOM=$ODOM requires LIDAR=true"; fi
+if [[ "$ODOM" =~ ^(openvins|mimosa)$ && "$CAMERA" != "true" ]]; then abort "ODOM=$ODOM requires CAMERA=true"; fi
 if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$DRONE_TYPE" != "quad" || "$HITL" == "true" ]]; then abort "AUTOPILOT=betaflight supports DRONE_TYPE=quad only, no HITL"; fi
 for v in QUAD_IDS VTOL_IDS TAIL_IDS; do [[ "${!v}" =~ ^([1-9][0-9]?(,[1-9][0-9]?)*)?$ ]] || abort "$v='${!v}', expected comma-separated IDs in 1..99"; done
 [[ -z $(echo "$QUAD_IDS,$VTOL_IDS,$TAIL_IDS" | tr ',' '\n' | grep . | sort | uniq -d) ]] || abort "Duplicate IDs in QUAD_IDS, VTOL_IDS, TAIL_IDS"

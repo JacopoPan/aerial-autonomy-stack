@@ -61,11 +61,11 @@
           <noise>
             <type>gaussian</type>
             <mean>0.0</mean>
-            <stddev>0.001</stddev>
+            <stddev>0.02</stddev>
           </noise>
         </lidar>
         <always_on>1</always_on>
-        <update_rate><%= lidar_intrinsics['update_rate'] %></update_rate>
+        <update_rate><%= lidar_intrinsics['update_rate'] * lidar_intrinsics['sim_time_slices'] %></update_rate> <!-- livox_sim builds each frame from sim_time_slices renders -->
         <visualize>true</visualize>
         <!-- <topic>lidar3d</topic> -->
       </sensor>
