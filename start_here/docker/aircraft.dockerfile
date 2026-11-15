@@ -346,6 +346,9 @@ RUN apt-get update && \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 COPY /_github_clones/SuperOdom /aas/github_ws/src/SuperOdom
+# Patch: wait for the IMU so that scans (from a tilted LiDAR) before the first IMU message do not tilt the map
+COPY aircraft/aircraft_resources/patches/superodom_wait_for_imu.patch /aas/github_ws/src/
+RUN cd /aas/github_ws/src/SuperOdom && git apply ../superodom_wait_for_imu.patch
 WORKDIR /aas/github_ws
 # Explicitly use bash, not sh, to source and build the workspace
 RUN bash -c "source /opt/ros/jazzy/setup.bash && source /aas/github_ws/install/setup.bash && colcon build --packages-up-to super_odometry --cmake-args -DCMAKE_BUILD_TYPE=Release"
@@ -453,11 +456,13 @@ RUN ln -s /aas/aircraft_resources/scripts/cancellable_action.py /usr/local/bin/c
 # Copy sensor configuration
 COPY simulation/simulation_resources/aircraft_sensors/sensor_config.yaml /aas/aircraft_resources/sensor_config.yaml
 
-# RViz windows resized to 800x600 and placed at the bottom left of the screen, with the Displays and Views docks hidden
+# RViz windows resized to 800x600 and placed at the bottom left of the screen, with the Displays, Selection, and Views docks hidden
 RUN for f in /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz /aas/github_ws/src/kiss-icp/ros/rviz/kiss_icp.rviz \
              /aas/github_ws/install/ov_msckf/share/ov_msckf/launch/display_ros2.rviz /aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz \
              /aas/github_ws/install/kiss_matcher_ros/share/kiss_matcher_ros/rviz/kiss_matcher_sam.rviz /aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz; do \
-      [ ! -f "$f" ] || sed -i 's/^  Height: .*/  Height: 600/; s/^  Width: .*/  Width: 800/; s/^  X: .*/  X: 0/; s/^  Y: .*/  Y: 4096/; s/\(0044006900730070006c006100790073\)01/\100/; s/\(00560069006500770073\)01/\100/' "$f"; done
+      [ ! -f "$f" ] || sed -i 's/^  Height: .*/  Height: 600/; s/^  Width: .*/  Width: 800/; s/^  X: .*/  X: 0/; s/^  Y: .*/  Y: 4096/; s/\(0044006900730070006c006100790073\)01/\100/; s/\(00560069006500770073\)01/\100/; s/\(00530065006c0065006300740069006f006e\)01/\100/g' "$f"; done
+# SuperOdom's RViz view: its map display subscribes to /overall_map, which SuperOdom publishes only in localization mode; show /laser_cloud_map (its map, latest message only) instead
+RUN [ ! -f /aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz ] || sed -i 's|Value: /overall_map|Value: /laser_cloud_map|; s|Decay Time: 500|Decay Time: 0|' /aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz
 
 # Source the workspaces (mimosa_custom_gtsam_ws only if BUILD_ADVANCED_ODOM=true)
 RUN echo "[ -f /aas/mimosa_custom_gtsam_ws/install/local_setup.bash ] && source /aas/mimosa_custom_gtsam_ws/install/local_setup.bash" >> /root/.bashrc \
