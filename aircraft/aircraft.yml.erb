@@ -68,6 +68,8 @@
                          'fastlio' => '/aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz',
                          'superodom' => '/aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz',
                          'mimosa' => '/aas/aircraft_resources/config/rviz_mimosa_ros2.rviz' }[odom]
+    # Each backend's odometry topic, in its RViz view's fixed frame (header.frame_id), to compare with the ground truth in odom_ground_truth.py
+    odom_topic = { 'kissicp' => '/kiss/odometry', 'openvins' => '/ov_msckf/odomimu', 'fastlio' => '/odometry', 'superodom' => '/laser_odometry', 'mimosa' => '/mimosa_node/graph/odometry' }[odom]
     # In simulation, we copy the RViz view to add Gazebo's ground truth (re-published by odom_ground_truth.py)
     if simulated_time && odom_rviz_config && File.exist?(odom_rviz_config)
       rviz_view = YAML.load_file(odom_rviz_config)
@@ -89,6 +91,14 @@
         Axes Radius: 0.05
         Topic:
           Value: /odom_ground_truth/pose
+        Enabled: true
+        Value: true
+      DISPLAY
+      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Marker
+        Name: Ground truth error
+        Topic:
+          Value: /odom_ground_truth/error
         Enabled: true
         Value: true
       DISPLAY
@@ -269,7 +279,7 @@ windows:
         <% if !headless && odom_rviz_config %>
         - ros2 run rviz2 rviz2 -d <%= odom_rviz_config %> <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
         <% if ground_truth_frame %>
-        - python3 /aas/aircraft_resources/scripts/odom_ground_truth.py --ros-args -p frame_id:=<%= ground_truth_frame %> <%= odom == 'openvins' ? '-p body_frame:=imu' : '' %>
+        - python3 /aas/aircraft_resources/scripts/odom_ground_truth.py --ros-args -p frame_id:=<%= ground_truth_frame %> -p odom_topic:=<%= odom_topic %> <%= odom == 'openvins' ? '-p body_frame:=imu' : '' %>
         <% end %>
         <% end %>
   <% end %>
