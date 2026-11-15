@@ -1,0 +1,181 @@
+<?xml version="1.0"?>
+<sdf version='1.10'>
+  <model name="livo_bench">
+    <static>true</static>
+    <link name="link">
+      <!-- All textured with random cells at 3 scales (1 m, 25 cm, 6 cm on the ground), for cameras to find corners near and far -->
+      <collision name="ground"><pose>0 0 -5 0 0 0</pose><geometry><box><size>100000 100000 10</size></box></geometry></collision>
+      <visual name="ground"><geometry><mesh><uri>model://livo_bench/meshes/ground.obj</uri></mesh></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- In front of the spawn points (+x) -->
+      <collision name="box_1"><pose degrees="true">11 2 1 0 0 20</pose><geometry><box><size>2 2 2</size></box></geometry></collision>
+      <visual name="box_1"><pose degrees="true">11 2 1 0 0 20</pose><geometry><box><size>2 2 2</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="box_2"><pose degrees="true">14 -3 2 0 0 -35</pose><geometry><box><size>1 3 4</size></box></geometry></collision>
+      <visual name="box_2"><pose degrees="true">14 -3 2 0 0 -35</pose><geometry><box><size>1 3 4</size></box></geometry>
+        <material><diffuse>0.55 0.65 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="box_3"><pose degrees="true">13 7 0.5 0 0 10</pose><geometry><box><size>4 1.5 1</size></box></geometry></collision>
+      <visual name="box_3"><pose degrees="true">13 7 0.5 0 0 10</pose><geometry><box><size>4 1.5 1</size></box></geometry>
+        <material><diffuse>1 0.95 0.45 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="pillar_1"><pose degrees="true">17 1 3 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>6</length></cylinder></geometry></collision>
+      <visual name="pillar_1"><pose degrees="true">17 1 3 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>6</length></cylinder></geometry>
+        <material><diffuse>0.55 1 0.55 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="sphere_1"><pose degrees="true">16 5 1.2 0 0 0</pose><geometry><sphere><radius>1.2</radius></sphere></geometry></collision>
+      <visual name="sphere_1"><pose degrees="true">16 5 1.2 0 0 0</pose><geometry><sphere><radius>1.2</radius></sphere></geometry>
+        <material><diffuse>1 0.7 0.4 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="ramp_1"><pose degrees="true">20 -1 0.7 0 -20 0</pose><geometry><box><size>4 3 0.2</size></box></geometry></collision>
+      <visual name="ramp_1"><pose degrees="true">20 -1 0.7 0 -20 0</pose><geometry><box><size>4 3 0.2</size></box></geometry>
+        <material><diffuse>0.5 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tower_1"><pose degrees="true">24 6 4 0 0 45</pose><geometry><box><size>2 2 8</size></box></geometry></collision>
+      <visual name="tower_1"><pose degrees="true">24 6 4 0 0 45</pose><geometry><box><size>2 2 8</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="floating_cube"><pose degrees="true">21 2 4.5 0 0 30</pose><geometry><box><size>1 1 1</size></box></geometry></collision>
+      <visual name="floating_cube"><pose degrees="true">21 2 4.5 0 0 30</pose><geometry><box><size>1 1 1</size></box></geometry>
+        <material><diffuse>1 0.95 0.45 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="wall_front"><pose degrees="true">30 2 1.5 0 0 0</pose><geometry><box><size>0.4 12 3</size></box></geometry></collision>
+      <visual name="wall_front"><pose degrees="true">30 2 1.5 0 0 0</pose><geometry><box><size>0.4 12 3</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- On their left (+y) -->
+      <collision name="wall_left"><pose degrees="true">8 22 2 0 0 0</pose><geometry><box><size>16 0.4 4</size></box></geometry></collision>
+      <visual name="wall_left"><pose degrees="true">8 22 2 0 0 0</pose><geometry><box><size>16 0.4 4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="wall_left_corner"><pose degrees="true">16 18.2 2 0 0 0</pose><geometry><box><size>0.4 8 4</size></box></geometry></collision>
+      <visual name="wall_left_corner"><pose degrees="true">16 18.2 2 0 0 0</pose><geometry><box><size>0.4 8 4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="box_4"><pose degrees="true">4 16 1 0 0 -15</pose><geometry><box><size>3 2 2</size></box></geometry></collision>
+      <visual name="box_4"><pose degrees="true">4 16 1 0 0 -15</pose><geometry><box><size>3 2 2</size></box></geometry>
+        <material><diffuse>0.55 1 0.55 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="pillar_2"><pose degrees="true">-1 18 2.5 0 0 0</pose><geometry><cylinder><radius>0.6</radius><length>5</length></cylinder></geometry></collision>
+      <visual name="pillar_2"><pose degrees="true">-1 18 2.5 0 0 0</pose><geometry><cylinder><radius>0.6</radius><length>5</length></cylinder></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="sphere_2"><pose degrees="true">12 15 2 0 0 0</pose><geometry><sphere><radius>2</radius></sphere></geometry></collision>
+      <visual name="sphere_2"><pose degrees="true">12 15 2 0 0 0</pose><geometry><sphere><radius>2</radius></sphere></geometry>
+        <material><diffuse>0.55 0.65 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- On their right (-y) -->
+      <collision name="pillar_3"><pose degrees="true">6 -6 2 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>4</length></cylinder></geometry></collision>
+      <visual name="pillar_3"><pose degrees="true">6 -6 2 0 0 0</pose><geometry><cylinder><radius>0.3</radius><length>4</length></cylinder></geometry>
+        <material><diffuse>1 0.7 0.4 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="pillar_4"><pose degrees="true">12 -10 4.5 0 0 0</pose><geometry><cylinder><radius>0.8</radius><length>9</length></cylinder></geometry></collision>
+      <visual name="pillar_4"><pose degrees="true">12 -10 4.5 0 0 0</pose><geometry><cylinder><radius>0.8</radius><length>9</length></cylinder></geometry>
+        <material><diffuse>0.5 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="box_5"><pose degrees="true">2 -12 1.5 0 0 30</pose><geometry><box><size>5 3 3</size></box></geometry></collision>
+      <visual name="box_5"><pose degrees="true">2 -12 1.5 0 0 30</pose><geometry><box><size>5 3 3</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="box_6"><pose degrees="true">-4 -8 3 0 0 0</pose><geometry><box><size>1.5 1.5 6</size></box></geometry></collision>
+      <visual name="box_6"><pose degrees="true">-4 -8 3 0 0 0</pose><geometry><box><size>1.5 1.5 6</size></box></geometry>
+        <material><diffuse>1 0.95 0.45 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="ramp_2"><pose degrees="true">8 -16 0.6 15 0 0</pose><geometry><box><size>3 5 0.2</size></box></geometry></collision>
+      <visual name="ramp_2"><pose degrees="true">8 -16 0.6 15 0 0</pose><geometry><box><size>3 5 0.2</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Behind them (-x) -->
+      <collision name="box_7"><pose degrees="true">-12 2 2 0 0 -10</pose><geometry><box><size>6 4 4</size></box></geometry></collision>
+      <visual name="box_7"><pose degrees="true">-12 2 2 0 0 -10</pose><geometry><box><size>6 4 4</size></box></geometry>
+        <material><diffuse>0.55 0.65 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="sphere_3"><pose degrees="true">-8 9 1.5 0 0 0</pose><geometry><sphere><radius>1.5</radius></sphere></geometry></collision>
+      <visual name="sphere_3"><pose degrees="true">-8 9 1.5 0 0 0</pose><geometry><sphere><radius>1.5</radius></sphere></geometry>
+        <material><diffuse>0.55 1 0.55 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="arch_left"><pose degrees="true">-16 0 2.5 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>5</length></cylinder></geometry></collision>
+      <visual name="arch_left"><pose degrees="true">-16 0 2.5 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>5</length></cylinder></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="arch_right"><pose degrees="true">-16 -4 2.5 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>5</length></cylinder></geometry></collision>
+      <visual name="arch_right"><pose degrees="true">-16 -4 2.5 0 0 0</pose><geometry><cylinder><radius>0.4</radius><length>5</length></cylinder></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="arch_top"><pose degrees="true">-16 -2 5.4 0 0 0</pose><geometry><box><size>0.8 6 0.8</size></box></geometry></collision>
+      <visual name="arch_top"><pose degrees="true">-16 -2 5.4 0 0 0</pose><geometry><box><size>0.8 6 0.8</size></box></geometry>
+        <material><diffuse>1 0.7 0.4 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="wall_back"><pose degrees="true">-24 4 1.5 0 0 0</pose><geometry><box><size>0.4 14 3</size></box></geometry></collision>
+      <visual name="wall_back"><pose degrees="true">-24 4 1.5 0 0 0</pose><geometry><box><size>0.4 14 3</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Near them, for parallax at takeoff -->
+      <collision name="cube_1"><pose degrees="true">6 -3 0.25 0 0 15</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry></collision>
+      <visual name="cube_1"><pose degrees="true">6 -3 0.25 0 0 15</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="cube_2"><pose degrees="true">-3 -2 0.25 0 0 40</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry></collision>
+      <visual name="cube_2"><pose degrees="true">-3 -2 0.25 0 0 40</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+        <material><diffuse>0.55 0.65 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="cube_3"><pose degrees="true">9 4 0.25 0 0 -20</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry></collision>
+      <visual name="cube_3"><pose degrees="true">9 4 0.25 0 0 -20</pose><geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+        <material><diffuse>1 0.95 0.45 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- South-west (-x, -y), along the lap of mission livo_bench.yaml: tall walls and a tunnel at x = -21, a gate at y = -38, a window and a tall wall at x = -8 -->
+      <collision name="tall_wall_1"><pose degrees="true">-24 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry></collision>
+      <visual name="tall_wall_1"><pose degrees="true">-24 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tall_wall_2"><pose degrees="true">-18 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry></collision>
+      <visual name="tall_wall_2"><pose degrees="true">-18 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Tunnel, 12 m long, 4 m wide and 4 m tall inside -->
+      <collision name="tunnel_back"><pose degrees="true">-23.2 -26 2 0 0 0</pose><geometry><box><size>0.4 12 4</size></box></geometry></collision>
+      <visual name="tunnel_back"><pose degrees="true">-23.2 -26 2 0 0 0</pose><geometry><box><size>0.4 12 4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_front"><pose degrees="true">-18.8 -26 2 0 0 0</pose><geometry><box><size>0.4 12 4</size></box></geometry></collision>
+      <visual name="tunnel_front"><pose degrees="true">-18.8 -26 2 0 0 0</pose><geometry><box><size>0.4 12 4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_top"><pose degrees="true">-21 -26 4.2 0 0 0</pose><geometry><box><size>4.8 12 0.4</size></box></geometry></collision>
+      <visual name="tunnel_top"><pose degrees="true">-21 -26 4.2 0 0 0</pose><geometry><box><size>4.8 12 0.4</size></box></geometry>
+        <material><diffuse>0.55 0.65 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Tunnel ribs (4 frames, 0.4 m deep and 0.2 m thick, irregularly spaced): without them, the tunnel is the same along its length and LiDAR odometry cannot measure motion along it -->
+      <collision name="tunnel_rib_1_back"><pose degrees="true">-22.8 -21.7 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_1_back"><pose degrees="true">-22.8 -21.7 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_1_front"><pose degrees="true">-19.2 -21.7 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_1_front"><pose degrees="true">-19.2 -21.7 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_1_top"><pose degrees="true">-21 -21.7 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry></collision>
+      <visual name="tunnel_rib_1_top"><pose degrees="true">-21 -21.7 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_2_back"><pose degrees="true">-22.8 -24.6 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_2_back"><pose degrees="true">-22.8 -24.6 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_2_front"><pose degrees="true">-19.2 -24.6 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_2_front"><pose degrees="true">-19.2 -24.6 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_2_top"><pose degrees="true">-21 -24.6 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry></collision>
+      <visual name="tunnel_rib_2_top"><pose degrees="true">-21 -24.6 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_3_back"><pose degrees="true">-22.8 -26.2 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_3_back"><pose degrees="true">-22.8 -26.2 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_3_front"><pose degrees="true">-19.2 -26.2 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_3_front"><pose degrees="true">-19.2 -26.2 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_3_top"><pose degrees="true">-21 -26.2 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry></collision>
+      <visual name="tunnel_rib_3_top"><pose degrees="true">-21 -26.2 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_4_back"><pose degrees="true">-22.8 -29.5 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_4_back"><pose degrees="true">-22.8 -29.5 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_4_front"><pose degrees="true">-19.2 -29.5 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry></collision>
+      <visual name="tunnel_rib_4_front"><pose degrees="true">-19.2 -29.5 1.8 0 0 0</pose><geometry><box><size>0.4 0.2 3.6</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tunnel_rib_4_top"><pose degrees="true">-21 -29.5 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry></collision>
+      <visual name="tunnel_rib_4_top"><pose degrees="true">-21 -29.5 3.8 0 0 0</pose><geometry><box><size>4 0.2 0.4</size></box></geometry>
+        <material><diffuse>1 0.5 0.5 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Gate, 3 m wide and 4 m tall inside -->
+      <collision name="gate_left"><pose degrees="true">-14.5 -36.3 2.2 0 0 0</pose><geometry><box><size>0.4 0.4 4.4</size></box></geometry></collision>
+      <visual name="gate_left"><pose degrees="true">-14.5 -36.3 2.2 0 0 0</pose><geometry><box><size>0.4 0.4 4.4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="gate_right"><pose degrees="true">-14.5 -39.7 2.2 0 0 0</pose><geometry><box><size>0.4 0.4 4.4</size></box></geometry></collision>
+      <visual name="gate_right"><pose degrees="true">-14.5 -39.7 2.2 0 0 0</pose><geometry><box><size>0.4 0.4 4.4</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="gate_top"><pose degrees="true">-14.5 -38 4.2 0 0 0</pose><geometry><box><size>0.4 3.8 0.4</size></box></geometry></collision>
+      <visual name="gate_top"><pose degrees="true">-14.5 -38 4.2 0 0 0</pose><geometry><box><size>0.4 3.8 0.4</size></box></geometry>
+        <material><diffuse>0.5 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <!-- Window, 2.6 m x 2.6 m inside, centered 2.2 m above the ground (the mission flies 1.5m above the takeoff height of the drone, which rests 0.2 m above the ground) -->
+      <collision name="window_back"><pose degrees="true">-9.5 -22 1.95 0 0 0</pose><geometry><box><size>0.4 0.4 3.9</size></box></geometry></collision>
+      <visual name="window_back"><pose degrees="true">-9.5 -22 1.95 0 0 0</pose><geometry><box><size>0.4 0.4 3.9</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="window_front"><pose degrees="true">-6.5 -22 1.95 0 0 0</pose><geometry><box><size>0.4 0.4 3.9</size></box></geometry></collision>
+      <visual name="window_front"><pose degrees="true">-6.5 -22 1.95 0 0 0</pose><geometry><box><size>0.4 0.4 3.9</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="window_top"><pose degrees="true">-8 -22 3.7 0 0 0</pose><geometry><box><size>3.4 0.4 0.4</size></box></geometry></collision>
+      <visual name="window_top"><pose degrees="true">-8 -22 3.7 0 0 0</pose><geometry><box><size>3.4 0.4 0.4</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="window_bottom"><pose degrees="true">-8 -22 0.7 0 0 0</pose><geometry><box><size>2.6 0.4 0.4</size></box></geometry></collision>
+      <visual name="window_bottom"><pose degrees="true">-8 -22 0.7 0 0 0</pose><geometry><box><size>2.6 0.4 0.4</size></box></geometry>
+        <material><diffuse>1 0.55 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+      <collision name="tall_wall_3"><pose degrees="true">-11 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry></collision>
+      <visual name="tall_wall_3"><pose degrees="true">-11 -11 4 0 0 0</pose><geometry><box><size>0.4 10 8</size></box></geometry>
+        <material><diffuse>1 1 1 1</diffuse><pbr><metal><albedo_map>model://livo_bench/materials/textures/cells.png</albedo_map></metal></pbr></material></visual>
+    </link>
+  </model>
+</sdf>

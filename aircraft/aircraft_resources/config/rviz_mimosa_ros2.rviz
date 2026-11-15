@@ -1,0 +1,96 @@
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Cell Size: 1
+      Color: 160; 160; 164
+      Enabled: true
+      Name: Grid
+      Plane Cell Count: 50
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/Axes
+      Enabled: true
+      Length: 1
+      Name: Body
+      Radius: 0.1
+      Reference Frame: mimosa_body
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Color: 239; 41; 41
+      Enabled: true
+      Line Style: Lines
+      Name: Path
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mimosa_node/graph/path
+      Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Axis: Z
+      Color Transformer: AxisColor
+      Decay Time: 0
+      Enabled: true
+      Name: Map
+      Position Transformer: XYZ
+      Size (Pixels): 2
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mimosa_node/lidar/geometric/map
+      Use Fixed Frame: true
+      Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Name: Scan
+      Position Transformer: XYZ
+      Size (Pixels): 4
+      Style: Points
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mimosa_node/lidar/geometric/sm_cloud_ds
+      Use Fixed Frame: true
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: mimosa_map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 40
+      Focal Point:
+        X: -10
+        Y: -15
+        Z: 0
+      Name: Current View
+      Pitch: 0.8
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+      Yaw: 3.9
+    Saved: ~
+Window Geometry:
+  Height: 600
+  Width: 800
+  X: 0
+  Y: 4096

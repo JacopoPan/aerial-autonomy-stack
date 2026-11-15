@@ -77,8 +77,8 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  AUTOPILOT=px4, ardupilot, betaflight
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
-#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
-#  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
+#  ODOM=kissicp, openvins, fastlio, superodom, mimosa (require BUILD_ADVANCED_ODOM=true)
+#  WORLD=impalpable_greyness, apple_orchard, crematoria, livo_bench, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true or AUTOPILOT=betaflight set RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
@@ -207,7 +207,9 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > </details>
 
 ![vio](https://github.com/user-attachments/assets/b1a97041-a508-4365-8197-9bf6ba32bcc1)
-> `BUILD_ADVANCED_ODOM=true ./sim_build.sh` adds to the `aircraft-image` several VIO and LIVO packages, including `openvins`, `rovio`, `fastlio`, `superodom`, and `mimosa`
+> `BUILD_ADVANCED_ODOM=true ./sim_build.sh` adds to the `aircraft-image` several VIO and LIVO packages
+>
+> With `ODOM=kissicp|openvins|fastlio|superodom|mimosa`, the backend runs on `/imu_data`, `/livox/lidar`, and `/camera_frames_N`, using the extrinsics in `sensor_config.yaml` (also published as static TFs from `base_link` to `imu_link`, `livox_frame`, and the optical `camera_frame_N`)
 
 ## 3. Deployment on Jetson
 
@@ -244,7 +246,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false (recordings are saved on the host's ~/Downloads/ folder)
 #  REMOTE_VIDEO_STREAMS=true, false (cam_0 stream to the ground container, toggle at runtime with topic /enable_remote_video_streams)
-#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
+#  ODOM=kissicp, openvins, fastlio, superodom, mimosa (require BUILD_ADVANCED_ODOM=true)
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -294,7 +296,7 @@ HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh        
 Finally, start the simulation container:
 ```sh
 # On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh
+HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh                                # Add the Jetsons' ODOM, if any: it sets livox_sim's LiDAR format
 ```
 
 > **Note:** running only the last 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
@@ -420,7 +422,7 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz --> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
+    gz --> |"livox_sim, /livox/lidar <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
     lidar_split --> kiss_icp
     lidar_split --> livo_pkgs
     gz --> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
@@ -492,9 +494,15 @@ aerial-autonomy-stack
 │   │       ├── apple_orchard.sdf
 │   │       ├── crematoria.sdf
 │   │       ├── impalpable_greyness.sdf
+│   │       ├── livo_bench.sdf
 │   │       ├── shibuya_crossing.sdf
 │   │       ├── swiss_town.sdf
 │   │       └── waterworld.sdf
+│   │
+│   ├── simulation_ws
+│   │   └── src
+│   │       ├── livox_sim                             # Publisher of `/livox/lidar`, the Gazebo's LiDAR sensor in Mid-360 driver's format
+│   │       └── zmq_bridge_cpp                        # ZeroMQ bridge stepping Gazebo for `aas_env.py`
 │   │
 │   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
@@ -550,10 +558,17 @@ External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`mavlink/c_library_v2`](https://github.com/mavlink/c_library_v2) tag/branch: `master`
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
-- [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
 - [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.31.1`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
+
+With `BUILD_ADVANCED_ODOM=true`, also:
+- [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
+- [`rpng/open_vins`](https://github.com/rpng/open_vins) tag/branch: `master`
+- [`MIT-SPARK/spark-fast-lio`](https://github.com/MIT-SPARK/spark-fast-lio) tag/branch: `main`
+- [`MIT-SPARK/KISS-Matcher`](https://github.com/MIT-SPARK/KISS-Matcher) tag/branch: `main`
+- [`superxslam/SuperOdom`](https://github.com/superxslam/SuperOdom) tag/branch: `ros2`
+- [`ntnu-arl/mimosa`](https://github.com/ntnu-arl/mimosa) tag/branch: `dev/ros2`
 </details>
 
 ---

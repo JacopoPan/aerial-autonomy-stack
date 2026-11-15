@@ -252,7 +252,7 @@ class YoloInferenceNode(Node):
 
         while rclpy.ok():
             try:
-                frame = frame_queue.get(timeout=1.0) # Get the most recent frame from the queue
+                frame, stamp = frame_queue.get(timeout=1.0) # Get the most recent frame, and its capture time, from the queue
             except queue.Empty:
                 self.get_logger().info("Frame queue is empty, is the stream running?")
                 continue
@@ -263,7 +263,7 @@ class YoloInferenceNode(Node):
             # Publish raw frames in ROS
             if self.ros2_frame_publisher:
                 msg_header = Header(
-                    stamp=self.get_clock().now().to_msg(),
+                    stamp=stamp.to_msg(),
                     frame_id=f"camera_frame_{self.camera_id}"
                 )
                 self.image_publisher.publish(self.bridge.cv2_to_imgmsg(frame, "bgr8", header=msg_header))
@@ -339,6 +339,7 @@ class YoloInferenceNode(Node):
         while is_running.is_set():
             with Profiler("cap.read()"):
                 ret, frame = cap.read()
+            stamp = self.get_clock().now() # Stamp at capture, before the queue and inference waits
 
             if not ret:
                 time.sleep(0.01) # Avoid busy loop if no frame is received
@@ -351,7 +352,7 @@ class YoloInferenceNode(Node):
                         frame_queue.get_nowait()
                     except queue.Empty:
                         pass
-                frame_queue.put_nowait(frame)
+                frame_queue.put_nowait((frame, stamp))
             except queue.Full:
                 pass # Drop frame if the main thread is lagging
 

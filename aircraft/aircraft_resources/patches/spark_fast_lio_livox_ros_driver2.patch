@@ -1,0 +1,172 @@
+Reason for this patch: FAST-LIO reads Livox scans only as CustomMsg (its PointCloud2 parsers are for Velodyne and Ouster layouts).
+In AAS, /livox/lidar carries livox_ros_driver2's CustomMsg (xfer_format 1), from the Mid-360's driver on the drone and from livox_sim in simulation.
+Upstream's CustomMsg input is half-ported ROS1 code: CMake looks for ROS1's livox_ros_driver, so in ROS2 the input is compiled out (and it has typos).
+Changes:
+- CMakeLists.txt: find livox_ros_driver2, REQUIRED (the build fails instead of dropping the input)
+- preprocess.h, preprocess.cpp: livox_ros_driver2's CustomMsg instead of ROS1's; avia_handler declared as defined (const reference); RCLCPP_DEBUG instead of ROS1's ROS_DEBUG
+- spark_fast_lio.h, spark_fast_lio.cpp: typos that do not compile (livoxLidarCallback for livoxLiDARCallback, the guard LIVOXROS_DRIVER_FOUND for LIVOX_ROS_DRIVER_FOUND,
+  imu_buffer for imu_buffer_, nanseconds() for nanoseconds()); the callback takes a const reference, as its body uses
+- spark_fast_lio.cpp: subscribe to CustomMsg on "livox" (AAS: -r livox:=/livox/lidar) instead of "lidar" (ROS2's FastDDS cannot have two message types on one topic in one node)
+- preprocess.cpp (avia_handler): the parentheses of the original hku-mars/FAST_LIO, so that points closer than preprocess.blind are dropped
+
+diff --git a/spark_fast_lio/CMakeLists.txt b/spark_fast_lio/CMakeLists.txt
+index e21990c..b835baf 100644
+--- a/spark_fast_lio/CMakeLists.txt
++++ b/spark_fast_lio/CMakeLists.txt
+@@ -82,7 +82,7 @@ add_library(ikd_tree third_party/ikd-Tree/ikd_Tree.cpp)
+ set_target_properties(ikd_tree PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+ # Optional: Livox driver
+-find_package(livox_ros_driver QUIET)
++find_package(livox_ros_driver2 REQUIRED)
+
+ # Create the library as a component
+ add_library(spark_lio_component SHARED
+@@ -100,15 +100,15 @@ target_link_libraries(spark_lio_component
+ )
+
+ # If Livox found, link it here
+-if(livox_ros_driver_FOUND)
++if(livox_ros_driver2_FOUND)
+   target_link_libraries(spark_lio_component
+-    ${livox_ros_driver_LIBRARIES}
++    ${livox_ros_driver2_LIBRARIES}
+   )
+   target_include_directories(spark_lio_component PRIVATE
+-    ${livox_ros_driver_INCLUDE_DIRS}
++    ${livox_ros_driver2_INCLUDE_DIRS}
+   )
+   target_compile_definitions(spark_lio_component PRIVATE
+-    -DLIVOX_ROS_DRIVER_FOUND=${livox_ros_driver_FOUND}
++    -DLIVOX_ROS_DRIVER_FOUND=${livox_ros_driver2_FOUND}
+   )
+ else()
+   message(STATUS "Missing livox driver! AVIA Lidar will be disabled!")
+diff --git a/spark_fast_lio/include/preprocess.h b/spark_fast_lio/include/preprocess.h
+index 7759840..d53f5f4 100644
+--- a/spark_fast_lio/include/preprocess.h
++++ b/spark_fast_lio/include/preprocess.h
+@@ -10,7 +10,7 @@
+ #include "rclcpp/time.hpp"
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-#include <livox_ros_driver/CustomMsg.h>
++#include <livox_ros_driver2/msg/custom_msg.hpp>
+ #endif
+
+ #define IS_VALID(a) ((abs(a) > 1e8) ? true : false)
+@@ -88,7 +88,7 @@ class Preprocess {
+   ~Preprocess();
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-  void process(const livox_ros_driver::CustomMsg &msg, PointCloudXYZI::Ptr &pcl_out);
++  void process(const livox_ros_driver2::msg::CustomMsg &msg, PointCloudXYZI::Ptr &pcl_out);
+ #endif
+   void process(const sensor_msgs::msg::PointCloud2 &msg, PointCloudXYZI::Ptr &pcl_out);
+   void set(bool feat_en, int lid_type, double bld, int pfilt_num);
+@@ -105,7 +105,7 @@ class Preprocess {
+  private:
+   bool is_from_pilot_zone(const float &pt_x, const float &pt_y, const float &pt_z, const std::string mode = "velodyne");
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-  void avia_handler(const livox_ros_driver::CustomMsg::ConstPtr &msg);
++  void avia_handler(const livox_ros_driver2::msg::CustomMsg &msg);
+ #endif
+   void oust64_handler(const sensor_msgs::msg::PointCloud2 &msg);
+   void kmoust64_handler(const sensor_msgs::msg::PointCloud2 &msg);
+diff --git a/spark_fast_lio/include/spark_fast_lio.h b/spark_fast_lio/include/spark_fast_lio.h
+index d380bc9..b0abf8a 100644
+--- a/spark_fast_lio/include/spark_fast_lio.h
++++ b/spark_fast_lio/include/spark_fast_lio.h
+@@ -78,7 +78,7 @@ class SPARKFastLIO2 : public rclcpp::Node {
+   void standardLiDARCallback(const sensor_msgs::msg::PointCloud2 &msg);
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-  void livoxLiDARCallback(const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr msg);
++  void livoxLiDARCallback(const livox_ros_driver2::msg::CustomMsg &msg);
+ #endif
+
+   void imuCallback(const sensor_msgs::msg::Imu::ConstSharedPtr msg);
+diff --git a/spark_fast_lio/src/preprocess.cpp b/spark_fast_lio/src/preprocess.cpp
+index 6ce26ad..7a7dfde 100644
+--- a/spark_fast_lio/src/preprocess.cpp
++++ b/spark_fast_lio/src/preprocess.cpp
+@@ -44,7 +44,7 @@ void Preprocess::set(bool feat_en, int lid_type, double bld, int pfilt_num) {
+ }
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-void Preprocess::process(const livox_ros_driver::CustomMsg &msg, PointCloudXYZI::Ptr &pcl_out) {
++void Preprocess::process(const livox_ros_driver2::msg::CustomMsg &msg, PointCloudXYZI::Ptr &pcl_out) {
+   avia_handler(msg);
+   *pcl_out = pl_surf;
+ }
+@@ -112,7 +112,7 @@ bool Preprocess::is_from_pilot_zone(const float &pt_x,
+ }
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+-void Preprocess::avia_handler(const livox_ros_driver::CustomMsg &msg) {
++void Preprocess::avia_handler(const livox_ros_driver2::msg::CustomMsg &msg) {
+   pl_surf.clear();
+   pl_corn.clear();
+   pl_full.clear();
+@@ -176,7 +176,7 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg &msg) {
+       // pl_surf += pl;
+     }
+     time += omp_get_wtime() - t0;
+-    ROS_DEBUG("Feature extraction time: %lf \n", time / count);
++    RCLCPP_DEBUG(rclcpp::get_logger("Preprocess"), "Feature extraction time: %lf \n", time / count);
+   } else {
+     for (uint i = 1; i < plsize; i++) {
+       if ((msg.points[i].line < N_SCANS) &&
+@@ -192,9 +192,9 @@ void Preprocess::avia_handler(const livox_ros_driver::CustomMsg &msg) {
+               static_cast<float>(
+                   1000000);  // use curvature as time of each laser points, curvature unit: ms
+
+-          if ((abs(pl_full[i].x - pl_full[i - 1].x) > 1e-7) ||
+-              (abs(pl_full[i].y - pl_full[i - 1].y) > 1e-7) ||
+-              (abs(pl_full[i].z - pl_full[i - 1].z) > 1e-7) &&
++          if (((abs(pl_full[i].x - pl_full[i - 1].x) > 1e-7) ||
++               (abs(pl_full[i].y - pl_full[i - 1].y) > 1e-7) ||
++               (abs(pl_full[i].z - pl_full[i - 1].z) > 1e-7)) &&
+                   (pl_full[i].x * pl_full[i].x + pl_full[i].y * pl_full[i].y +
+                        pl_full[i].z * pl_full[i].z >
+                    (blind * blind))) {
+diff --git a/spark_fast_lio/src/spark_fast_lio.cpp b/spark_fast_lio/src/spark_fast_lio.cpp
+index 40fccc6..d5e509a 100644
+--- a/spark_fast_lio/src/spark_fast_lio.cpp
++++ b/spark_fast_lio/src/spark_fast_lio.cpp
+@@ -95,9 +95,9 @@ SPARKFastLIO2::SPARKFastLIO2(const rclcpp::NodeOptions &options)
+
+ #if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+   sub_lidar_livox_ = create_subscription<livox_ros_driver2::msg::CustomMsg>(
+-      "lidar",
++      "livox",
+       lidar_qos,
+-      std::bind(&SPARKFastLIO2::livoxLidarCallback, this, std::placeholders::_1));
++      std::bind(&SPARKFastLIO2::livoxLiDARCallback, this, std::placeholders::_1));
+ #endif
+   auto imu_qos = rclcpp::SensorDataQoS();
+   sub_imu_ = create_subscription<sensor_msgs::msg::Imu>(
+@@ -388,9 +388,9 @@ void SPARKFastLIO2::standardLiDARCallback(const sensor_msgs::msg::PointCloud2 &m
+   sig_buffer_.notify_all();
+ }
+
+-#if defined(LIVOXROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
++#if defined(LIVOX_ROS_DRIVER_FOUND) && LIVOX_ROS_DRIVER_FOUND
+ void SPARKFastLIO2::livoxLiDARCallback(
+-    const livox_ros_driver2::msg::CustomMsg::ConstSharedPtr msg) {
++    const livox_ros_driver2::msg::CustomMsg &msg) {
+   static bool timediff_set_flg = false;
+
+   std::lock_guard<std::mutex> lk(buffer_mutex_);
+@@ -411,9 +411,9 @@ void SPARKFastLIO2::livoxLiDARCallback(
+                            << ", lidar header time: " << last_lidar_timestamp_.nanoseconds());
+   }
+
+-  if (time_sync_en_ && !timediff_set_flg && diff_s > 1.0 && !imu_buffer.empty()) {
++  if (time_sync_en_ && !timediff_set_flg && diff_s > 1.0 && !imu_buffer_.empty()) {
+     timediff_set_flg        = true;
+-    timediff_lidar_wrt_imu_ = last_lidar_timestamp_.nanseconds() + static_cast<int64_t>(1.0e8) -
++    timediff_lidar_wrt_imu_ = last_lidar_timestamp_.nanoseconds() + static_cast<int64_t>(1.0e8) -
+                               last_imu_timestamp_.nanoseconds();
+     RCLCPP_INFO_STREAM(
+         this->get_logger(),

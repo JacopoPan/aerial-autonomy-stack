@@ -1,0 +1,24 @@
+Reason for this patch: AAS runs KISS-ICP with base_frame:=base_link on /livox/lidar, whose clouds have header.frame_id livox_frame.
+When base_frame_ is set and differs from header.frame_id, KISS-ICP publishes the odometry of base_frame_ (/kiss/odometry, TF odom_lidar -> base_link), starting from its first pose,
+but it publishes the local map (/kiss/local_map) from header.frame_id's first pose: with a tilted LiDAR, RViz would draw a tilted map.
+Change:
+- Move the local map to the odometry frame before publishing it (visualization-only fix, odometry is unchanged).
+
+diff --git a/ros/src/OdometryServer.cpp b/ros/src/OdometryServer.cpp
+index c4b0fbb..ad33b8a 100644
+--- a/ros/src/OdometryServer.cpp
++++ b/ros/src/OdometryServer.cpp
+@@ -226,7 +226,12 @@ void OdometryServer::PublishOdometry(const Sophus::SE3d &kiss_pose,
+ void OdometryServer::PublishClouds(const std::vector<Eigen::Vector3d> &frame,
+                                    const std::vector<Eigen::Vector3d> &keypoints,
+                                    const std_msgs::msg::Header &header) {
+-    const auto kiss_map = kiss_icp_->LocalMap();
++    auto kiss_map = kiss_icp_->LocalMap();
++    // With a base_frame, the odometry frame is the first base_frame pose (see PublishOdometry): move the map there too
++    if (!base_frame_.empty() && base_frame_ != header.frame_id) {
++        const Sophus::SE3d cloud2base = LookupTransform(base_frame_, header.frame_id, tf2_buffer_);
++        for (auto &point : kiss_map) point = cloud2base * point;
++    }
+
+     frame_publisher_->publish(std::move(EigenToPointCloud2(frame, header)));
+     kpoints_publisher_->publish(std::move(EigenToPointCloud2(keypoints, header)));
