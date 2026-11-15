@@ -25,6 +25,7 @@ class OdomGroundTruth(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.pub = self.create_publisher(Path, '/odom_ground_truth/path', 1)
+        self.pose_pub = self.create_publisher(PoseStamped, '/odom_ground_truth/pose', 1)
         self.create_subscription(Odometry, '/odom_ground_truth', self.callback, 10)
 
     def start_pose(self): # Where the path restarts in frame_id: the backend's pose of body_frame, the first time it is on TF (else None)
@@ -50,14 +51,15 @@ class OdomGroundTruth(Node):
             return
         rotation, translation = self.world_to_frame
         x, y, z = [r + t for r, t in zip(rotate(rotation, p), translation, strict=True)]
-        last = self.path.poses[-1].pose.position if self.path.poses else None
-        if last and (x - last.x) ** 2 + (y - last.y) ** 2 + (z - last.z) ** 2 < 0.01: # Ignore poses less than 10cm apart
-            return
         pose = PoseStamped(header=msg.header)
         pose.header.frame_id = self.path.header.frame_id
         pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = x, y, z
         o = pose.pose.orientation
         o.x, o.y, o.z, o.w = qmul(rotation, q)
+        self.pose_pub.publish(pose) # Every pose, for RViz's axes
+        last = self.path.poses[-1].pose.position if self.path.poses else None
+        if last and (x - last.x) ** 2 + (y - last.y) ** 2 + (z - last.z) ** 2 < 0.01: # Ignore poses less than 10cm apart
+            return
         self.path.header.stamp = msg.header.stamp
         self.path.poses.append(pose)
         self.pub.publish(self.path)

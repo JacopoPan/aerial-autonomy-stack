@@ -81,6 +81,17 @@
         Value: true
       DISPLAY
       rviz_view['Visualization Manager']['Displays'] << ground_truth_display
+      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Pose
+        Name: Ground truth pose
+        Shape: Axes
+        Axes Length: 1
+        Axes Radius: 0.05
+        Topic:
+          Value: /odom_ground_truth/pose
+        Enabled: true
+        Value: true
+      DISPLAY
       odom_rviz_config = '/aas/aircraft_resources/config/rviz_odom_gz_ground_truth.rviz'
       File.write(odom_rviz_config, rviz_view.to_yaml)
       ground_truth_frame = rviz_view['Visualization Manager']['Global Options']['Fixed Frame'] # The selected backend's odometry fixed frame (e.g., odom_lidar for kissicp), used by odom_ground_truth.py to publish /odom_ground_truth/path
