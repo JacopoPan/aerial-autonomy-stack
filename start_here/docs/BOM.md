@@ -157,7 +157,7 @@ ATC_RAT_RLL_FLTD    10              # Roll axis rate controller derivative frequ
 # Harmonic notch filter
 INS_HNTCH_ENABLE    1               # Enable (reboot to set the other parameters)
 INS_HNTCH_MODE      1               # Throttle tracking
-INS_HNTCH_REF       0.325           # Anchor point, based on MOT_THST_HOVER, automatically learned when MOT_HOVER_LEARN is 2
+INS_HNTCH_REF       0.325           # Anchor point (i.e., MOT_THST_HOVER when INS_HNTCH_FREQ was measured; MOT_THST_HOVER is re-learned on every flight when MOT_HOVER_LEARN is 2)
 INS_HNTCH_FREQ      65              # Base frequency, lower than the default 80 for the X650
 INS_HNTCH_BW        32              # Half of INS_HNTCH_FREQ
 # Check INS_HNTCH_OPTS is set to 0

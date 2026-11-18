@@ -420,16 +420,16 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz --> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
-    lidar_split --> kiss_icp
-    lidar_split --> livo_pkgs
-    gz --> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
-    camera_split --> livo_pkgs
-    camera_split -->  yolo_py
-    sitl <--> |"XRCE-DDS/UDP || MAVLink/UDP <br/> || MSP/TCP [SIM_SUBNET]"| ap_link
-    sitl <--> |"MAVLink/UDP [SIM_SUBNET]"| mlrouter
-    sitl <--> |"MSP/TCP [SIM_SUBNET]"| bf_app
-    zenoh_gnd <-.-> |"Zenoh/TCP <br/> [AIR_SUBNET]"| zenoh_air
+    gz sim1@--> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
+    lidar_split sim2@--> kiss_icp
+    lidar_split sim3@--> livo_pkgs
+    gz sim4@--> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
+    camera_split sim5@--> livo_pkgs
+    camera_split sim6@-->  yolo_py
+    sitl sim7@<--> |"XRCE-DDS/UDP || MAVLink/UDP <br/> || MSP/TCP [SIM_SUBNET]"| ap_link
+    sitl sim8@<--> |"MAVLink/UDP [SIM_SUBNET]"| mlrouter
+    sitl sim9@<--> |"MSP/TCP [SIM_SUBNET]"| bf_app
+    zenoh_gnd air1@<-.-> |"Zenoh/TCP <br/> [AIR_SUBNET]"| zenoh_air
 
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
     classDef algo fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
@@ -438,7 +438,8 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    linkStyle 22,23,24,25,26,27,28,29,30 stroke:teal,stroke-width:3px; linkStyle 31 stroke:blue,stroke-width:4px;
+    classDef simNet stroke:teal,stroke-width:3px; class sim1,sim2,sim3,sim4,sim5,sim6,sim7,sim8,sim9 simNet;
+    classDef airNet stroke:blue,stroke-width:4px; class air1 airNet;
 ```
 
 <details>
