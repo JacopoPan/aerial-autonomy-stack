@@ -1,4 +1,4 @@
-# Lemniscate vs Stalker (vel-sk) with the EXTRA-LARGE figure-8 (vel-x8)
+# Lemniscate vs Stalker (vel-sk) with the EXTRA-LARGE figure-8 (vel-x8-slow)
 # Start the same command on both drones at the same time, DRONE_ID selects the branch
 # Start Drone 1 closer to the field as it will move first
 type: Selector
@@ -19,10 +19,10 @@ children:
           takeoff_altitude: 40.0
 
       - action: offboard
-        name: "Extra-large figure-8 for 3'50'' (~57'' per lap = ~4 laps)"
+        name: "Extra-large figure-8 for 5'30'' (~107'' per lap = 3 laps)"
         params:
-          controller_name: vel-x8
-          max_duration_sec: 230.0
+          controller_name: vel-x8-slow
+          max_duration_sec: 330.0
 
       - action: land
         name: "Return to land"
@@ -46,13 +46,13 @@ children:
       - action: wait
         name: "Wait one figure-8, until Drone 1 approaches the nearest point"
         params:
-          duration: 65.0 # Wait for Drone 1 to start its second lap
+          duration: 115.0 # Wait for Drone 1 to start its second lap
 
       - action: offboard
-        name: "Stalk for 2'45'', i.e. about 3 loops"
+        name: "Stalk for 3', i.e. about 2 loops"
         params:
           controller_name: vel-sk
-          max_duration_sec: 165.0
+          max_duration_sec: 180.0
 
       - action: land
         name: "Return to land"
