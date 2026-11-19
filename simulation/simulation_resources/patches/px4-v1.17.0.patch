@@ -1,3 +1,7 @@
+px4-rc.mavlink: add a MAVLink link streaming GLOBAL_POSITION_INT at 10 Hz to AAS_GROUND_IP (UDP 16540 + instance), for ground_system
+ArmingCheckReply.msg: increase the queue size from 4 to 8 replies, one per external mode PX4 can register (MAX_NUM_REGISTRATIONS), see https://github.com/PX4/PX4-Autopilot/pull/27516
+navigator_main.cpp, vtol_takeoff.cpp/h: VTOL takeoff transitions to param4's heading when param2 is 3 (MAVLink's "specified"), so missions can set the direction
+
 diff --git a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink b/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink
 index 17ef44521b..052bb52708 100644
 --- a/ROMFS/px4fmu_common/init.d-posix/px4-rc.mavlink

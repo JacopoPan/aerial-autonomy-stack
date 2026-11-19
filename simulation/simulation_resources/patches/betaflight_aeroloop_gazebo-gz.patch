@@ -1,3 +1,7 @@
+BetaflightPlugin.cc: SDF <portOffset> for the motor (9002) and state (9003) ports, to match each SITL's --port-offset, to support multiple SITL instances
+BetaflightPlugin.cc: uses the IMU of its own model (every drone has one with the same name), to support multiple SITL instances
+BetaflightPlugin.cc: (bugfix) the accelerometer reports specific force like a real one (Gazebo's LinearAcceleration lacks gravity, the plugin subtracts it in the IMU frame)
+
 diff --git a/plugins/BetaflightPlugin.cc b/plugins/BetaflightPlugin.cc
 index 2725828..63384e9 100644
 --- a/plugins/BetaflightPlugin.cc
