@@ -4,6 +4,7 @@
   camera = ENV.fetch('CAMERA', 'true') == 'true'
   lidar = ENV.fetch('LIDAR', 'true') == 'true'
   odom = ENV.fetch('ODOM', 'none')
+  gnss = ENV.fetch('GNSS', 'nominal')
 
   sim_subnet = ENV.fetch('SIM_SUBNET', '10.42')
   sim_id = ENV.fetch('ROS_DOMAIN_ID', '100')
@@ -59,6 +60,10 @@
   livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0 # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
   gz_sim_lidar_time_slices = sensor_config['sensors']['lidar_intrinsics']['sim_time_slices']
 
+  # Used when GNSS=contested, these parameters are used by gnss_contested.h, patched into every autopilot SITL
+  # "min_satellites: 0, max_satellites: 0" simulates a fully denied GNSS
+  gnss_contested_params = { onset_s: 45, min_satellites: 3, max_satellites: 9, sigma_m: 2.0, tau_s: 30, vel_sigma_m_s: 0.2 } # Order matters
+
   # ArduPilot SITL --home (lat,lon,alt,heading) from the world's spherical coordinates
   if autopilot == 'ardupilot'
     world_sdf = File.read("/aas/simulation_resources/simulation_worlds/#{world}.sdf")
@@ -74,7 +79,11 @@ windows:
   - gz_sim:
       layout: tiled
       panes:
-        - clear && echo "So nice to have you with us, this is the simulation container."
+        - >
+          clear && echo "So nice to have you with us, this is the simulation container."
+          <% if gnss == 'contested' %>
+          && echo "GNSS=contested: <%= gnss_contested_params %>"
+          <% end %>
         - python3 /aas/simulation_resources/scripts/set_gz_wind.py --stop_wind
         - >
           ruby /aas/simulation_resources/aircraft_models/create_sdfs_using_sensor_config.rb <%= sdf_models.join(' ') %> &&
@@ -83,6 +92,9 @@ windows:
           <% end %>
           <% unless lidar %>
           sed -i '/<sensor/,/<\/sensor>/d'  /aas/simulation_resources/aircraft_sensors/sensor_lidar/model.sdf &&
+          <% end %>
+          <% if gnss == 'none' %>
+          sed -i '/<sensor name="navsat_sensor"/,/<\/sensor>/d' <%= sdf_models.map { |m| "/aas/simulation_resources/aircraft_models/#{m}/model.sdf" }.join(' ') %> &&
           <% end %>
           sed -i 's|<real_time_factor>1.0</real_time_factor>|<%= rtf_string %>|' /aas/simulation_resources/simulation_worlds/<%= world %>.sdf &&
           <% if autopilot == 'px4' %>
@@ -101,6 +113,9 @@ windows:
   <% drones.each_with_index do |drone, sitl_instance|
     drone_id = sitl_instance + 1
     drone_type = drone[:type]
+
+    # GNSS=contested: the environment variables read by gnss_contested.h, its parameters and a random seed per drone
+    gnss_contested_envvars = "AAS_GNSS_CONTESTED='#{gnss_contested_params.values.join(' ')}' AAS_GNSS_SEED=#{drone_id}"
 
     if autopilot == 'px4'
       case drone_type
@@ -157,6 +172,11 @@ windows:
           PX4_GZ_STANDALONE=1 PX4_GZ_WORLD=<%= world %> PX4_GZ_MODEL_NAME=<%= model_name %>
           PX4_SYS_AUTOSTART=<%= autostart %> ROS_DOMAIN_ID=<%= drone_id %> <%= gnd_container ? "AAS_GROUND_IP=#{sim_subnet}.90.#{ground_id}" : "" %>
           PX4_UXRCE_DDS_NS="Drone<%= drone_id %>" PX4_PARAM_UXRCE_DDS_AG_IP=<%= uxrce_dds_ag_ip %> PX4_PARAM_UXRCE_DDS_PTCFG=<%= uxrce_dds_ptcfg %> PX4_UXRCE_DDS_PORT=8888
+          <% if gnss == 'none' %>
+          PX4_PARAM_SYS_HAS_GPS=0
+          <% elsif gnss == 'contested' %>
+          <%= gnss_contested_envvars %>
+          <% end %>
           /aas/github_apps/PX4-Autopilot/build/px4_sitl_default/bin/px4 -i <%= sitl_instance %>
   <% elsif autopilot == 'ardupilot' %>
   - ardu_sitl_<%= drone_id %>:
@@ -168,11 +188,16 @@ windows:
         - >
           sleep <%= sitl_instance * 0.5 %> && mkdir -p /aas/ardu_sitl_<%= drone_id %> && cd /aas/ardu_sitl_<%= drone_id %> &&
           echo "105 5" > message-intervals-chan2.txt &&
+          <% if gnss == 'none' %>
+          printf 'GPS1_TYPE 0\nSIM_GPS_TYPE 0\n' > gnss_none.params &&
+          <% elsif gnss == 'contested' %>
+          <%= gnss_contested_envvars %>
+          <% end %>
           /aas/github_apps/ardupilot/build/sitl/bin/<%= ardu_bin %> -S --model JSON
           -I <%= sitl_instance %> --sysid <%= drone_id %>
           --speedup <%= speedup %>
           --home <%= world_sdf_home %>
-          --defaults <%= ardu_defaults %>,/aas/simulation_resources/aircraft_models/<%= model_name.delete_suffix("_#{drone_id}") %>/ardupilot-4.6.params
+          --defaults <%= ardu_defaults %>,/aas/simulation_resources/aircraft_models/<%= model_name.delete_suffix("_#{drone_id}") %>/ardupilot-4.6.params<%= ',gnss_none.params' if gnss == 'none' %>
           --serial0=tcp:0
           --serial1=udpclient:<%= gnd_container ? "#{sim_subnet}.90.#{ground_id}:#{16540 + sitl_instance}" : "127.0.0.1:#{14550 + sitl_instance}" %> --serial2=udpclient:<%= "#{sim_subnet}.90.#{drone_id}" %>:8888
   <% elsif autopilot == 'betaflight' %>
@@ -181,8 +206,13 @@ windows:
       panes:
         - >
           until gz topic -l | grep -q /world/<%= world %>/stats; do sleep 1; done &&
-          mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> &&
-          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli &&
+          mkdir -p /aas/bf_sitl_<%= drone_id %> && cd /aas/bf_sitl_<%= drone_id %> && cp /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli copy_of_betaflight.cli &&
+          <% if gnss == 'none' %>
+          sed -i '/^save$/i feature -GPS' copy_of_betaflight.cli &&
+          <% elsif gnss == 'contested' %>
+          export <%= gnss_contested_envvars %> &&
+          <% end %>
+          /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --config copy_of_betaflight.cli &&
           /aas/github_apps/betaflight/obj/main/betaflight_SITL.elf --port-offset <%= 10 * sitl_instance %> --sysid <%= drone_id %>
         # Stand-in for the pilot's RC, with the MSP OVERRIDE switch on (UDP RC, 9004 + port offset); a USB gamepad connected on /dev/input/js0 can also be used to drive the RC channels of drone 1
         - python3 /aas/simulation_resources/scripts/betaflight_simulated_rc.py <%= 9004 + 10 * sitl_instance %> /aas/simulation_resources/aircraft_models/iris_with_betaflight/betaflight-2026.6.cli <%= drone_id == 1 ? '/dev/input/js0' : '' %>
