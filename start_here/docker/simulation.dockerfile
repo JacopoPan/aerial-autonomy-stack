@@ -59,7 +59,10 @@ RUN useradd -m -s /bin/bash arduuser \
     && USER=arduuser SKIP_AP_GIT_CHECK=1 PIP_ONLY_BINARY=wxpython gosu arduuser bash ./Tools/environment_install/install-prereqs-ubuntu.sh -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN ./waf configure --board sitl && ./waf copter plane
+# Apply a custom patch to simulate the GNSS-denied/degraded model in simulation_resources/patches/gnss_contested.h
+COPY simulation/simulation_resources/patches/gnss_contested.h /aas/github_apps/ardupilot/libraries/SITL/gnss_contested.h
+COPY simulation/simulation_resources/patches/ardupilot-4.6.3-gnss.patch /aas/github_apps/ardupilot-4.6.3-gnss.patch
+RUN git apply ../ardupilot-4.6.3-gnss.patch && ./waf configure --board sitl && ./waf copter plane
 # Run with $ /aas/github_apps/ardupilot/build/sitl/bin/arducopter
 # Link the MAVProxy installed by install-prereqs-ubuntu.sh in ArduPilot's venv (isolated from the system numpy/OpenCV)
 RUN ln -s /home/arduuser/venv-ardupilot/bin/mavproxy.py /usr/local/bin/mavproxy.py
@@ -129,8 +132,11 @@ FROM ros2-gcs-gz-px4-ardupilot-gst-waves-zmq-image AS ros2-gcs-gz-px4-ardupilot-
 # Patched for multiple drones (UDP/TCP port offsets, MAVLink system IDs, per-drone IMU), sensor frame conventions, simulated GPS noise, MAVLink telemetry, and MSP2_POSITION_ESTIMATE
 COPY /_github_clones/betaflight /aas/github_apps/betaflight
 COPY simulation/simulation_resources/patches/betaflight-2026.6.2.patch /aas/github_apps/betaflight-2026.6.2.patch
+# Apply a custom patch to simulate the GNSS-denied/degraded model in simulation_resources/patches/gnss_contested.h
+COPY simulation/simulation_resources/patches/gnss_contested.h /aas/github_apps/betaflight/src/platform/SIMULATOR/gnss_contested.h
+COPY simulation/simulation_resources/patches/betaflight-2026.6.2-gnss.patch /aas/github_apps/betaflight-2026.6.2-gnss.patch
 WORKDIR /aas/github_apps/betaflight
-RUN git apply ../betaflight-2026.6.2.patch && make TARGET=SITL
+RUN git apply ../betaflight-2026.6.2.patch && git apply ../betaflight-2026.6.2-gnss.patch && make TARGET=SITL
 COPY /_github_clones/aeroloop_gazebo /aas/github_apps/aeroloop_gazebo
 COPY simulation/simulation_resources/patches/betaflight_aeroloop_gazebo-gz.patch /aas/github_apps/betaflight_aeroloop_gazebo-gz.patch
 WORKDIR /aas/github_apps/aeroloop_gazebo
@@ -152,8 +158,11 @@ FROM ros2-gcs-gz-px4-ardupilot-gst-waves-zmq-betaflight-image AS ros2-gcs-gz-px4
 
 # Apply PX4 patch (DDS Agent on custom IP, ...) created with $ git diff > ../px4-v1.17.0.patch
 COPY simulation/simulation_resources/patches/px4-v1.17.0.patch /aas/github_apps/px4-v1.17.0.patch
+# Apply a custom patch to simulate the GNSS-denied/degraded model in simulation_resources/patches/gnss_contested.h
+COPY simulation/simulation_resources/patches/gnss_contested.h /aas/github_apps/PX4-Autopilot/src/modules/simulation/gz_bridge/gnss_contested.h
+COPY simulation/simulation_resources/patches/px4-v1.17.0-gnss.patch /aas/github_apps/px4-v1.17.0-gnss.patch
 WORKDIR /aas/github_apps/PX4-Autopilot
-RUN git apply ../px4-v1.17.0.patch
+RUN git apply ../px4-v1.17.0.patch && git apply ../px4-v1.17.0-gnss.patch
 
 # Replace dds_topics.yaml with custom topics
 COPY simulation/simulation_resources/patches/px4_dds_topics.yaml /aas/github_apps/PX4-Autopilot/src/modules/uxrce_dds_client/dds_topics.yaml

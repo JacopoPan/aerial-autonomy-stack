@@ -1,0 +1,88 @@
+SIM_GPS.cpp: add the error model in gnss_contested.h to the first simulated GPS's update() method
+SIM_GPS.h: add HDOP and VDOP to GPS_Data, 0 unless contested
+SIM_GPS_UBLOX.cpp: send GPS_Data's HDOP and VDOP if set (else the fixed 1.21 and 2.0 of stock SITL)
+SIM_GPS_UBLOX.cpp: (bugfix) report the speed accuracy in mm/s, as ArduPilot reads it (as it was, in cm/s, it was 10 times too good and the EKF over-trusted a degraded GPS velocity)
+Includes "gnss_contested.h" (copied in by simulation.dockerfile): the same GNSS noise model for PX4, ArduPilot, and Betaflight SITL
+
+diff --git a/libraries/SITL/SIM_GPS.cpp b/libraries/SITL/SIM_GPS.cpp
+index d51521c..1fe8828 100644
+--- a/libraries/SITL/SIM_GPS.cpp
++++ b/libraries/SITL/SIM_GPS.cpp
+@@ -30,6 +30,10 @@
+ 
+ #include <GCS_MAVLink/GCS.h>
+ 
++#include "gnss_contested.h" // AAS: contested GNSS model, copied here by simulation.dockerfile
++
++static aas_gnss_t aas_gnss {}; // AAS: contested GNSS state, for the first GPS
++
+ // the number of GPS leap seconds - copied from AP_GPS.h
+ #define GPS_LEAPSECONDS_MILLIS 18000ULL
+ 
+@@ -431,6 +435,31 @@ void GPS::update()
+             simulate_jamming(d);
+         }
+ 
++    // AAS: contested GNSS (gnss_contested.h) for the first GPS: its errors, satellites (no fix below 4), and accuracies, nominal otherwise
++    if (instance == 0) {
++        aas_gnss_update(&aas_gnss, now_ms * 1e-3);
++        if (aas_gnss.satellites >= 0) {
++            int32_t lat = int32_t(d.latitude * 1e7);
++            int32_t lng = int32_t(d.longitude * 1e7);
++            Location::offset_latlng(lat, lng, aas_gnss.error_ned_m[0], aas_gnss.error_ned_m[1]);
++            d.latitude = lat * 1e-7;
++            d.longitude = lng * 1e-7;
++            d.altitude -= float(aas_gnss.error_ned_m[2]);
++            d.speedN += aas_gnss.velocity_error_ned_m_s[0];
++            d.speedE += aas_gnss.velocity_error_ned_m_s[1];
++            d.speedD += aas_gnss.velocity_error_ned_m_s[2];
++            d.num_sats = uint8_t(aas_gnss.satellites);
++            d.have_lock = d.have_lock && aas_gnss.satellites >= AAS_GNSS_MIN_FIX_SATELLITES;
++        }
++        if (aas_gnss.eph_m > 0.0) {
++            d.horizontal_acc = float(aas_gnss.eph_m);
++            d.vertical_acc = float(aas_gnss.epv_m);
++            d.speed_acc = float(aas_gnss.sacc_m_s);
++            d.hdop = float(aas_gnss.hdop);
++            d.vdop = float(aas_gnss.vdop);
++        }
++    }
++
+     backend->publish(&d);
+ }
+ 
+diff --git a/libraries/SITL/SIM_GPS.h b/libraries/SITL/SIM_GPS.h
+--- a/libraries/SITL/SIM_GPS.h
++++ b/libraries/SITL/SIM_GPS.h
+@@ -49,6 +49,7 @@ struct GPS_Data {
+     float vertical_acc;
+     float speed_acc;
+     uint8_t num_sats;
++    float hdop, vdop; // AAS: the contested GNSS's DOPs (gnss_contested.h), 0 keeps GPS_UBlox's fixed ones
+ 
+     // Get course over ground [rad], where 0 = North in WGS-84 coordinate system.
+     // Calculated from 2D velocity.
+
+diff --git a/libraries/SITL/SIM_GPS_UBLOX.cpp b/libraries/SITL/SIM_GPS_UBLOX.cpp
+index ce77a44..0660bde 100644
+--- a/libraries/SITL/SIM_GPS_UBLOX.cpp
++++ b/libraries/SITL/SIM_GPS_UBLOX.cpp
+@@ -230,7 +230,7 @@ void GPS_UBlox::publish(const GPS_Data *d)
+     dop.gDOP = 65535;
+     dop.pDOP = 65535;
+     dop.tDOP = 65535;
+-    dop.vDOP = 200;
+-    dop.hDOP = 121;
++    dop.vDOP = (d->vdop > 0) ? d->vdop * 100 : 200; // AAS: the contested GNSS's DOPs, upstream's fixed ones otherwise
++    dop.hDOP = (d->hdop > 0) ? d->hdop * 100 : 121;
+     dop.nDOP = 65535;
+     dop.eDOP = 65535;
+@@ -260,7 +260,7 @@ void GPS_UBlox::publish(const GPS_Data *d)
+     pvt.velD = 1000.0f * d->speedD;
+     pvt.gspeed = norm(d->speedN, d->speedE) * 1000;
+     pvt.head_mot = ToDeg(atan2f(d->speedE, d->speedN)) * 1.0e5;
+-    pvt.s_acc = velned.speed_accuracy;
++    pvt.s_acc = d->speed_acc * 1000; // AAS: m/s -> mm/s (UBX-NAV-PVT's unit, read by AP_GPS_UBLOX as mm/s; velned's is cm/s)
+     pvt.head_acc = 38 * 1.0e5;
+     pvt.p_dop = 65535;
+     memset(pvt.reserved1, '\0', ARRAY_SIZE(pvt.reserved1));
