@@ -521,48 +521,77 @@ ATS105=3                            # Press Enter, set the unit address, MUST be
 
 For models `DoodleLabs SmartRadio MB-1700v4-1L-X` / `DoodleLabs SmartRadio MB-0004v4-1L-X` on firmware `Mesh Rider firmware-2026-03.1`
 
-- Connect and login (default or set password) to the radio's address: https://10.223.xx.xx
-- On the "Setup Wizard" page:
-```sh
+### First-time Setup with UI
+
+- Connect to the radio's address https://10.223.xx.xx, on the "Setup Wizard" page:
+````sh
 Profile                                General
 Active Frequency Band                  2455v4 MHz
 Select Scenario                        Mesh
-Mesh ID                                [pick]
-Wireless Password                      [pick]
-Channel                                101 (2500Mhz)
-Bandwidth                              10Mhz
-Operating Distance (m)                 [pick]
-Number of Devices                      [pick]
+Mesh ID                                [same as MESH_ID below]
+Wireless Password                      [same as MESH_KEY below]
+Channel                                101 (2500 MHz)
+Bandwidth                              10 MHz
+Operating Distance (m)                 [same as DISTANCE below]
+Number of Devices                      3 to 5           # Only set here
 Additional Static IPv4 on BR-WAN       [none]
 Additional Static IPv4 netmask         [none]
 DHCP on BR-WAN                         Client enabled
 Enable Automatic C&C Queue Detection   [uncheck]
-```
-- On the "Link Optimization" -> "Traffic Prioritization" page, add 3 rules:
-```sh
-Source host                             All
-Destination host                        All
-Protocol                                TCP
-Port(s)                                 7447
-DSCP                                    Voice, Command & Control (CS6)
-Comment                                 Zenoh
-```
-```sh
-Source host                             All
-Destination host                        All
-Protocol                                UDP
-Port(s)                                 7446
-DSCP                                    Voice, Command & Control (CS6)
-Comment                                 Zenoh
-```
-```sh
-Source host                             All
-Destination host                        All
-Protocol                                TCP
-Port(s)                                 22
-DSCP                                    Video (CS5)
-Comment                                 SSH
-```
+````
+- Afterwards, do not save the Setup Wizard again: it restores its stored Aggressive TPC, mesh key and traffic rules, overwriting the SSH configuration below
+
+### SSH Network-wide Wireless Configuration
+
+````sh
+RADIO_IPS="10.223.xx.air1 10.223.xx.air2 10.223.xx.gnd" # Air-side IPs first, ground-side IP last (i.e. change air-side first, not to lose connection)
+MESH_ID="PICK_A_NAME"
+MESH_KEY="not123456"                                    # 8+ letters and digits, the default is DoodleSmartRadio
+CHANNEL=101                                             # 2500 MHz
+CHANBW=10                                               # MHz
+DISTANCE=999                                            # m, at least the maximum flight range
+
+for ip in $RADIO_IPS; do
+  echo "===== $ip"
+  ssh root@$ip "MESH_ID='$MESH_ID' MESH_KEY='$MESH_KEY' CHANNEL='$CHANNEL' CHANBW='$CHANBW' DISTANCE='$DISTANCE' sh -s" <<'EOF'
+uci set wireless.radio0.channel="$CHANNEL"
+uci set wireless.radio0.chanbw="$CHANBW"
+uci set wireless.radio0.distance="$DISTANCE"
+uci set wireless.radio0.dynamic_txpower='1'             # TPC: ON
+uci set wireless.radio0.dynamic_txpower_aggr='1'        # Aggressive TPC: ON
+uci set wireless.wifi0.mesh_id="$MESH_ID"
+uci set wireless.wifi0.key="$MESH_KEY"
+uci commit wireless
+uci set acs_multiband.settings.enable='0'               # Automatic channel switching: OFF, stay on CHANNEL
+uci commit acs_multiband
+uci set diffserv.@general[0].enabled='1'                # Differentiated services: ON
+uci set diffserv.@general[0].optimized_cc='1'           # C&C and voice optimization (URLLC): ON
+uci set diffserv.@general[0].optimized_vi='1'           # Video optimization: ON
+uci set diffserv.@general[0].low_latency='0'            # Optimize for latency over throughput: OFF
+uci set diffserv.@general[0].diversity_rates='0'        # Optimize for robustness: OFF
+uci set diffserv.@qdetection[0].qdetection_enabled='0'  # Automatic C&C queue detection: OFF
+while uci -q delete diffserv.@mark[0]; do :; done       # Remove all traffic rules, defaults included
+m() { uci add diffserv mark >/dev/null; uci set diffserv.@mark[-1].proto="$1"; uci set diffserv.@mark[-1].ports="$2"; uci set diffserv.@mark[-1].dscp="$3"; uci set diffserv.@mark[-1].comment="$4"; }
+m tcp 7447 CS6 "Zenoh"
+m udp 7446 CS6 "Zenoh scouting"
+m tcp 22 CS6 "SSH"
+uci commit diffserv
+EOF
+done
+for ip in $RADIO_IPS; do ssh root@$ip reboot; done # Reboot all radios to apply (drones first, ground last, as in RADIO_IPS)
+
+# Check that configuration was applied
+for ip in $RADIO_IPS; do
+  echo "===== $ip"
+  ssh root@$ip 'uci show wireless | grep -E "mesh_id|chanbw|distance|dynamic_txpower"; echo "dscp_rules=$(iptables -t mangle -S | grep -c DSCP)"; echo "peers=$(iwinfo wlan0 assoclist | grep -c dBm)"'
+done
+
+# Link status
+for ip in $RADIO_IPS; do
+  echo "===== $ip"
+  ssh root@$ip 'iw dev wlan0 station dump | grep -E "Station|signal:|tx packets|tx retries|tx failed|tx bitrate|rx bitrate" | grep -v "ack signal"'
+done
+````
 
 <!--
 - [Doodle Labs Knowledge Base](https://kb.doodlelabs.com/product-index)
