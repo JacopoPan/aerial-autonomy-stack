@@ -17,6 +17,8 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_e
     this->declare_parameter("simulated_link_rate", 10.0); // Hz: max per-drone position rate over a real radio (e.g., for ArduPilot, SRx_POSITION)
     this->declare_parameter("simulated_link_outage_rate", 0.04); // Hz: per-drone telemetry link outages (exponential gaps between fades, 0 = never)
     this->declare_parameter("simulated_link_outage_duration", 4.5); // s: max outage duration (uniform in [0, max])
+    // Option to replay /telemetry_tracks (matching recorded /external_tracks) from a recorded rosbag (no MAVLink from SITL or real drones)
+    const bool replay_rosbag_tracks = this->declare_parameter("replay_rosbag_tracks", false);
 
     // Get Parameters
     drone_ids_ = this->get_parameter("drone_ids").as_integer_array();
@@ -40,7 +42,7 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_e
             RCLCPP_WARN(this->get_logger(), "Missing hyphen in assignment: '%s'", pair_str.c_str());
         }
     }
-    simulate_link_degradation_ = this->get_parameter("use_sim_time").as_bool() && this->get_parameter("degrade_simulated_link").as_bool();
+    simulate_link_degradation_ = !replay_rosbag_tracks && this->get_parameter("use_sim_time").as_bool() && this->get_parameter("degrade_simulated_link").as_bool();
     simulated_link_delay_s_ = this->get_parameter("simulated_link_delay").as_double();
     simulated_link_jitter_s_ = this->get_parameter("simulated_link_jitter").as_double();
     simulated_link_loss_prob_ = this->get_parameter("simulated_link_loss").as_double();
@@ -56,7 +58,6 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_e
 
     // Publishers
     tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/tracks", rclcpp::SensorDataQoS()); // Best effort: over the radio, the Zenoh bridge drops stale tracks instead of queuing them
-    telemetry_tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", 10); // Reliable: external subscribers may be reliable or best effort, a best-effort publisher would not reach reliable ones
 
     // Subscribers
     external_tracks_sub_ = this->create_subscription<ground_system_msgs::msg::SwarmObs>("/external_tracks", rclcpp::SensorDataQoS(),
@@ -76,15 +77,29 @@ GroundSystem::GroundSystem() : Node("ground_system"), keep_running_(true), use_e
             }
         });
 
-    // Timer
-    timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(1.0 / publish_rate_), std::bind(&GroundSystem::publish_swarm_obs, this));
+    if (!replay_rosbag_tracks) {
+        // /telemetry_tracks from MAVLink (SITL or real drones): PUBLISH IT
+        telemetry_tracks_pub_ = this->create_publisher<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", 10); // Reliable: external subscribers may be reliable or best effort, a best-effort publisher would not reach reliable ones
 
-    // Single listener thread, use base_port_ and pass drone_id = -1 to signal "auto-detect ID from message"
-    listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, -1, base_port_, 0);
-    RCLCPP_INFO(this->get_logger(), "Listening to the streams from %zu drones on single port %d", drone_ids_.size(), base_port_);
-    // To listen to separate UDP streams on separate ports, create multiple threads using:
-    // listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, drone_id, port, thread_idx);
-    // Make sure thread_idx < MAVLINK_COMM_NUM_BUFFERS
+        // Timer
+        timer_ = rclcpp::create_timer(this, this->get_clock(), std::chrono::duration<double>(1.0 / publish_rate_), std::bind(&GroundSystem::publish_swarm_obs, this));
+
+        // Single listener thread, use base_port_ and pass drone_id = -1 to signal "auto-detect ID from message"
+        listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, -1, base_port_, 0);
+        RCLCPP_INFO(this->get_logger(), "Listening to the streams from %zu drones on single port %d", drone_ids_.size(), base_port_);
+        // To listen to separate UDP streams on separate ports, create multiple threads using:
+        // listener_threads_.emplace_back(&GroundSystem::mavlink_listener, this, drone_id, port, thread_idx);
+        // Make sure thread_idx < MAVLINK_COMM_NUM_BUFFERS
+    } else {
+        // /telemetry_tracks from a recorded rosbag: SUBSCRIBE TO IT
+        telemetry_tracks_sub_ = this->create_subscription<ground_system_msgs::msg::SwarmObs>("/telemetry_tracks", rclcpp::SensorDataQoS(),
+            [this](ground_system_msgs::msg::SwarmObs::ConstSharedPtr msg) {
+                if (!use_external_tracks_) {
+                    tracks_pub_->publish(*msg); // Simple passthrough, as for /external_tracks
+                }
+            });
+        RCLCPP_INFO(this->get_logger(), "replay_rosbag_tracks=true: ground_system only publishes /tracks and expects /telemetry_tracks, /external_tracks from a recorded rosbag");
+    }
 }
 
 GroundSystem::~GroundSystem()
