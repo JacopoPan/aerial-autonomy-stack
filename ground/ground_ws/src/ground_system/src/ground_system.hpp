@@ -83,7 +83,7 @@ private:
     rclcpp::Publisher<ground_system_msgs::msg::SwarmObs>::SharedPtr telemetry_tracks_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<ground_system_msgs::msg::SwarmObs>::SharedPtr external_tracks_sub_;
-    rclcpp::Subscription<ground_system_msgs::msg::SwarmObs>::SharedPtr telemetry_tracks_sub_; // Only for rosbags replay
+    rclcpp::Subscription<ground_system_msgs::msg::SwarmObs>::SharedPtr telemetry_tracks_sub_; // Only to read /telemetry_tracks from a recorded rosbag when replay_rosbag_tracks=true
     rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr use_external_tracks_sub_;
 
     // Methods

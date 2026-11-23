@@ -12,9 +12,9 @@ ODOM="${ODOM:-none}" # Options: none (default), openvins, fastlio, superodom, mi
 #
 SIM_SUBNET="${SIM_SUBNET:-10.42}" # Simulation subnet (default = 10.42) Note: this is overridden if INSTANCE != 0
 AIR_SUBNET="${AIR_SUBNET:-10.22}" # Inter-vehicle subnet (default = 10.22) Note: this is overridden if INSTANCE != 0
-LAN_IP="${LAN_IP:-}" # Ground container IP on a wired LAN of this computer, e.g. 10.30.90.102 to share its ROS_DOMAIN_ID with another computer on 10.30/16 (default = none)
 SIM_ID="${SIM_ID:-100}" # Last byte of the simulation container IP (default = 100)
 GROUND_ID="${GROUND_ID:-101}" # Last byte of the ground container IP (default = 101)
+GND_LAN_IP="${GND_LAN_IP:-}" # Ground container IP on a wired LAN of this computer, e.g. 10.30.90.102 to share its ROS_DOMAIN_ID with another computer on 10.30/16 (default = none)
 #
 NUM_QUADS="${NUM_QUADS:-1}" # Number of quadcopters (default = 1)
 NUM_VTOLS="${NUM_VTOLS:-0}" # Number of VTOLs (default = 0)
@@ -57,12 +57,6 @@ if [[ "$AUTOPILOT" == "betaflight" ]] && [[ "$HITL" == "true" || "$PLOT" == "tru
 for v in SIM_ID GROUND_ID; do check_int "$v" 100 101; done
 check_int INSTANCE 0 99
 check_num RTF
-if [[ -n "$LAN_IP" ]]; then # The interface and subnet of this computer that contain LAN_IP, e.g. enx9c69d3441166 and 10.30.0.0/16
-  LAN_INTERFACE=$(ip -o -4 route show match "$LAN_IP" scope link | awk '{print $3; exit}')
-  LAN_SUBNET=$(ip -o -4 route show match "$LAN_IP" scope link | awk '{print $1; exit}')
-  [[ -n "$LAN_INTERFACE" ]] || abort "LAN_IP=$LAN_IP is not in the subnet of a network interface of this computer (link up?)"
-  [[ -z "$(ip -o -4 addr show to "$LAN_IP")" ]] || abort "LAN_IP=$LAN_IP is this computer's own address: use a free one"
-fi
 if [[ "$PX4_ROS2_LIB" == "true" && "$RTF" != "1.0" ]]; then echo "WARNING: PX4_ROS2_LIB=true sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
 if [[ "$AUTOPILOT" == "betaflight" && "$RTF" != "1.0" ]]; then echo "WARNING: AUTOPILOT=betaflight sets RTF=1.0 (was RTF=$RTF)" >&2; RTF=1.0; fi
 print_envvars
@@ -76,7 +70,6 @@ AIR_BYTE_2=$(echo "$AIR_SUBNET" | cut -d'.' -f2)
 AIR_SUBNET="${AIR_BYTE_1}.$((AIR_BYTE_2 + INSTANCE))"
 SIM_NET_NAME="aas-sim-network-inst${INSTANCE}"
 AIR_NET_NAME="aas-air-network-inst${INSTANCE}"
-LAN_NET_NAME="aas-lan-network-inst${INSTANCE}"
 SIM_CONT_NAME="simulation-container-inst${INSTANCE}"
 GND_CONT_NAME="ground-container-inst${INSTANCE}"
 
@@ -96,15 +89,22 @@ if [[ "$DEV" == "true" ]]; then
   DEV_AIR_OPTS+=" -v ~/Downloads/:/aas/mounted_downloads_folder:cached"
 fi
 
+# (optional, SITL only) LAN for the ground container (e.g., to play rosbags from a separate computer on the same ROS_DOMAIN_ID)
+if [[ "$HITL" == "false" && -n "$GND_LAN_IP" ]]; then
+  GND_LAN_INTERFACE=$(ip -o -4 route show match "$GND_LAN_IP" scope link | awk '{print $3; exit}') # Interface that contains GND_LAN_IP, e.g. enx9c69d3441166
+  GND_LAN_SUBNET=$(ip -o -4 route show match "$GND_LAN_IP" scope link | awk '{print $1; exit}') # Subnet that contains GND_LAN_IP, e.g. 10.30.0.0/16
+  GND_LAN_NET_NAME="aas-lan-network-inst${INSTANCE}"
+  [[ -n "$GND_LAN_INTERFACE" ]] || abort "GND_LAN_IP=$GND_LAN_IP is not in the subnet of a network interface of this computer (is the link up?)"
+  [[ -z "$(ip -o -4 addr show to "$GND_LAN_IP")" ]] || abort "GND_LAN_IP=$GND_LAN_IP is this computer's own address: use a different one"
+  # A macvlan network gives the ground container its own network card on the LAN adapter (own MAC address and GND_LAN_IP), as if it were one more computer on the cable
+  # Note: Linux blocks traffic between a macvlan and its own host, so the host computer cannot reach GND_LAN_IP while running this
+  docker network inspect $GND_LAN_NET_NAME >/dev/null 2>&1 || docker network create -d macvlan -o parent=$GND_LAN_INTERFACE --subnet=$GND_LAN_SUBNET $GND_LAN_NET_NAME
+fi
+
 # Create docker networks for SITL
 if [[ "$HITL" == "false" ]]; then
   docker network inspect $SIM_NET_NAME >/dev/null 2>&1 || docker network create --subnet=${SIM_SUBNET}.0.0/16 $SIM_NET_NAME
   docker network inspect $AIR_NET_NAME >/dev/null 2>&1 || docker network create --subnet=${AIR_SUBNET}.0.0/16 $AIR_NET_NAME
-  if [[ -n "$LAN_IP" ]]; then
-    # A macvlan network gives the ground container its own network card on the LAN adapter (own MAC address and LAN_IP), as if it were one more computer on the cable
-    # Note: Linux blocks traffic between a macvlan and its own host, so the host computer cannot reach LAN_IP while running this
-    docker network inspect $LAN_NET_NAME >/dev/null 2>&1 || docker network create -d macvlan -o parent=$LAN_INTERFACE --subnet=$LAN_SUBNET $LAN_NET_NAME
-  fi
 fi
 
 # Grant access to the X server
@@ -199,8 +199,8 @@ if [[ "$HITL" == "false" ]]; then
       --network name=$AIR_NET_NAME,ip=${AIR_SUBNET}.90.${GROUND_ID} \
       --privileged \
       --name $GND_CONT_NAME"
-    if [[ -n "$LAN_IP" ]]; then
-      DOCKER_CMD="$DOCKER_CMD --network name=$LAN_NET_NAME,ip=$LAN_IP"
+    if [[ -n "$GND_LAN_IP" ]]; then
+      DOCKER_CMD="$DOCKER_CMD --network name=$GND_LAN_NET_NAME,ip=$GND_LAN_IP"
     fi
     # Add WSL-specific options and complete the command
     if [[ "$DESK_ENV" == "wsl" ]]; then
@@ -329,8 +329,8 @@ cleanup() {
   fi
   docker network rm $SIM_NET_NAME 2>/dev/null && echo "Removed $SIM_NET_NAME" || echo "Network $SIM_NET_NAME not found or already removed"
   docker network rm $AIR_NET_NAME 2>/dev/null && echo "Removed $AIR_NET_NAME" || echo "Network $AIR_NET_NAME not found or already removed"
-  if [[ -n "$LAN_IP" ]]; then
-    docker network rm $LAN_NET_NAME 2>/dev/null && echo "Removed $LAN_NET_NAME" || echo "Network $LAN_NET_NAME not found or already removed"
+  if [[ "$HITL" == "false" && -n "$GND_LAN_IP" ]]; then # Same IF condition under which GND_LAN_NET_NAME is created
+    docker network rm $GND_LAN_NET_NAME 2>/dev/null && echo "Removed $GND_LAN_NET_NAME" || echo "Network $GND_LAN_NET_NAME not found or already removed"
   fi
   if command -v xhost >/dev/null 2>&1; then
     sleep 1 && xhost -local:docker >/dev/null
