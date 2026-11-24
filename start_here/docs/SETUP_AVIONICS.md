@@ -161,13 +161,6 @@ AIR_SUBNET                          # Deployment as well as (optionally) for har
   netmask  255.255.0.0
 ```
 
-Cap unsent TCP data at 16 KB, so that on a slow link the TCP video stream to the ground skips stale frames instead of building up seconds of lag
-
-```sh
-echo "net.ipv4.tcp_notsent_lowat = 16384" | sudo tee /etc/sysctl.d/90-tcp-notsent-lowat.conf
-sudo sysctl --system
-```
-
 ## Build and Flash PX4, ArduPilot, or Betaflight Firmware
 
 Build the PX4 firmware in `simulation-image` for Pixhawk 6X
