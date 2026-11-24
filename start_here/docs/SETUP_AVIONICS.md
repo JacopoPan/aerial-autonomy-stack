@@ -161,6 +161,13 @@ AIR_SUBNET                          # Deployment as well as (optionally) for har
   netmask  255.255.0.0
 ```
 
+Cap unsent TCP data at 16 KB, so that on a slow link the TCP video stream to the ground skips stale frames instead of building up seconds of lag
+
+```sh
+echo "net.ipv4.tcp_notsent_lowat = 16384" | sudo tee /etc/sysctl.d/90-tcp-notsent-lowat.conf
+sudo sysctl --system
+```
+
 ## Build and Flash PX4, ArduPilot, or Betaflight Firmware
 
 Build the PX4 firmware in `simulation-image` for Pixhawk 6X
@@ -530,7 +537,7 @@ Active Frequency Band                  2455v4 MHz
 Select Scenario                        Mesh
 Mesh ID                                [same as MESH_ID below]
 Wireless Password                      [same as MESH_KEY below]
-Channel                                101 (2500 MHz)
+Channel                                78 (2477 MHz)
 Bandwidth                              10 MHz
 Operating Distance (m)                 [same as DISTANCE below]
 Number of Devices                      3 to 5           # Only set here
@@ -547,18 +554,21 @@ Enable Automatic C&C Queue Detection   [uncheck]
 RADIO_IPS="10.223.xx.air1 10.223.xx.air2 10.223.xx.gnd" # Air-side IPs first, ground-side IP last (i.e. change air-side first, not to lose connection)
 MESH_ID="PICK_A_NAME"
 MESH_KEY="not123456"                                    # 8+ letters and digits, the default is DoodleSmartRadio
-CHANNEL=101                                             # 2500 MHz
+CHANNEL=78                                              # Between 1 (2400MHz) and 106 (2505MHz)
 CHANBW=10                                               # MHz
 DISTANCE=999                                            # m, at least the maximum flight range
+TXPOWER=29                                              # dBm, 13 to 29 (29dBm = 794mW, full power)
 
 for ip in $RADIO_IPS; do
   echo "===== $ip"
-  ssh root@$ip "MESH_ID='$MESH_ID' MESH_KEY='$MESH_KEY' CHANNEL='$CHANNEL' CHANBW='$CHANBW' DISTANCE='$DISTANCE' sh -s" <<'EOF'
+  ssh root@$ip "MESH_ID='$MESH_ID' MESH_KEY='$MESH_KEY' CHANNEL='$CHANNEL' CHANBW='$CHANBW' DISTANCE='$DISTANCE' TXPOWER='$TXPOWER' sh -s" <<'EOF'
 uci set wireless.radio0.channel="$CHANNEL"
 uci set wireless.radio0.chanbw="$CHANBW"
 uci set wireless.radio0.distance="$DISTANCE"
+uci set wireless.radio0.txpower="$TXPOWER"              # Transmit power, in dBm
 uci set wireless.radio0.dynamic_txpower='1'             # TPC: ON
 uci set wireless.radio0.dynamic_txpower_aggr='1'        # Aggressive TPC: ON
+uci set wireless.radio0.rts='500'                       # RTS/CTS before frames over 500 bytes (e.g. video), skipping small ones (e.g. SSH)
 uci set wireless.wifi0.mesh_id="$MESH_ID"
 uci set wireless.wifi0.key="$MESH_KEY"
 uci commit wireless
@@ -583,7 +593,7 @@ for ip in $RADIO_IPS; do ssh root@$ip reboot; done # Reboot all radios to apply 
 # Check that configuration was applied
 for ip in $RADIO_IPS; do
   echo "===== $ip"
-  ssh root@$ip 'uci show wireless | grep -E "mesh_id|chanbw|distance|dynamic_txpower"; echo "dscp_rules=$(iptables -t mangle -S | grep -c DSCP)"; echo "peers=$(iwinfo wlan0 assoclist | grep -c dBm)"'
+  ssh root@$ip 'uci show wireless | grep -E "mesh_id|chanbw|distance|txpower|rts"; echo "dscp_rules=$(iptables -t mangle -S | grep -c DSCP)"; echo "peers=$(iwinfo wlan0 assoclist | grep -c dBm)"'
 done
 
 # Link status
@@ -591,6 +601,10 @@ for ip in $RADIO_IPS; do
   echo "===== $ip"
   ssh root@$ip 'iw dev wlan0 station dump | grep -E "Station|signal:|tx packets|tx retries|tx failed|tx bitrate|rx bitrate" | grep -v "ack signal"'
 done
+
+# Adjust power setting (e.g., 23dBm = 199mW)
+TXPOWER=23; for ip in $RADIO_IPS; do ssh root@$ip "uci set wireless.radio0.txpower='$TXPOWER'; uci commit wireless; reboot"; done
+for ip in $RADIO_IPS; do echo -n "$ip "; ssh root@$ip 'iw dev wlan0 info | grep txpower'; done # Check
 ````
 
 <!--

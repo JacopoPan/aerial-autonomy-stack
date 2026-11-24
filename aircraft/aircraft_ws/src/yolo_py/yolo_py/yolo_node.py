@@ -287,28 +287,28 @@ class YoloInferenceNode(Node):
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            # Only on Jetson, stream to the ground station via UDP using GStreamer
+            # Only on Jetson, serve the stream to the ground station over TCP using GStreamer
             # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
             # To turn the stream on: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: true}'
             # To turn the stream off: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: false}'
             if self.remote_video_streams and self.is_jetson: # Use cached boolean flag in loops
                 if not hasattr(self, 'gnd_stream_writer'):
                     h, w = frame.shape[:2]
-                    gnd_ip = os.getenv('AIR_SUBNET', '10.22') + '.90.' + os.getenv('GROUND_ID', '101')
+                    air_ip = os.getenv('AIR_SUBNET', '10.22') + '.90.' + os.getenv('DRONE_ID', '1')
                     port = 5000 + int(os.getenv('DRONE_ID', '1')) + (self.camera_id * 100)
                     gst_out = (
                         "appsrc do-timestamp=true ! video/x-raw, format=BGR ! queue max-size-buffers=2 leaky=downstream ! "
                         "videoconvert ! videorate drop-only=true ! "
                         "video/x-raw, format=BGRx, max-framerate=10/1 ! nvvidconv ! "
                         "nvv4l2h265enc maxperf-enable=1 preset-level=3 "
-                        "control-rate=0 bitrate=800000 peak-bitrate=1200000 " # Variable bitrate, or use "control-rate=1 bitrate=1000000 " for constant bitrate
+                        "control-rate=0 bitrate=400000 peak-bitrate=600000 " # Variable bitrate, or use "control-rate=1 bitrate=1000000 " for constant bitrate
                         "insert-sps-pps=true idrinterval=20 ! "
-                        f"h265parse ! rtph265pay pt=96 config-interval=1 mtu=1400 ! udpsink host={gnd_ip} port={port} sync=false async=false"
+                        f"h265parse ! rtph265pay pt=96 config-interval=1 mtu=1400 ! rtpstreampay ! tcpserversink host={air_ip} port={port} sync=false async=false recover-policy=latest buffers-soft-max=20"
                     )
                     # Cap the framerate to 10FPS and use h265 to reduce bandwidith
                     # Optionally, re-scale the frames "nvvidconv ! video/x-raw, width=640, height=480 ! "
                     self.gnd_stream_writer = cv2.VideoWriter(gst_out, cv2.CAP_GSTREAMER, 0, 60.0, (w, h)) # Framerate upper limit of 60FPS
-                    self.get_logger().info(f"Started UDP stream to {gnd_ip}:{port}")
+                    self.get_logger().info(f"Serving TCP video stream on {air_ip}:{port}")
                 if self.gnd_stream_writer.isOpened():
                     ros_time_sec = self.get_clock().now().nanoseconds / 1e9
                     time_label = f"ROS T: ..{ros_time_sec % 10000:07.2f}" # Last 4 integer digits and 2 decimals

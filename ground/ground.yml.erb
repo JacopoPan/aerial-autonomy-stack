@@ -111,7 +111,7 @@ windows:
       layout: tiled
       panes:
         <% drone_ids.each do |drone_id| %>
-        - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --port <%= 5000 + drone_id %> --name "Aircraft <%= drone_id %> (Cam 0)"; do sleep 2; done
+        - until python3 /aas/ground_resources/comms/udp_gst_receiver.py --host <%= air_subnet %>.90.<%= drone_id %> --port <%= 5000 + drone_id %> --name "Aircraft <%= drone_id %> (Cam 0)"; do sleep 2; done
         <% end %>
   <% end %>
 
