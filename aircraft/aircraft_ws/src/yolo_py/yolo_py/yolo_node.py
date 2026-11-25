@@ -24,12 +24,13 @@ CONF_THRESH = 0.5
 RECORD_VIDEO_DIR = "/aas/mounted_downloads_folder" # Host ~/Downloads, mounted by deploy_run.sh
 
 class YoloInferenceNode(Node):
-    def __init__(self, camera_id, headless, hitl, remote_video_streams, hfov, ros2_frame_publisher, no_inference, record_video):
+    def __init__(self, camera_id, headless, hitl, remote_video_streams, video_stream_transport, hfov, ros2_frame_publisher, no_inference, record_video):
         super().__init__(f'yolo_inference_node_{camera_id}')
         self.camera_id = camera_id
         self.headless = headless
         self.hitl = hitl
         self.remote_video_streams = remote_video_streams
+        self.video_stream_transport = video_stream_transport
         self.hfov = hfov
         self.ros2_frame_publisher = ros2_frame_publisher
         self.run_inference = not no_inference # # Invert flag for readability
@@ -287,28 +288,33 @@ class YoloInferenceNode(Node):
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            # Only on Jetson, stream to the ground station via UDP using GStreamer
+            # Only on Jetson, stream to the ground station over TCP or UDP (VIDEO_STREAM_TRANSPORT in deploy_run.sh) using GStreamer
             # On ports 5001, 5002, ..., and 5101, 5102, ..., based on DRONE_ID and self.camera_id
             # To turn the stream on: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: true}'
             # To turn the stream off: ros2 topic pub --once /enable_remote_video_streams std_msgs/msg/Bool '{data: false}'
             if self.remote_video_streams and self.is_jetson: # Use cached boolean flag in loops
                 if not hasattr(self, 'gnd_stream_writer'):
                     h, w = frame.shape[:2]
+                    air_ip = os.getenv('AIR_SUBNET', '10.22') + '.90.' + os.getenv('DRONE_ID', '1')
                     gnd_ip = os.getenv('AIR_SUBNET', '10.22') + '.90.' + os.getenv('GROUND_ID', '101')
                     port = 5000 + int(os.getenv('DRONE_ID', '1')) + (self.camera_id * 100)
+                    if self.video_stream_transport == 'tcp': # Serve the stream on this drone's address, the ground station connects to it
+                        sink = f"rtpstreampay ! tcpserversink host={air_ip} port={port} sync=false async=false recover-policy=latest buffers-soft-max=20"
+                    else: # Send the stream to the ground station's address
+                        sink = f"udpsink host={gnd_ip} port={port} sync=false async=false"
                     gst_out = (
                         "appsrc do-timestamp=true ! video/x-raw, format=BGR ! queue max-size-buffers=2 leaky=downstream ! "
                         "videoconvert ! videorate drop-only=true ! "
                         "video/x-raw, format=BGRx, max-framerate=10/1 ! nvvidconv ! "
                         "nvv4l2h265enc maxperf-enable=1 preset-level=3 "
-                        "control-rate=0 bitrate=800000 peak-bitrate=1200000 " # Variable bitrate, or use "control-rate=1 bitrate=1000000 " for constant bitrate
+                        "control-rate=0 bitrate=400000 peak-bitrate=600000 " # Variable bitrate, or use "control-rate=1 bitrate=1000000 " for constant bitrate
                         "insert-sps-pps=true idrinterval=20 ! "
-                        f"h265parse ! rtph265pay pt=96 config-interval=1 mtu=1400 ! udpsink host={gnd_ip} port={port} sync=false async=false"
+                        f"h265parse ! rtph265pay pt=96 config-interval=1 mtu=1400 ! {sink}"
                     )
                     # Cap the framerate to 10FPS and use h265 to reduce bandwidith
                     # Optionally, re-scale the frames "nvvidconv ! video/x-raw, width=640, height=480 ! "
                     self.gnd_stream_writer = cv2.VideoWriter(gst_out, cv2.CAP_GSTREAMER, 0, 60.0, (w, h)) # Framerate upper limit of 60FPS
-                    self.get_logger().info(f"Started UDP stream to {gnd_ip}:{port}")
+                    self.get_logger().info(f"Started video stream: {sink}")
                 if self.gnd_stream_writer.isOpened():
                     ros_time_sec = self.get_clock().now().nanoseconds / 1e9
                     time_label = f"ROS T: ..{ros_time_sec % 10000:07.2f}" # Last 4 integer digits and 2 decimals
@@ -488,6 +494,7 @@ def main(args=None):
     parser.add_argument('--headless', action='store_true', help="Run in headless mode.")
     parser.add_argument('--hitl', action='store_true', help="Open camera from gz-sim for HITL.")
     parser.add_argument('--remote-video-streams', action='store_true', help="Send video streams to the ground container.")
+    parser.add_argument('--video-stream-transport', choices=['tcp', 'udp'], default='tcp', help="tcp: serve the stream, the ground connects; udp: send the video to the ground.")
     parser.add_argument('--hfov', type=float, default=100.0, help="Horizontal field of view in degrees.")
     parser.add_argument('--ros2-frame-publisher', action='store_true', help="Publish raw frames to ROS 2.")
     parser.add_argument('--no-inference', action='store_true', help="Disable YOLO inference and only run camera acquisition/streaming.")
@@ -497,7 +504,7 @@ def main(args=None):
     rclpy.init(args=ros_args)
 
     yolo_node = YoloInferenceNode(camera_id=cli_args.camera_id, headless=cli_args.headless, hitl=cli_args.hitl,
-        remote_video_streams=cli_args.remote_video_streams, hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher,
+        remote_video_streams=cli_args.remote_video_streams, video_stream_transport=cli_args.video_stream_transport, hfov=cli_args.hfov, ros2_frame_publisher=cli_args.ros2_frame_publisher,
         no_inference=cli_args.no_inference, record_video=cli_args.record_video)
     yolo_node.run_inference_loop()
     
