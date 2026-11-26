@@ -78,7 +78,6 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
 #  ODOM=kissicp, openvins, fastlio, superodom, mimosa (require BUILD_ADVANCED_ODOM=true)
-#  GNSS=nominal, contested, none
 #  WORLD=impalpable_greyness, apple_orchard, crematoria, livo_bench, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true or AUTOPILOT=betaflight set RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
