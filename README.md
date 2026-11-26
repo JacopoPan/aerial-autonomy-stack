@@ -122,7 +122,7 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 # Then, take-off using QGroundControl and switch to mode "AAS Template" (implemented in aircraft/aircraft_ws/src/px4_custom_mode_template/)
 ```
 
-https://github.com/user-attachments/assets/48d94bab-9c60-48d9-9e6e-aa817900bfe1
+https://github.com/user-attachments/assets/4e55089d-2a35-4ad0-905d-194cce1f67fe
 
 Building with `BUILD_ADVANCED_ODOM=true ./sim_build.sh` (~20' longer build) adds the `ODOM` backends to the `aircraft-image`: `kissicp` (LiDAR), `openvins` (camera, IMU), `fastlio` and `superodom` (LiDAR, IMU), `mimosa` (LiDAR, IMU, and OpenVINS' odometry)
 
