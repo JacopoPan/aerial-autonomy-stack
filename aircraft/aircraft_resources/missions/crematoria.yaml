@@ -1,0 +1,294 @@
+# Cave mission, start with: WORLD=crematoria ODOM=kissicp|openvins|fastlio|superodom|mimosa RTF=2 ./sim_run.sh
+# Out and back at 2m/s, for the drone spawned at the origin: into the cave, through the junction, down two ramps to 16m below the takeoff point, then back the same way
+# The drone stops at each waypoint, then hovers above the takeoff point and lands: the odometry's error there is its drift over the flight
+type: Sequence
+name: Crematoria_Cave_Mission
+children:
+  - action: takeoff
+    name: "Takeoff to 2.5m"
+    params:
+      takeoff_altitude: 2.5
+
+  - action: speed
+    name: "Set cruise speed to 2m/s"
+    params:
+      speed: 2.0
+
+  - action: reposition
+    name: "Into the cave (1/19)"
+    params:
+      east: 20.5
+      north: -0.5
+      altitude: 3.6
+
+  - action: reposition
+    name: "Around the junction's pillar (2/19)"
+    params:
+      east: 22.5
+      north: -2.5
+      altitude: 4.3
+
+  - action: reposition
+    name: "Around the junction's pillar (3/19)"
+    params:
+      east: 24.5
+      north: -4.5
+      altitude: 4.9
+
+  - action: reposition
+    name: "Junction, south exit (4/19)"
+    params:
+      east: 25.5
+      north: -11.5
+      altitude: 5.1
+
+  - action: reposition
+    name: "Down the first ramp (5/19)"
+    params:
+      east: 25.5
+      north: -14.0
+      altitude: 4.2
+
+  - action: reposition
+    name: "Down the first ramp (6/19)"
+    params:
+      east: 25.5
+      north: -19.5
+      altitude: 1.3
+
+  - action: reposition
+    name: "Down the first ramp (7/19)"
+    params:
+      east: 25.5
+      north: -24.0
+      altitude: -0.8
+
+  - action: reposition
+    name: "Down the first ramp (8/19)"
+    params:
+      east: 25.5
+      north: -31.5
+      altitude: -2.5
+
+  - action: reposition
+    name: "Down the first ramp (9/19)"
+    params:
+      east: 25.5
+      north: -34.0
+      altitude: -4.1
+
+  - action: reposition
+    name: "Bottom of the first ramp (10/19)"
+    params:
+      east: 26.5
+      north: -41.5
+      altitude: -5.7
+
+  - action: reposition
+    name: "East, around the corner (11/19)"
+    params:
+      east: 39.5
+      north: -49.0
+      altitude: -5.7
+
+  - action: reposition
+    name: "East, around the corner (12/19)"
+    params:
+      east: 46.0
+      north: -49.5
+      altitude: -4.3
+
+  - action: reposition
+    name: "Corner, south exit (13/19)"
+    params:
+      east: 51.5
+      north: -56.5
+      altitude: -4.7
+
+  - action: reposition
+    name: "Down the second ramp (14/19)"
+    params:
+      east: 50.5
+      north: -63.5
+      altitude: -6.0
+
+  - action: reposition
+    name: "Down the second ramp (15/19)"
+    params:
+      east: 50.5
+      north: -69.5
+      altitude: -8.8
+
+  - action: reposition
+    name: "Down the second ramp (16/19)"
+    params:
+      east: 50.5
+      north: -74.0
+      altitude: -10.7
+
+  - action: reposition
+    name: "Down the second ramp (17/19)"
+    params:
+      east: 50.5
+      north: -82.0
+      altitude: -12.9
+
+  - action: reposition
+    name: "Down the second ramp (18/19)"
+    params:
+      east: 50.5
+      north: -86.5
+      altitude: -15.0
+
+  - action: reposition
+    name: "End, bottom of the second ramp (19/19)"
+    params:
+      east: 50.5
+      north: -98.5
+      altitude: -16.2
+
+  - action: reposition
+    name: "Back: down the second ramp (18/19)"
+    params:
+      east: 50.5
+      north: -86.5
+      altitude: -15.0
+
+  - action: reposition
+    name: "Back: down the second ramp (17/19)"
+    params:
+      east: 50.5
+      north: -82.0
+      altitude: -12.9
+
+  - action: reposition
+    name: "Back: down the second ramp (16/19)"
+    params:
+      east: 50.5
+      north: -74.0
+      altitude: -10.7
+
+  - action: reposition
+    name: "Back: down the second ramp (15/19)"
+    params:
+      east: 50.5
+      north: -69.5
+      altitude: -8.8
+
+  - action: reposition
+    name: "Back: down the second ramp (14/19)"
+    params:
+      east: 50.5
+      north: -63.5
+      altitude: -6.0
+
+  - action: reposition
+    name: "Back: corner, south exit (13/19)"
+    params:
+      east: 51.5
+      north: -56.5
+      altitude: -4.7
+
+  - action: reposition
+    name: "Back: east, around the corner (12/19)"
+    params:
+      east: 46.0
+      north: -49.5
+      altitude: -4.3
+
+  - action: reposition
+    name: "Back: east, around the corner (11/19)"
+    params:
+      east: 39.5
+      north: -49.0
+      altitude: -5.7
+
+  - action: reposition
+    name: "Back: bottom of the first ramp (10/19)"
+    params:
+      east: 26.5
+      north: -41.5
+      altitude: -5.7
+
+  - action: reposition
+    name: "Back: down the first ramp (9/19)"
+    params:
+      east: 25.5
+      north: -34.0
+      altitude: -4.1
+
+  - action: reposition
+    name: "Back: down the first ramp (8/19)"
+    params:
+      east: 25.5
+      north: -31.5
+      altitude: -2.5
+
+  - action: reposition
+    name: "Back: down the first ramp (7/19)"
+    params:
+      east: 25.5
+      north: -24.0
+      altitude: -0.8
+
+  - action: reposition
+    name: "Back: down the first ramp (6/19)"
+    params:
+      east: 25.5
+      north: -19.5
+      altitude: 1.3
+
+  - action: reposition
+    name: "Back: down the first ramp (5/19)"
+    params:
+      east: 25.5
+      north: -14.0
+      altitude: 4.2
+
+  - action: reposition
+    name: "Back: junction, south exit (4/19)"
+    params:
+      east: 25.5
+      north: -11.5
+      altitude: 5.1
+
+  - action: reposition
+    name: "Back: around the junction's pillar (3/19)"
+    params:
+      east: 24.5
+      north: -4.5
+      altitude: 4.9
+
+  - action: reposition
+    name: "Back: around the junction's pillar (2/19)"
+    params:
+      east: 22.5
+      north: -2.5
+      altitude: 4.3
+
+  - action: reposition
+    name: "Back: into the cave (1/19)"
+    params:
+      east: 20.5
+      north: -0.5
+      altitude: 3.6
+
+  - action: reposition
+    name: "Back above the takeoff point"
+    params:
+      east: 0.0
+      north: 0.0
+      altitude: 2.5
+
+  - action: wait
+    name: "Hover for 5s"
+    params:
+      duration: 5.0
+
+  - action: land
+    name: "Land on the takeoff point"
+    params:
+      landing_altitude: 2.5
+
+run_with:
+  ros2 run mission mission --conops crematoria.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=$SIMULATED_TIME

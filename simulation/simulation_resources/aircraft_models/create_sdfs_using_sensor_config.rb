@@ -36,4 +36,10 @@ config['aircraft_models'].each do |model_name, extrinsics|
   lidar_ext  = extrinsics['lidar_extrinsics']
   
   render_and_save("#{model_name}/model.sdf.erb", "#{model_name}/model.sdf", binding)
+
+  # With an ODOM backend, Gazebo publishes the vehicle's true pose on /model/<name>/odometry, bridged to /odom_ground_truth by simulation.yml.erb
+  sdf = File.join(MODELS_DIR, "#{model_name}/model.sdf")
+  if ENV.fetch('ODOM', 'none') != 'none' && File.exist?(sdf)
+    File.write(sdf, File.read(sdf).sub(%r{</model>(\s*</sdf>)}, '<plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher"><dimensions>3</dimensions></plugin></model>\1'))
+  end
 end

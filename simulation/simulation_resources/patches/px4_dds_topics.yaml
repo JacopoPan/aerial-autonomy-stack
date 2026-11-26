@@ -43,7 +43,7 @@ publications:
 
   - topic: /fmu/out/sensor_combined # 250 / 200 Hz, IMU rate
     type: px4_msgs::msg::SensorCombined
-    rate_limit: 100.
+    rate_limit: 200. # Used by imu_publisher and the VIO/LIO packages
 
   # - topic: /fmu/out/timesync_status
   #   type: px4_msgs::msg::TimesyncStatus

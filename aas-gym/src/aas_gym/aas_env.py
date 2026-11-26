@@ -61,6 +61,10 @@ class AASEnv(gym.Env):
             raise ValueError("autopilot='betaflight' is not supported: the Betaflight SITL is not lockstepped with Gazebo")
         self.CAMERA = camera
         self.LIDAR = lidar
+        if odom in ("kissicp", "fastlio", "superodom", "mimosa") and not lidar:
+            raise ValueError(f"odom='{odom}' requires lidar=True")
+        if odom in ("openvins", "mimosa") and not camera:
+            raise ValueError(f"odom='{odom}' requires camera=True")
         self.ODOM = odom
         self.NUM_QUADS = num_quads
         self.NUM_VTOLS = 0 # TODO add support beyond multicopters
@@ -186,6 +190,7 @@ class AASEnv(gym.Env):
                 "HEADLESS": str(self.HEADLESS).lower(),
                 "CAMERA": str(self.CAMERA).lower(),
                 "LIDAR": str(self.LIDAR).lower(),
+                "ODOM": self.ODOM,
                 "NUM_QUADS": str(self.NUM_QUADS),
                 "NUM_VTOLS": str(self.NUM_VTOLS),
                 "NUM_TAILS": str(self.NUM_TAILS),

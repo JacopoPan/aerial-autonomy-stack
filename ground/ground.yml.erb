@@ -41,15 +41,12 @@ windows:
       panes:
         - >
           cp /aas/ground_resources/comms/mavlink_router_base.conf /aas/ground_resources/comms/mavlink_router_main.conf &&
-          <% if simulated_time %>
-          <% (1..num_drones).each do |drone_id| %>
-          <% sitl_instance = drone_id - 1 %>
+          <% if simulated_time; (1..num_drones).each do |drone_id| %>
           echo "[UdpEndpoint drone<%= drone_id %>]" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
           echo "Mode = Server" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
           echo "Address = <%= sim_subnet %>.90.<%= ground_id %>" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
-          echo "Port = <%= 16540 + sitl_instance %>" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
-          <% end %>
-          <% else %>
+          echo "Port = <%= 16540 + drone_id - 1 %>" >> /aas/ground_resources/comms/mavlink_router_main.conf &&
+          <% end; else %>
           (
             radio_endpoint_idx=1 && processed_devs="" &&
             for dev in /dev/ttyUSB*; do

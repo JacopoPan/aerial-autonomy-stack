@@ -5,7 +5,7 @@
       <transport_descriptor>
         <transport_id>udp</transport_id>
         <type>UDPv4</type>
-        <!-- All interfaces except the mesh radios (AIR_SUBNET): in SITL/HITL the SIM_SUBNET still carries /clock and /lidar_points -->
+        <!-- All interfaces except the mesh radios (AIR_SUBNET): in SITL/HITL the SIM_SUBNET still carries /clock and /livox/lidar -->
         <interfaces>
           <blocklist>
             <interface name="<%= ENV.fetch('AIR_SUBNET', '10.22') %>.90.<%= ENV.fetch('ROS_DOMAIN_ID') %>"/>

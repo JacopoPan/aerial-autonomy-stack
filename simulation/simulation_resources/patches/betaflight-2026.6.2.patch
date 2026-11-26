@@ -1,3 +1,11 @@
+serial_tcp.c: TCP ports from 5760 + --port-offset, to run multiple SITL instances
+msp.c, msp_protocol_v2_betaflight.h: new MSP2_POSITION_ESTIMATE (the position, velocity, GPS origin, and status POS HOLD flies on), for the companion computer
+mavlink.c, mavlink_mission.c: MAVLink system ID from --sysid (was 1), to tell drones apart when running multiple SITL instances
+sitl.c: --port-offset (UDP 9001-9004) and --sysid to run multiple SITL instances; realistic GPS noise (1 m wander over 60 s, 0.2 m noise, 0.05 m/s, 10 Hz, one fix late)
+sitl.c: (bugfixes) ignores state sent before the virtual sensors exist; no clock stall at start; accelerometer X and attitude in Betaflight's frames (X was negated, heading 180 deg off)
+sitl_gyro.h: (bugfix) yaw rate negated for Gazebo
+target.h: MAVLink telemetry on, for ground_system
+
 diff --git a/src/main/drivers/serial_tcp.c b/src/main/drivers/serial_tcp.c
 index a922cc7..8c9a16a 100644
 --- a/src/main/drivers/serial_tcp.c

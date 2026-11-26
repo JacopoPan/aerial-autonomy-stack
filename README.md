@@ -15,7 +15,7 @@ https://github.com/user-attachments/assets/57e5bc91-8bee-4bae-8f81-a9aacef471e7
 
 - **PX4, ArduPilot, and Betaflight multi-vehicle** simulation (**quadrotors, quadplane VTOLs, and tailsitters**)
 - ROS2 action-based autopilot interface (*via* XRCE-DDS, MAVROS, or MSP)
-- **YOLO** (with ONNX GPU Runtimes) and **LiDAR** Odometry (with [KISS-ICP](https://github.com/PRBonn/kiss-icp))
+- **YOLO** (with ONNX GPU Runtimes) and **LiDAR/visual-inertial odometry** (KISS-ICP, OpenVINS, FAST-LIO, SuperOdom, MIMOSA)
 - 3D worlds for perception-based simulation
 - **Steppable** [Gymnasium environment](https://gymnasium.farama.org/index.html) and **faster-than-real-time**, **multi-instance** simulation
 - Gazebo's wind effects and [waves](https://github.com/srmainwaring/asv_wave_sim) plugins
@@ -46,6 +46,9 @@ cd aerial-autonomy-stack/start_here/
 
 ./tests/check_requirements.sh                         # AAS requires nvidia-driver, docker, and nvidia-container-toolkit
 ./sim_build.sh                                        # The 1st build takes ~45' with good internet (`Ctrl + c` and restart if needed, cached stages will be preserved)
+
+# Build options:
+#  BUILD_ADVANCED_ODOM=true, false (add the ODOM backends, kissicp, openvins, fastlio, superodom, mimosa, ~20' longer build)
 ```
 
 <details>
@@ -77,8 +80,8 @@ NUM_QUADS=1 NUM_VTOLS=1 WORLD=swiss_town RTF=3 PLOT=true ./sim_run.sh    # Start
 #  AUTOPILOT=px4, ardupilot, betaflight
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB=true, false
 #  NUM_QUADS/NUM_VTOLS/NUM_TAILS=0, 1, ...
-#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
-#  WORLD=impalpable_greyness, apple_orchard, crematoria, shibuya_crossing, swiss_town, waterworld
+#  ODOM=none, kissicp, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
+#  WORLD=impalpable_greyness, apple_orchard, crematoria, livo_bench, shibuya_crossing, swiss_town, waterworld
 #  RTF=1, 2, ... (real-time-factor, use 0 for "as fast as possible", PX4_ROS2_LIB=true or AUTOPILOT=betaflight set RTF=1)
 #  INSTANCE=0, 1, ... (integer ID to run multiple parallel simulations)
 #  PLOT/RECORD_ROSBAG=true, false (plotting requires pymavlink, pyulog, pymap3d)
@@ -119,7 +122,17 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 # Then, take-off using QGroundControl and switch to mode "AAS Template" (implemented in aircraft/aircraft_ws/src/px4_custom_mode_template/)
 ```
 
-![logs](https://github.com/user-attachments/assets/d207f4da-6560-4d90-abf6-aac598a168c5)
+https://github.com/user-attachments/assets/4e55089d-2a35-4ad0-905d-194cce1f67fe
+
+Building with `BUILD_ADVANCED_ODOM=true ./sim_build.sh` (~20' longer build) adds the `ODOM` backends to the `aircraft-image`: `kissicp` (LiDAR), `openvins` (camera, IMU), `fastlio` and `superodom` (LiDAR, IMU), `mimosa` (LiDAR, IMU, and OpenVINS' odometry)
+
+Evaluate the LiDAR-inertial-visual-odometry (LIVO) performance with:
+```sh
+ODOM=mimosa WORLD=crematoria RTF=2 ./sim_run.sh
+# From the QUAD 1 terminal
+ros2 run mission mission --conops crematoria.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
+# Try also `ODOM=kissicp|openvins|fastlio|superodom` and `WORLD=livo_bench`/`--conops livo_bench.yaml`
+```
 
 ![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)
 
@@ -129,7 +142,8 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > / *(iii)* `shibuya_crossing`, a 3D world adapted from [cgtrader](https://www.cgtrader.com/)
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
 > / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
-> / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0)
+> / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0);
+> `livo_bench` contains simple textured structures to benchmark the `ODOM` backends
 
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_sensors/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
@@ -206,9 +220,6 @@ ros2 run px4_custom_mode_template px4_custom_mode_template --ros-args -r __ns:=/
 > To end the simulation, in each terminal detach Tmux with `Ctrl + b`, then `d`; kill all lingering processes with `tmux kill-server && pkill -f gz`
 > </details>
 
-![vio](https://github.com/user-attachments/assets/b1a97041-a508-4365-8197-9bf6ba32bcc1)
-> `BUILD_ADVANCED_ODOM=true ./sim_build.sh` adds to the `aircraft-image` several VIO and LIVO packages, including `openvins`, `rovio`, `fastlio`, `superodom`, and `mimosa`
-
 ## 3. Deployment on Jetson
 
 > AAS is tested on a [Holybro Jetson Baseboard](https://holybro.com/products/pixhawk-jetson-baseboard) with Pixhawk 6X and NVIDIA Orin NX 16GB
@@ -226,6 +237,7 @@ cd aerial-autonomy-stack/start_here/
 ./deploy_build.sh                                     # Build for arm64, on Jetson Orin NX the first build requires ~50' to build onnxruntime-gpu with TensorRT support from source
 
 # Build options:
+#  BUILD_ADVANCED_ODOM=true, false (add the ODOM backends, kissicp, openvins, fastlio, superodom, mimosa, ~20' longer build)
 #  PREBUILT_DEPS=true, false (use a pre-built image on ghcr.io and only build stages aircraft-manifests/aircraft-dev-image)
 ```
 
@@ -245,7 +257,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false (recordings are saved on the host's ~/Downloads/ folder)
 #  REMOTE_VIDEO_STREAMS=true, false (cam_0 stream to the ground container, toggle at runtime with topic /enable_remote_video_streams)
 #  VIDEO_STREAM_TRANSPORT=tcp, udp
-#  ODOM=none, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
+#  ODOM=none, kissicp, openvins, fastlio, superodom, mimosa (all except "none" require BUILD_ADVANCED_ODOM=true)
 ```
 
 On a laptop, start the `ground-image` (QGC, Zenoh, SSH, and GStreamer):
@@ -295,7 +307,7 @@ HITL=true DRONE_ID=2 SIM_SUBNET=172.30 AIR_SUBNET=10.223 ./deploy_run.sh        
 Finally, start the simulation container:
 ```sh
 # On the computer with IPs ending in 90.100
-HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh
+HITL=true NUM_QUADS=2 SIM_SUBNET=172.30 PLOT=true ./sim_run.sh                                # Add the Jetsons' ODOM, if any: it sets livox_sim's LiDAR format
 ```
 
 > **Note:** running only the last 3 commands with `GND_CONTAINER=false` puts the Zenoh bridge on the `SIM_SUBNET`, removing the need for the optional `AIR_SUBNET` and the computer with IP ending in `90.101`
@@ -386,8 +398,7 @@ flowchart TB
         subgraph air ["[N#nbsp;x]#nbsp;aircraft#nbsp;container(s)#nbsp;(amd64,#nbsp;arm64)"]
             subgraph perception [Perception]
                 yolo_py(yolo_py):::algo
-                kiss_icp(kiss_icp):::algo
-                livo_pkgs(livo_pkgs):::algo
+                livo_pkgs("kissicp || openvins || fastlio || superodom || mimosa"):::algo
             end
             zenoh_air{{zenoh_bridge}}:::bridge
             subgraph control [Control]
@@ -401,8 +412,7 @@ flowchart TB
             track_split( ):::splitNode
 
             ap_link{{"uxrce_dds || MAVROS#nbsp;|| MSP"}}:::bridge
-            kiss_icp -.-> |"/TBD"| ap_link
-            livo_pkgs <-.-> |"/imu_data <br/> /TBD"| ap_link
+            ap_link --> |"/imu_data"| livo_pkgs
             zenoh_air --> |"/tracks <br/> /state_drone_N"| track_split
             track_split --> offboard_control
             track_split --> mission
@@ -421,8 +431,7 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz sim1@--> |"/lidar_points <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
-    lidar_split sim2@--> kiss_icp
+    gz sim1@--> |"/livox/lidar <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
     lidar_split sim3@--> livo_pkgs
     gz sim4@--> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
     camera_split sim5@--> livo_pkgs
@@ -439,7 +448,7 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    classDef simNet stroke:teal,stroke-width:3px; class sim1,sim2,sim3,sim4,sim5,sim6,sim7,sim8,sim9 simNet;
+    classDef simNet stroke:teal,stroke-width:3px; class sim1,sim3,sim4,sim5,sim6,sim7,sim8,sim9 simNet;
     classDef airNet stroke:blue,stroke-width:4px; class air1 airNet;
 ```
 
@@ -494,9 +503,15 @@ aerial-autonomy-stack
 │   │       ├── apple_orchard.sdf
 │   │       ├── crematoria.sdf
 │   │       ├── impalpable_greyness.sdf
+│   │       ├── livo_bench.sdf
 │   │       ├── shibuya_crossing.sdf
 │   │       ├── swiss_town.sdf
 │   │       └── waterworld.sdf
+│   │
+│   ├── simulation_ws
+│   │   └── src
+│   │       ├── livox_sim                             # Publisher of `/livox/lidar`, the Gazebo's LiDAR sensor in Mid-360 driver's format
+│   │       └── zmq_bridge_cpp                        # ZeroMQ bridge stepping Gazebo for `aas_env.py`
 │   │
 │   └── simulation.yml.erb                            # Simulation docker tmux entrypoint
 │
@@ -552,10 +567,17 @@ External repositories (cloned by `sim_build.sh` and `deploy_build.sh`):
 - [`mavlink/c_library_v2`](https://github.com/mavlink/c_library_v2) tag/branch: `master`
 - [`mavlink-router/mavlink-router`](https://github.com/mavlink-router/mavlink-router) tag/branch: `master`
 - [`eProsima/Micro-XRCE-DDS-Agent`](https://github.com/eProsima/Micro-XRCE-DDS-Agent) tag/branch: `master`
-- [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
 - [`microsoft/onnxruntime`](https://github.com/microsoft/onnxruntime) tag/branch: `v1.31.1`
 - [`Livox-SDK/Livox-SDK2`](https://github.com/Livox-SDK/Livox-SDK2) tag/branch: `master`
 - [`Livox-SDK/livox_ros_driver2`](https://github.com/Livox-SDK/livox_ros_driver2) tag/branch: `master`
+
+With `BUILD_ADVANCED_ODOM=true`, also:
+- [`PRBonn/kiss-icp`](https://github.com/PRBonn/kiss-icp) tag/branch: `main`
+- [`rpng/open_vins`](https://github.com/rpng/open_vins) tag/branch: `master`
+- [`MIT-SPARK/spark-fast-lio`](https://github.com/MIT-SPARK/spark-fast-lio) tag/branch: `main`
+- [`MIT-SPARK/KISS-Matcher`](https://github.com/MIT-SPARK/KISS-Matcher) tag/branch: `main`
+- [`superxslam/SuperOdom`](https://github.com/superxslam/SuperOdom) tag/branch: `ros2`
+- [`ntnu-arl/mimosa`](https://github.com/ntnu-arl/mimosa) tag/branch: `dev/ros2`
 </details>
 
 ---
