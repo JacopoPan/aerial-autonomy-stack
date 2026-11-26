@@ -120,13 +120,15 @@ ArdupilotGuided::ArdupilotGuided() : Node("ardupilot_guided"),
     controller_map_["vel-test"] = std::bind(&ArdupilotGuided::vel_ref_test, this);
     controller_map_["acc-test"] = std::bind(&ArdupilotGuided::acc_ref_test, this);
     // Custom controllers
-    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 22.5, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
+    controller_map_["vel-sk"] = [this]() { vel_ref_stalk({10.0, -10.0, 18.5, 5.0}); }; // Standoff, alt offset (negative is below), speed ceiling, correction budget
     controller_map_["vel-lp"] = std::bind(&ArdupilotGuided::vel_ref_lead_pursuit, this);
     controller_map_["acc-pn"] = std::bind(&ArdupilotGuided::acc_ref_proportional_navigation, this);
     // Lemniscate trajectories
     controller_map_["vel-s8"] = [this]() { vel_ref_lemniscate({{-20.0, -5.0}, {30.0, 90.0}, {55.0, 60.0}, 8.0}); }; // ENU {min, max}, speed ceiling
-    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {30.0, 180.0}, {55.0, 65.0}, 13.0}); }; // ENU {min, max}, speed ceiling
-    controller_map_["vel-x8"] = [this]() { vel_ref_lemniscate({{-90.0, -10.0}, {30.0, 400.0}, {55.0, 70.0}, 18.5, 10.0}); }; // ENU {min, max}, speed ceiling, CCW rotation
+    controller_map_["vel-l8"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {50.0, 200.0}, {55.0, 65.0}, 13.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-l8-slow"] = [this]() { vel_ref_lemniscate({{-45.0, -10.0}, {50.0, 200.0}, {55.0, 65.0}, 8.0}); }; // ENU {min, max}, speed ceiling
+    controller_map_["vel-x8"] = [this]() { vel_ref_lemniscate({{-90.0, -10.0}, {30.0, 400.0}, {55.0, 70.0}, 16.5, 10.0}); }; // ENU {min, max}, speed ceiling, CCW rotation
+    controller_map_["vel-x8-slow"] = [this]() { vel_ref_lemniscate({{-90.0, -10.0}, {30.0, 400.0}, {55.0, 70.0}, 8.0, 10.0}); }; // ENU {min, max}, speed ceiling, CCW rotation
     // Vision-based guidance
     controller_map_["vel-lm"] = [this]() { vel_ref_lawnmower_search({{0.0, -75.0}, {150.0, 300.0}, 14.0, 25.0, 10.0, false}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
     controller_map_["vel-lmr"] = [this]() { vel_ref_lawnmower_search({{-75.0, 0.0}, {150.0, 300.0}, 12.0, 25.0, 10.0, true}); }; // East {start, end}, North {min, max}, altitude, leg separation, speed ceiling, re-attack
@@ -695,7 +697,7 @@ void ArdupilotGuided::vel_ref_lemniscate(const Lemniscate &loop)
     constexpr double SPEED_RATIO = 2.0;   // Speed ceiling ratio, as a multiple of what the tightest turn allows
     constexpr double A_LAT_MAX_MS2 = 2.50; // m/s^2, lateral acceleration limit
     constexpr double MAX_VZ_MS = 2.0;     // m/s, climb/descent limit
-    constexpr double LOOKAHEAD_S = 0.6;   // s, lookahead in seconds (at the current speed)
+    constexpr double LOOKAHEAD_S = 1.2;   // s, lookahead in seconds (at the current speed)
     constexpr double SCAN_RAD = 0.5;      // rad, forward-only search window
     constexpr int SCAN_STEPS = 60;        // Samples in the window
     constexpr double KP_YAW = 0.8;        // 1/s, heading error to yaw rate gain

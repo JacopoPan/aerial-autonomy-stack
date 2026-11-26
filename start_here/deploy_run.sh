@@ -30,6 +30,7 @@ DRONE_ID="${DRONE_ID:-1}" # Id of aircraft (default = 1)
 RECORD_ROSBAG="${RECORD_ROSBAG:-false}" # Options: true, false (default)
 RECORD_VIDEO="${RECORD_VIDEO:-false}" # Options: true, false (default)
 REMOTE_VIDEO_STREAMS="${REMOTE_VIDEO_STREAMS:-true}" # Options: true (default), false
+VIDEO_STREAM_TRANSPORT="${VIDEO_STREAM_TRANSPORT:-tcp}" # Options: tcp (default), udp
 DEV="${DEV:-false}" # Options: true, false (default)
 HITL="${HITL:-false}" # Options: true, false (default)
 GND_CONTAINER="${GND_CONTAINER:-true}" # Options: true (default), false
@@ -49,6 +50,7 @@ source "${SCRIPT_DIR}/tests/check_env_vars.sh"
 check_enum AUTOPILOT px4 ardupilot betaflight
 check_enum ODOM none kissicp openvins fastlio superodom mimosa
 check_enum DRONE_TYPE quad vtol tail
+check_enum VIDEO_STREAM_TRANSPORT tcp udp
 check_int DRONE_ID 1 99
 for v in HEADLESS CAMERA LIDAR RECORD_ROSBAG RECORD_VIDEO REMOTE_VIDEO_STREAMS DEV HITL GND_CONTAINER PX4_ROS2_LIB GROUND; do check_enum "$v" true false; done
 if [[ "$ODOM" =~ ^(kissicp|fastlio|superodom|mimosa)$ && "$LIDAR" != "true" ]]; then abort "ODOM=$ODOM requires LIDAR=true"; fi
@@ -126,7 +128,7 @@ docker run $DOCKER_RUN_FLAGS \
   --env SIM_SUBNET=$SIM_SUBNET --env AIR_SUBNET=$AIR_SUBNET --env SIM_ID=$SIM_ID --env GROUND_ID=$GROUND_ID \
   --env GND_CONTAINER=$GND_CONTAINER \
   --env ROS_DOMAIN_ID=$DRONE_ID \
-  --env REMOTE_VIDEO_STREAMS=$REMOTE_VIDEO_STREAMS \
+  --env REMOTE_VIDEO_STREAMS=$REMOTE_VIDEO_STREAMS --env VIDEO_STREAM_TRANSPORT=$VIDEO_STREAM_TRANSPORT \
   --env RECORD_ROSBAG=$RECORD_ROSBAG --env RECORD_VIDEO=$RECORD_VIDEO \
   --net=host \
   --privileged \

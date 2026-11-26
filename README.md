@@ -247,6 +247,7 @@ DRONE_ID=1 CAMERA=true LIDAR=false AIR_SUBNET=10.223 HEADLESS=true ./deploy_run.
 #  DRONE_ID=1, 2, ... (ROS_DOMAIN_ID of the drone, matching the MAV_SYS_ID/SYSID_THISMAV of the autopilot)
 #  HEADLESS/CAMERA/LIDAR/PX4_ROS2_LIB/RECORD_ROSBAG/RECORD_VIDEO=true, false (recordings are saved on the host's ~/Downloads/ folder)
 #  REMOTE_VIDEO_STREAMS=true, false (cam_0 stream to the ground container, toggle at runtime with topic /enable_remote_video_streams)
+#  VIDEO_STREAM_TRANSPORT=tcp, udp
 #  ODOM=kissicp, openvins, fastlio, superodom, mimosa (require BUILD_ADVANCED_ODOM=true)
 ```
 
@@ -423,16 +424,16 @@ flowchart TB
         camera_split( ):::splitNode
     end
 
-    gz --> |"livox_sim, /livox/lidar <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
-    lidar_split --> kiss_icp
-    lidar_split --> livo_pkgs
-    gz --> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
-    camera_split --> livo_pkgs
-    camera_split -->  yolo_py
-    sitl <--> |"XRCE-DDS/UDP || MAVLink/UDP <br/> || MSP/TCP [SIM_SUBNET]"| ap_link
-    sitl <--> |"MAVLink/UDP [SIM_SUBNET]"| mlrouter
-    sitl <--> |"MSP/TCP [SIM_SUBNET]"| bf_app
-    zenoh_gnd <-.-> |"Zenoh/TCP <br/> [AIR_SUBNET]"| zenoh_air
+    gz sim1@--> |"livox_sim, /livox/lidar <br/> DDS/UDP [SIM_SUBNET]"| lidar_split
+    lidar_split sim2@--> kiss_icp
+    lidar_split sim3@--> livo_pkgs
+    gz sim4@--> |"gz_gst_bridge <br/> RTP/UDP [SIM_SUBNET]"| camera_split
+    camera_split sim5@--> livo_pkgs
+    camera_split sim6@-->  yolo_py
+    sitl sim7@<--> |"XRCE-DDS/UDP || MAVLink/UDP <br/> || MSP/TCP [SIM_SUBNET]"| ap_link
+    sitl sim8@<--> |"MAVLink/UDP [SIM_SUBNET]"| mlrouter
+    sitl sim9@<--> |"MSP/TCP [SIM_SUBNET]"| bf_app
+    zenoh_gnd air1@<-.-> |"Zenoh/TCP <br/> [AIR_SUBNET]"| zenoh_air
 
     classDef bridge fill:#ffebd6,stroke:#f5a623,stroke-width:2px;
     classDef algo fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
@@ -441,7 +442,8 @@ flowchart TB
     classDef blueStyle  fill:#e1f0ff,stroke:#666,stroke-width:2px; class aas blueStyle;
     classDef whiteStyle fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class air,gnd,sim whiteStyle;
     classDef greyStyle  fill:#eeeeee,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5; class perception,control,models greyStyle;
-    linkStyle 22,23,24,25,26,27,28,29,30 stroke:teal,stroke-width:3px; linkStyle 31 stroke:blue,stroke-width:4px;
+    classDef simNet stroke:teal,stroke-width:3px; class sim1,sim2,sim3,sim4,sim5,sim6,sim7,sim8,sim9 simNet;
+    classDef airNet stroke:blue,stroke-width:4px; class air1 airNet;
 ```
 
 <details>
@@ -538,7 +540,7 @@ aerial-autonomy-stack
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
 - [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
 - [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
-  - **TODO: upgrade to 4.7.2** [release notes](https://github.com/ArduPilot/ardupilot/blob/Copter-4.7.1/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385), [4.7.2 discussion](https://discuss.ardupilot.org/t/copter-4-7-2-released/145800)
+  - **TODO: upgrade to 4.7.3** [release notes](https://github.com/ArduPilot/ardupilot/blob/ArduPilot-4.7/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385), [4.7.2 discussion](https://discuss.ardupilot.org/t/copter-4-7-2-released/145800) [4.7.3 discussion](https://discuss.ardupilot.org/t/copter-4-7-3-released/146256)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
     - Streamrates, sysid, mygcs-sysid, etc moved to MAV_ parameters [PR](https://github.com/ArduPilot/ardupilot/pull/29617)
 - [x] [QGroundControl 5.1.5](https://github.com/mavlink/qgroundcontrol/releases)

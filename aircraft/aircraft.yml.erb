@@ -21,6 +21,7 @@
 
   simulated_time = ENV.fetch('SIMULATED_TIME', 'false') == 'true'
   remote_video_streams = ENV.fetch('REMOTE_VIDEO_STREAMS', 'false') == 'true'
+  video_stream_transport = ENV.fetch('VIDEO_STREAM_TRANSPORT', 'tcp')
 
   gymnasium = ENV.fetch('GYMNASIUM', 'false') == 'true'
   px4_ros2_lib = ENV.fetch('PX4_ROS2_LIB', 'false') == 'true'
@@ -221,7 +222,7 @@ windows:
       layout: even-horizontal
       panes:
         <% if camera; camera_ids.each do |cam_id| %>
-        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom_requires_ros2_camera_frames %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
+        - until ros2 run yolo_py yolo_py --camera-id <%= cam_id %> <%= cam_id != 0 ? '--no-inference' : '' %> <% if odom_requires_ros2_camera_frames %>--ros2-frame-publisher<% end %> <%= headless ? '--headless' : '' %> <%= hitl ? '--hitl' : '' %> <%= remote_video_streams && cam_id == 0 ? '--remote-video-streams' : '' %> --video-stream-transport <%= video_stream_transport %> <%= record_video ? '--record-video' : '' %> <%= simulated_time ? "--ros-args -p use_sim_time:=true --hfov #{hfov_deg}" : '' %>; do sleep 2; done
         <% end; end %>
         <% if lidar && !headless && odom == 'none' %>
         - ros2 run rviz2 rviz2 -d /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
