@@ -143,7 +143,7 @@ ros2 run mission mission --conops crematoria.yaml --ros-args -r __ns:=/Drone$DRO
 > / *(iv)* `swiss_town`, a photogrammetry world courtesy of [Pix4D / pix4d.com](https://support.pix4d.com/hc/en-us/articles/360000235126)
 > / *(v)* `waterworld`, a dynamic world using the [`asv_wave_sim`](https://github.com/srmainwaring/asv_wave_sim) wave plugin
 > / *(vi)* `crematoria`, based on DARPA SubT's [`simple_cave_02`](https://github.com/osrf/subt) (CC BY 4.0);
-> additionally, `livo_bench` contains simple textured structures (arch, walls, tunnel, gate, window) to benchmark the `ODOM` backends
+> `livo_bench` contains simple textured structures to benchmark the `ODOM` backends
 
 > [!TIP]
 > Edit [`sensor_config.yaml`](simulation/simulation_resources/aircraft_sensors/sensor_config.yaml), then run `sim_build.sh`, to customize the sensor parameters
