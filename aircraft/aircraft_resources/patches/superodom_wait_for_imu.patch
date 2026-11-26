@@ -1,18 +1,17 @@
 Reason for this patch: SuperOdom levels the scans with its IMU (imu_laser_R_Gravity), but it maps the scans it receives before its first IMU message without leveling them.
 When such scans arrive first (e.g., livox_sim publishing before PX4's SITL IMU is up), the first one fixes the map frame to the LiDAR's pose: with a tilted LiDAR, the map and the odometry are tilted.
 Change:
-- featureExtraction.cpp (livoxHandler): process scans only once the IMU is initialized (scans received earlier wait in the buffer and are discarded once the IMU covers newer ones).
+- featureExtraction.cpp (livoxHandler): ignore the scans received before the first IMU message (not buffered: SuperOdom drops buffered scans one per new scan, so buffering them would delay all later scans).
 
 diff --git a/super_odometry/src/FeatureExtraction/featureExtraction.cpp b/super_odometry/src/FeatureExtraction/featureExtraction.cpp
-index a6dd44d..d636a01 100755
+index a6dd44d..1ecf9bc 100755
 --- a/super_odometry/src/FeatureExtraction/featureExtraction.cpp
 +++ b/super_odometry/src/FeatureExtraction/featureExtraction.cpp
-@@ -814,7 +814,7 @@ namespace super_odometry {
+@@ -782,6 +782,7 @@ namespace super_odometry {
+             return; 
  
-         manageLidarBuffer(pointCloud, msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9);
- 
--        if(IMU_INIT==true or imuBuf.empty())
-+        if(IMU_INIT==true)
-         {   
-             undistortionAndFeatureExtraction();
-             double lidar_first_time;
+         m_buf.lock();
++        if (imuBuf.empty()) { m_buf.unlock(); return; } // Ignore scans until the first IMU message
+         
+         pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr pointCloud(
+             new pcl::PointCloud<point_os::PointcloudXYZITR>());
