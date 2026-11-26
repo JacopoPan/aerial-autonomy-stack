@@ -67,7 +67,7 @@ class OdomGroundTruth(Node):
         self.pose_pub.publish(pose) # Every pose, for RViz's axes
         if not self.flying and abs(v.x) + abs(v.y) + abs(v.z) > 0.5: # Takeoff: the RMSE starts here
             self.flying, self.sum_sq, self.count = True, 0.0, 0
-        self.recent = self.recent[-99:] + [(msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9, [x, y, z])] # The last 2s, at Gazebo's 50Hz
+        self.recent = self.recent[-199:] + [(msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9, [x, y, z])] # The last 4s, at Gazebo's 50Hz
         self.score()
         if self.count:
             text = f'error {self.error:.2f} m, RMSE {math.sqrt(self.sum_sq / self.count):.2f} m'
@@ -90,7 +90,7 @@ class OdomGroundTruth(Node):
         p = msg.pose.pose.position
         self.pending.append((msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9, [p.x, p.y, p.z]))
 
-    def score(self): # Errors of the queued backend positions against the ground truth, interpolated at their times (dropped if older than 2s)
+    def score(self): # Errors of the queued backend positions against the ground truth, interpolated at their times (dropped if older than 4s)
         while self.pending and self.recent and self.pending[0][0] < self.recent[-1][0]:
             t, p = self.pending.pop(0)
             i = next(i for i, (ti, _) in enumerate(self.recent) if ti > t)
@@ -98,6 +98,8 @@ class OdomGroundTruth(Node):
                 (t0, p0), (t1, p1) = self.recent[i - 1], self.recent[i]
                 self.error = math.dist(p, [a + (b - a) * (t - t0) / (t1 - t0) for a, b in zip(p0, p1, strict=True)])
                 self.sum_sq, self.count = self.sum_sq + self.error ** 2, self.count + 1
+            elif self.flying:
+                self.get_logger().warn(f'Odometry stamped {self.recent[-1][0] - t:.1f}s behind the ground truth, older than the samples kept: not scored', throttle_duration_sec=5.0)
 
 rclpy.init()
 rclpy.spin(OdomGroundTruth())

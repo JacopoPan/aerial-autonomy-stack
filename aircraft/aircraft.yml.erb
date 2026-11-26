@@ -137,6 +137,7 @@
       mimosa_params['lidar']['T_B_S'] = (lidar_position + lidar_quaternion).map { |v| v.round(6) }
       mimosa_params['lidar']['sensor_json'] = "#{mimosa_config}/os_dummy.json" # Placeholder Ouster model (mimosa requires one even with photometric off), by absolute path
       mimosa_params['lidar']['manager']['range_min'] = lidar_min_range
+      mimosa_params['lidar']['manager']['ns_max'] = 1.1e9 / sensor_config['sensors']['lidar_intrinsics']['update_rate'] if simulated_time # mimosa drops points later than ns_max (in ns) after a frame's start: keep a whole livox_sim frame (1/update_rate s, plus a margin)
       mimosa_params['radar']['manager']['enabled'] = false
       mimosa_params['imu']['preintegration']['integration_sigma'] = 1e-4
       mimosa_params_yaml = '/aas/aircraft_resources/config/mimosa_params.yaml'

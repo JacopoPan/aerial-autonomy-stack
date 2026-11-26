@@ -1,4 +1,4 @@
-# Cave mission, start with: WORLD=crematoria ODOM=kissicp|openvins|fastlio|superodom|mimosa RTF=1 ./sim_run.sh
+# Cave mission, start with: WORLD=crematoria ODOM=kissicp|openvins|fastlio|superodom|mimosa RTF=2 ./sim_run.sh
 # Out and back at 2m/s, for the drone spawned at the origin: into the cave, through the junction, down two ramps to 16m below the takeoff point, then back the same way
 # The drone stops at each waypoint, then hovers above the takeoff point and lands: the odometry's error there is its drift over the flight
 type: Sequence

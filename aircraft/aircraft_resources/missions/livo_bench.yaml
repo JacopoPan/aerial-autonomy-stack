@@ -1,5 +1,5 @@
 # Odometry benchmark mission, start with: WORLD=livo_bench ODOM=kissicp|openvins|fastlio|superodom|mimosa RTF=2 ./sim_run.sh
-# One ccw lap at 1.5m of altitude at 2.5m/s (~90'' in sim time): through the arch, between the walls, through the tunnel, the gate, and the window, along the wall
+# One ccw lap at 2.5m/s (~90'' in sim time): through the arch, between the walls, through the tunnel, the gate, and the window, along the wall
 # The drone stops at each corner, then hovers above the takeoff point and lands: the odometry's error there is its drift over the lap
 type: Sequence
 name: LIVO_Bench_Mission
@@ -15,25 +15,25 @@ children:
       speed: 2.5
 
   - action: reposition
-    name: "Go to the start of the lap, at 1.5m"
+    name: "Go to the start of the lap, at 0.75m"
     params:
       east: -8.0
       north: -2.0
-      altitude: 1.5
+      altitude: 0.75
 
   - action: reposition
     name: "West, through the arch"
     params:
       east: -21.0
       north: -2.0
-      altitude: 1.5
+      altitude: 0.75
 
   - action: reposition
     name: "South, between the tall walls and through the tunnel"
     params:
       east: -21.0
       north: -38.0
-      altitude: 1.5
+      altitude: 0.75
 
   - action: reposition
     name: "East, through the gate"

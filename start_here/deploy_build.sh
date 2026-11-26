@@ -9,7 +9,7 @@ set -e
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 # Set up the build
-BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the advanced odometry and SLAM packages
+BUILD_ADVANCED_ODOM="${BUILD_ADVANCED_ODOM:-false}" # Options: true, false (default), build the ODOM backends
 CLEAN_BUILD="${CLEAN_BUILD:-false}" # Options: true, false (default), rebuild everything from scratch
 CLONE_ONLY="${CLONE_ONLY:-false}" # Options: true, false (default), clone the repos and skip the Docker builds
 PREBUILT_DEPS="${PREBUILT_DEPS:-false}" # Options: true, false (default), use the pre-built stages on ghcr.io for everything (including the steps added by BUILD_ADVANCED_ODOM=true) except aircraft-manifests/aircraft-dev-image
