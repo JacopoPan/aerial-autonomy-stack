@@ -155,9 +155,9 @@
       /dtc_commands
       /tracks
       /offboard_flag
-      /kiss/odometry
     ]
     rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
+    rosbag_topics << odom_topic if odom_topic
     case autopilot
     when 'px4'
       rosbag_topics += %W[
