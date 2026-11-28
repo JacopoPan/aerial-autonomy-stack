@@ -129,9 +129,12 @@ Building with `BUILD_ADVANCED_ODOM=true ./sim_build.sh` (~20' longer build) adds
 Evaluate the LiDAR-inertial-visual-odometry (LIVO) performance with:
 ```sh
 ODOM=mimosa WORLD=crematoria RTF=2 ./sim_run.sh
-# From the QUAD 1 terminal
+
+# Then, from the QUAD 1 terminal
 ros2 run mission mission --conops crematoria.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
-# Try also `ODOM=kissicp|openvins|fastlio|superodom` and `WORLD=livo_bench`/`--conops livo_bench.yaml`
+
+# Also try `ODOM=kissicp|openvins|fastlio|superodom`
+# And `WORLD=livo_bench ./sim_run.sh` with `ros2 run mission mission --conops livo_bench.yaml`
 ```
 
 ![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)
