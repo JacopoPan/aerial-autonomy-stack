@@ -1,3 +1,4 @@
+# Tip: install https://github.com/JacopoPan/aerial-autonomy-stack/releases/download/v3.5.0/yaml-erb-0.0.1.vsix for correct syntax highlight in VSCode
 <% 
   autopilot = ENV.fetch('AUTOPILOT', 'px4')
   headless = ENV.fetch('HEADLESS', 'true') == 'true'
@@ -44,143 +45,7 @@
   livox_xfer_format = %w[fastlio superodom].include?(odom) ? 1 : 0 # livox_ros_driver2's format: CustomMsg (1) for FAST-LIO and SuperOdom, PointCloud2 (0) otherwise
   gz_sim_instantaneous_lidar = simulated_time && sensor_config['sensors']['lidar_intrinsics']['sim_time_slices'] == 1 # In SITL/HITL, with sim_time_slices == 1, all points in a LiDAR frame have the same time
 
-  odom_requires_ros2_camera_frames = %w[openvins mimosa].include?(odom) # mimosa through openvins
-
-  if odom != 'none'
-    require '/aas/aircraft_resources/scripts/pose_helpers.rb'
-    extend PoseHelpers
-
-    raise "ODOM=#{odom} requires wideangle: false in sensor_config.yaml" if odom_requires_ros2_camera_frames && camera_intrinsics['wideangle'] == true
-
-    camera_quaternion = quat_mul(quat(*camera_extrinsics[3, 3]), quat(-90, 0, -90)) # camera_frame_N is optical: z forward, x right, y down
-    camera_y_offsets = stereo_cam ? [0.05, -0.05] : [0.0] # Camera 0 on the left, camera 1 on the right, see sensor_camera/model.sdf.erb
-    camera_positions = camera_y_offsets.map { |y| transform_point(camera_extrinsics, [0, y, 0]) }
-    focal_length = camera_intrinsics['width'] / 2.0 / Math.tan(hfov_deg * Math::PI / 360)
-    pinhole_intrinsics = [focal_length, focal_length, camera_intrinsics['width'] / 2.0, camera_intrinsics['height'] / 2.0] # fx, fy, cx, cy
-
-    lidar_position = lidar_extrinsics[0, 3]
-    lidar_quaternion = quat(*lidar_extrinsics[3, 3])
-    lidar_rotation = rot_matrix(lidar_quaternion)
-    lidar_min_range = 0.5 # Closer points (e.g., on the propellers) are ignored
-
-    # RViz configurations
-    odom_rviz_config = { 'kissicp' => '/aas/github_ws/install/kiss_icp/share/kiss_icp/rviz/kiss_icp.rviz',
-                         'openvins' => '/aas/github_ws/install/ov_msckf/share/ov_msckf/launch/display_ros2.rviz',
-                         'fastlio' => '/aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz',
-                         'superodom' => '/aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz',
-                         'mimosa' => '/aas/aircraft_resources/config/rviz_mimosa_ros2.rviz' }[odom]
-    # Each backend's odometry topic, in its RViz view's fixed frame (header.frame_id), to compare with the ground truth in odom_ground_truth.py
-    odom_topic = { 'kissicp' => '/kiss/odometry', 'openvins' => '/ov_msckf/odomimu', 'fastlio' => '/odometry', 'superodom' => '/laser_odometry', 'mimosa' => '/mimosa_node/graph/odometry' }[odom]
-    # In simulation, we copy the RViz view to add Gazebo's ground truth (re-published by odom_ground_truth.py)
-    if simulated_time && odom_rviz_config && File.exist?(odom_rviz_config)
-      rviz_view = YAML.load_file(odom_rviz_config)
-      ground_truth_display = YAML.safe_load(<<~DISPLAY)
-        Class: rviz_default_plugins/Path
-        Name: Ground truth
-        Color: 255; 255; 0
-        Topic:
-          Value: /odom_ground_truth/path
-        Enabled: true
-        Value: true
-      DISPLAY
-      rviz_view['Visualization Manager']['Displays'] << ground_truth_display
-      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
-        Class: rviz_default_plugins/Pose
-        Name: Ground truth pose
-        Shape: Axes
-        Axes Length: 1
-        Axes Radius: 0.05
-        Topic:
-          Value: /odom_ground_truth/pose
-        Enabled: true
-        Value: true
-      DISPLAY
-      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
-        Class: rviz_default_plugins/Marker
-        Name: Ground truth error
-        Topic:
-          Value: /odom_ground_truth/error
-        Enabled: true
-        Value: true
-      DISPLAY
-      odom_rviz_config = '/aas/aircraft_resources/config/rviz_odom_gz_ground_truth.rviz'
-      File.write(odom_rviz_config, rviz_view.to_yaml)
-      ground_truth_frame = rviz_view['Visualization Manager']['Global Options']['Fixed Frame'] # The selected backend's odometry fixed frame (e.g., odom_lidar for kissicp), used by odom_ground_truth.py to publish /odom_ground_truth/path
-    end
-
-    # SuperOdom and mimosa configuration files
-    case odom
-    when 'superodom'
-      lidar_in_imu = mat_vec(lidar_rotation.transpose, lidar_position) # IMU-to-LiDAR translation in LiDAR's axes (imu_transformer already rotates /imu_data into livox_frame)
-      superodom_calibration_yaml = '/aas/aircraft_resources/config/superodom_calibration.yaml'
-      File.write(superodom_calibration_yaml, <<~CALIBRATION) # Read with OpenCV's cv::FileStorage
-        %YAML:1.0
-        extrinsicRotation_imu_laser: !!opencv-matrix
-          rows: 3
-          cols: 3
-          dt: d
-          data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-        extrinsicTranslation_imu_laser: !!opencv-matrix
-          rows: 3
-          cols: 1
-          dt: d
-          data: #{float_list(lidar_in_imu)}
-        imu_laser_rotation_offset: !!opencv-matrix
-          rows: 3
-          cols: 1
-          dt: d
-          data: [0.0, 0.0, 0.0]
-      CALIBRATION
-    when 'mimosa'
-      mimosa_config = '/aas/mimosa_custom_gtsam_ws/install/mimosa/share/mimosa/config'
-      mimosa_params = YAML.load_file("#{mimosa_config}/lapwing/params.yaml") # mimosa's example with a Mid-360
-      mimosa_params['lidar']['T_B_S'] = (lidar_position + lidar_quaternion).map { |v| v.round(6) }
-      mimosa_params['lidar']['sensor_json'] = "#{mimosa_config}/os_dummy.json" # Placeholder Ouster model (mimosa requires one even with photometric off), by absolute path
-      mimosa_params['lidar']['manager']['range_min'] = lidar_min_range
-      mimosa_params['lidar']['manager']['ns_max'] = 1.1e9 / sensor_config['sensors']['lidar_intrinsics']['update_rate'] if simulated_time # mimosa drops points later than ns_max (in ns) after a frame's start: keep a whole livox_sim frame (1/update_rate s, plus a margin)
-      mimosa_params['radar']['manager']['enabled'] = false
-      mimosa_params['imu']['preintegration']['integration_sigma'] = 1e-4
-      mimosa_params_yaml = '/aas/aircraft_resources/config/mimosa_params.yaml'
-      File.write(mimosa_params_yaml, mimosa_params.to_yaml)
-    end
-  end
-
-  if record_rosbag
-    # Omitted for size: /livox/lidar, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
-    rosbag_topics = %W[
-      /tf
-      /tf_static
-      /rosout
-      /detections
-      /dtc_commands
-      /tracks
-      /offboard_flag
-    ]
-    rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
-    rosbag_topics << odom_topic if odom_topic
-    case autopilot
-    when 'px4'
-      rosbag_topics += %W[
-        /Drone#{drone_id}/fmu/out/vehicle_status_v1
-        /Drone#{drone_id}/fmu/out/vehicle_local_position_v1
-        /Drone#{drone_id}/fmu/out/vehicle_global_position
-      ]
-    when 'ardupilot'
-      rosbag_topics += %W[
-        /mavros/state
-        /mavros/local_position/odom
-        /mavros/global_position/global
-      ]
-    when 'betaflight'
-      rosbag_topics += %W[
-        /Drone#{drone_id}/attitude
-        /Drone#{drone_id}/global_position
-        /Drone#{drone_id}/local_position
-        /Drone#{drone_id}/velocity
-        /Drone#{drone_id}/rc_override
-      ]
-    end
-  end
+  odom_requires_ros2_camera_frames = %w[openvins mimosa].include?(odom) # mimosa also uses openvins
 %>
 
 name: drone
@@ -219,6 +84,43 @@ windows:
         - ros2 run state_sharing state_sharing_node --ros-args -p autopilot:=<%= autopilot %> -p drone_id:=<%= drone_id %> <%= simulated_time ? '-p use_sim_time:=true' : '' %>
         - ros2 run drone_traffic_client dtc_client <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
 
+  # Autopilot middleware and Zenoh bridge
+  - <%= { 'px4' => 'uxrce_dds_and_zenoh', 'ardupilot' => 'mavros_and_zenoh', 'betaflight' => 'zenoh' }.fetch(autopilot) %>:
+      layout: even-horizontal
+      panes:
+        <% if autopilot == 'px4' %>
+        - MicroXRCEAgent udp4 -p 8888
+        <% elsif autopilot == 'ardupilot' %>
+        - >
+          <% if simulated_time %>
+          sudo sed -i '0,/ros__parameters:/s/ros__parameters:/ros__parameters:\n    use_sim_time: true/' /opt/ros/jazzy/share/mavros/launch/apm_config.yaml &&
+          ros2 launch mavros apm.launch fcu_url:=udp://<%= "#{sim_subnet}.90.#{drone_id}" %>:8888@8888 tgt_system:=<%= drone_id %>
+          <% else %>
+          ros2 launch mavros apm.launch fcu_url:=/dev/ttyTHS1:921600 tgt_system:=<%= drone_id %>
+          <% end %>
+        <% elsif autopilot == 'betaflight' %>
+        - echo "No middleware for Betaflight, betaflight_interface directly talks MSP to the flight controller"
+        <% end %>
+        - >
+          erb /aas/aircraft_resources/comms/zenoh_config_air.json5.erb > /aas/aircraft_resources/comms/zenoh_config_air.json5 &&
+          <% # Zenoh bridge options: -e = connect to this address, -l = accept connections only on this address (without -l: every interface)
+            # Every drone connects to the ground container (or the simulation container if GND_CONTAINER=false)
+            endpoints = "-e tcp/#{gnd_container ? "#{air_subnet}.90.#{ground_id}" : "#{sim_subnet}.90.#{sim_id}"}:7447"
+            # SITL (and HITL without a ground container) stops here for simplicity (i.e. star configuration of all drones around the ground or sim container)
+            # HITL (with ground container) and real flights: also connect to every other drone over the radio (i.e. mesh configuration), so drones keep talking if one loses the ground
+            if (hitl && gnd_container) || !simulated_time
+              (1..10).each do |peer_id| # Drone IDs from 1 up to 10: a missing drone is retried every 4 s, silently (a few ARP requests on the radio each time)
+                next if peer_id == drone_id # Skip itself
+                endpoints += " -e tcp/#{air_subnet}.90.#{peer_id}:7447"
+              end
+              # Accept the other drones' connections only on the air_subnet/radio address (not on other interfaces like Wi-Fi, etc.)
+              endpoints += " -l tcp/#{air_subnet}.90.#{drone_id}:7447"
+            else
+              endpoints += " -l tcp/127.0.0.1:7447" # SITL (and HITL without a ground container): star configuration, do not accept connections from other computers
+            end
+          %>
+          until zenoh-bridge-ros2dds <%= endpoints %> -c /aas/aircraft_resources/comms/zenoh_config_air.json5; do sleep 1; done
+
   - perception:
       layout: even-horizontal
       panes:
@@ -229,7 +131,105 @@ windows:
         - ros2 run rviz2 rviz2 -d /aas/github_ws/src/livox_ros_driver2/config/display_point_cloud_ROS2.rviz <%= simulated_time ? '--ros-args -p use_sim_time:=true' : '' %>
         <% end %>
 
-  <% if odom != 'none' %>
+  <%
+  if odom != 'none'
+    require '/aas/aircraft_resources/scripts/pose_helpers.rb'
+    extend PoseHelpers
+
+    raise "ODOM=#{odom} requires wideangle: false in sensor_config.yaml" if odom_requires_ros2_camera_frames && camera_intrinsics['wideangle'] == true
+
+    camera_quaternion = quat_mul(quat(*camera_extrinsics[3, 3]), quat(-90, 0, -90)) # camera_frame_N is optical: z forward, x right, y down
+    camera_y_offsets = stereo_cam ? [0.05, -0.05] : [0.0] # Camera 0 on the left, camera 1 on the right, see sensor_camera/model.sdf.erb
+    camera_positions = camera_y_offsets.map { |y| transform_point(camera_extrinsics, [0, y, 0]) }
+    focal_length = camera_intrinsics['width'] / 2.0 / Math.tan(hfov_deg * Math::PI / 360)
+    pinhole_intrinsics = [focal_length, focal_length, camera_intrinsics['width'] / 2.0, camera_intrinsics['height'] / 2.0] # fx, fy, cx, cy
+
+    lidar_position = lidar_extrinsics[0, 3]
+    lidar_quaternion = quat(*lidar_extrinsics[3, 3])
+    lidar_rotation = rot_matrix(lidar_quaternion)
+    lidar_min_range = 0.5 # Closer points (e.g., on the propellers) are ignored
+
+    # SuperOdom and mimosa configuration files
+    case odom
+    when 'superodom'
+      lidar_in_imu = mat_vec(lidar_rotation.transpose, lidar_position) # IMU-to-LiDAR translation in LiDAR's axes (imu_transformer already rotates /imu_data into livox_frame)
+      superodom_calibration_yaml = '/aas/aircraft_resources/config/superodom_calibration.yaml'
+      File.write(superodom_calibration_yaml, <<~CALIBRATION) # Read with OpenCV's cv::FileStorage
+        %YAML:1.0
+        extrinsicRotation_imu_laser: !!opencv-matrix
+          rows: 3
+          cols: 3
+          dt: d
+          data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        extrinsicTranslation_imu_laser: !!opencv-matrix
+          rows: 3
+          cols: 1
+          dt: d
+          data: #{float_list(lidar_in_imu)}
+        imu_laser_rotation_offset: !!opencv-matrix
+          rows: 3
+          cols: 1
+          dt: d
+          data: [0.0, 0.0, 0.0]
+      CALIBRATION
+    when 'mimosa'
+      mimosa_config = '/aas/mimosa_custom_gtsam_ws/install/mimosa/share/mimosa/config'
+      mimosa_params = YAML.load_file("#{mimosa_config}/lapwing/params.yaml") # mimosa's example with a Mid-360
+      mimosa_params['lidar']['T_B_S'] = (lidar_position + lidar_quaternion).map { |v| v.round(6) }
+      mimosa_params['lidar']['sensor_json'] = "#{mimosa_config}/os_dummy.json" # Placeholder Ouster model (mimosa requires one even with photometric off), by absolute path
+      mimosa_params['lidar']['manager']['range_min'] = lidar_min_range
+      mimosa_params['lidar']['manager']['ns_max'] = 1.1e9 / sensor_config['sensors']['lidar_intrinsics']['update_rate'] if simulated_time # mimosa drops points later than ns_max (in ns) after a frame's start: keep a whole livox_sim frame (1/update_rate s, plus a margin)
+      mimosa_params['radar']['manager']['enabled'] = false
+      mimosa_params['imu']['preintegration']['integration_sigma'] = 1e-4
+      mimosa_params_yaml = '/aas/aircraft_resources/config/mimosa_params.yaml'
+      File.write(mimosa_params_yaml, mimosa_params.to_yaml)
+    end
+
+    # RViz configurations for each backend
+    odom_rviz_config = { 'kissicp' => '/aas/github_ws/install/kiss_icp/share/kiss_icp/rviz/kiss_icp.rviz',
+                         'openvins' => '/aas/github_ws/install/ov_msckf/share/ov_msckf/launch/display_ros2.rviz',
+                         'fastlio' => '/aas/github_ws/install/spark_fast_lio/share/spark_fast_lio/rviz/ouster_vbr.rviz',
+                         'superodom' => '/aas/github_ws/src/SuperOdom/super_odometry/ros2.rviz',
+                         'mimosa' => '/aas/aircraft_resources/config/rviz_mimosa_ros2.rviz' }[odom]
+    odom_topic = { 'kissicp' => '/kiss/odometry', 'openvins' => '/ov_msckf/odomimu', 'fastlio' => '/odometry', 'superodom' => '/laser_odometry', 'mimosa' => '/mimosa_node/graph/odometry' }[odom]
+
+    # In simulation only, we copy the RViz view to also add Gazebo's ground truth (re-published by odom_ground_truth.py)
+    if simulated_time && odom_rviz_config && File.exist?(odom_rviz_config)
+      rviz_view = YAML.load_file(odom_rviz_config)
+      ground_truth_display = YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Path
+        Name: Ground truth
+        Color: 255; 255; 0
+        Topic:
+          Value: /odom_ground_truth/path
+        Enabled: true
+        Value: true
+      DISPLAY
+      rviz_view['Visualization Manager']['Displays'] << ground_truth_display
+      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Pose
+        Name: Ground truth pose
+        Shape: Axes
+        Axes Length: 1
+        Axes Radius: 0.05
+        Topic:
+          Value: /odom_ground_truth/pose
+        Enabled: true
+        Value: true
+      DISPLAY
+      rviz_view['Visualization Manager']['Displays'] << YAML.safe_load(<<~DISPLAY)
+        Class: rviz_default_plugins/Marker
+        Name: Ground truth error
+        Topic:
+          Value: /odom_ground_truth/error
+        Enabled: true
+        Value: true
+      DISPLAY
+      odom_rviz_config = '/aas/aircraft_resources/config/rviz_odom_gz_ground_truth.rviz'
+      File.write(odom_rviz_config, rviz_view.to_yaml)
+      ground_truth_frame = rviz_view['Visualization Manager']['Global Options']['Fixed Frame'] # The selected backend's odometry fixed frame (e.g., odom_lidar for kissicp), used by odom_ground_truth.py to publish /odom_ground_truth/path
+    end
+  %>
   - odom:
       layout: tiled
       panes:
@@ -286,47 +286,6 @@ windows:
         <% end %>
   <% end %>
 
-  <% if autopilot == 'px4' %>
-  - uxrce_dds_and_zenoh:
-      layout: even-horizontal
-      panes:
-        - MicroXRCEAgent udp4 -p 8888
-  <% elsif autopilot == 'ardupilot' %>
-  - mavros_and_zenoh:
-      layout: even-horizontal
-      panes:
-        - >
-          <% if simulated_time %>
-          sudo sed -i '0,/ros__parameters:/s/ros__parameters:/ros__parameters:\n    use_sim_time: true/' /opt/ros/jazzy/share/mavros/launch/apm_config.yaml &&
-          ros2 launch mavros apm.launch fcu_url:=udp://<%= "#{sim_subnet}.90.#{drone_id}" %>:8888@8888 tgt_system:=<%= drone_id %>
-          <% else %>
-          ros2 launch mavros apm.launch fcu_url:=/dev/ttyTHS1:921600 tgt_system:=<%= drone_id %>
-          <% end %>
-  <% elsif autopilot == 'betaflight' %>
-  - zenoh:
-      layout: even-horizontal
-      panes:
-  <% end %>
-        - >
-          erb /aas/aircraft_resources/comms/zenoh_config_air.json5.erb > /aas/aircraft_resources/comms/zenoh_config_air.json5 &&
-          <% # Zenoh bridge options: -e = connect to this address, -l = accept connections only on this address (without -l: every interface)
-            # Every drone connects to the ground container (or the simulation container if GND_CONTAINER=false)
-            endpoints = "-e tcp/#{gnd_container ? "#{air_subnet}.90.#{ground_id}" : "#{sim_subnet}.90.#{sim_id}"}:7447"
-            # SITL (and HITL without a ground container) stops here for simplicity (i.e. star configuration of all drones around the ground or sim container)
-            # HITL (with ground container) and real flights: also connect to every other drone over the radio (i.e. mesh configuration), so drones keep talking if one loses the ground
-            if (hitl && gnd_container) || !simulated_time
-              (1..10).each do |peer_id| # Drone IDs from 1 up to 10: a missing drone is retried every 4 s, silently (a few ARP requests on the radio each time)
-                next if peer_id == drone_id # Skip itself
-                endpoints += " -e tcp/#{air_subnet}.90.#{peer_id}:7447"
-              end
-              # Accept the other drones' connections only on the air_subnet/radio address (not on other interfaces like Wi-Fi, etc.)
-              endpoints += " -l tcp/#{air_subnet}.90.#{drone_id}:7447"
-            else
-              endpoints += " -l tcp/127.0.0.1:7447" # SITL (and HITL without a ground container): star configuration, do not accept connections from other computers
-            end
-          %>
-          until zenoh-bridge-ros2dds <%= endpoints %> -c /aas/aircraft_resources/comms/zenoh_config_air.json5; do sleep 1; done
-
   <% if lidar && !simulated_time %>
   # The Mid-360's driver publishes /livox/lidar (xfer_format 0: sensor_msgs/PointCloud2, 1: livox_ros_driver2/CustomMsg), as livox_sim does in simulation
   - livox_driver:
@@ -335,7 +294,43 @@ windows:
         - ros2 run livox_ros_driver2 livox_ros_driver2_node --ros-args -p xfer_format:=<%= livox_xfer_format %> -p frame_id:=livox_frame -p user_config_path:=/aas/github_ws/src/livox_ros_driver2/config/MID360_config.json
   <% end %>
 
-  <% if record_rosbag %>
+  <%
+  if record_rosbag
+    # Omitted for size: /livox/lidar, /kiss/{frame,local_map,keypoints}, /camera_frames_*, /clock, /gimbal_state
+    rosbag_topics = %W[
+      /tf
+      /tf_static
+      /rosout
+      /detections
+      /dtc_commands
+      /tracks
+      /offboard_flag
+    ]
+    rosbag_topics += (1..10).map { |peer_id| "/state_sharing_drone_#{peer_id}" } # Up to 10 drones
+    rosbag_topics << odom_topic if odom_topic
+    case autopilot
+    when 'px4'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/fmu/out/vehicle_status_v1
+        /Drone#{drone_id}/fmu/out/vehicle_local_position_v1
+        /Drone#{drone_id}/fmu/out/vehicle_global_position
+      ]
+    when 'ardupilot'
+      rosbag_topics += %W[
+        /mavros/state
+        /mavros/local_position/odom
+        /mavros/global_position/global
+      ]
+    when 'betaflight'
+      rosbag_topics += %W[
+        /Drone#{drone_id}/attitude
+        /Drone#{drone_id}/global_position
+        /Drone#{drone_id}/local_position
+        /Drone#{drone_id}/velocity
+        /Drone#{drone_id}/rc_override
+      ]
+    end
+  %>
   - logging:
       layout: tiled
       panes:

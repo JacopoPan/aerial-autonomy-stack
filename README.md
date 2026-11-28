@@ -130,9 +130,12 @@ Building with `BUILD_ADVANCED_ODOM=true ./sim_build.sh` (~20' longer build) adds
 Evaluate the LiDAR-inertial-visual-odometry (LIVO) performance with:
 ```sh
 ODOM=mimosa WORLD=crematoria RTF=2 ./sim_run.sh
-# From the QUAD 1 terminal
+
+# Then, from the QUAD 1 terminal
 ros2 run mission mission --conops crematoria.yaml --ros-args -r __ns:=/Drone$DRONE_ID -p use_sim_time:=true
-# Try also `ODOM=kissicp|openvins|fastlio|superodom` and `WORLD=livo_bench`/`--conops livo_bench.yaml`
+
+# Also try `ODOM=kissicp|openvins|fastlio|superodom`
+# And `WORLD=livo_bench ./sim_run.sh` with `ros2 run mission mission --conops livo_bench.yaml`
 ```
 
 ![worlds](https://github.com/user-attachments/assets/97c736df-eba4-456d-9b44-42e19ba20cd9)
@@ -545,7 +548,8 @@ aerial-autonomy-stack
 - [x] [DeepStream 9.1](https://docs.nvidia.com/metropolis/deepstream/dev-guide/text/DS_Installation.html#platform-and-os-compatibility)
 - [x] [ROS2 Jazzy (LTS, EOL 5/2029)](https://docs.ros.org/en/lyrical/Releases.html)
 - [x] [Gazebo Sim Harmonic (LTS, EOL 9/2028)](https://gazebosim.org/docs/latest/releases/)
-- [x] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
+- [ ] [PX4 1.17.0](https://github.com/PX4/PX4-Autopilot/releases)
+  - **TODO: upgrade to 1.18.0** [release](https://github.com/PX4/PX4-Autopilot/releases/tag/v1.18.0)
 - [ ] [ArduPilot 4.6.3](https://github.com/ArduPilot/ardupilot/releases)
   - **TODO: upgrade to 4.7.3** [release notes](https://github.com/ArduPilot/ardupilot/blob/ArduPilot-4.7/ArduCopter/ReleaseNotes.txt), [4.7.0 discussion](https://discuss.ardupilot.org/t/copter-4-7-0-released/144650), [4.7.1 discussion](https://discuss.ardupilot.org/t/copter-4-7-1-released/145385), [4.7.2 discussion](https://discuss.ardupilot.org/t/copter-4-7-2-released/145800) [4.7.3 discussion](https://discuss.ardupilot.org/t/copter-4-7-3-released/146256)
     - Default parameters out of `sim_vehicle.py` [issue](https://github.com/ArduPilot/ardupilot_gazebo/issues/175), [commit](https://github.com/ArduPilot/ardupilot/commit/6787aa3b2036c08905b35b205ed817)
